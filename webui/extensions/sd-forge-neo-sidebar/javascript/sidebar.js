@@ -1178,8 +1178,8 @@
                 cb.type = 'checkbox';
                 cb.className = 'neo-settings-cb';
                 cb.dataset.itemId = item.id;
-                // Default: checked if previously visible, otherwise unchecked
-                cb.checked = currentState[item.id] === true;
+                // Default: checked unless explicitly hidden by saved state
+                cb.checked = currentState[item.id] !== false;
 
                 const icon = document.createElement('span');
                 icon.className = 'neo-settings-item-icon';
@@ -2117,6 +2117,21 @@
         }
 
         console.log('[NEO] Initializing...');
+
+        // Fix corrupted visibility state: if all items are saved as false, clear it
+        (function fixCorruptedState() {
+            const saved = loadVisibleItems();
+            if (!saved) return;
+            let allFalse = true;
+            for (const item of TOPBAR_ITEMS) {
+                if (item.type === 'separator') continue;
+                if (saved[item.id] !== false) { allFalse = false; break; }
+            }
+            if (allFalse && Object.keys(saved).length > 0) {
+                console.log('[NEO] Fixed corrupted visibility state (all items hidden)');
+                localStorage.removeItem(STORAGE_KEY_VISIBLE_ITEMS);
+            }
+        })();
 
         // Apply saved item order from localStorage
         applySavedOrder();
