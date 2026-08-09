@@ -1,6 +1,65 @@
 import sys
 import os
+import subprocess
+import importlib.util
 import traceback
+
+
+def _ensure_dependencies():
+    """
+    启动前检查并自动安装启动器依赖（PyQt6, PyYAML, pyinstaller）。
+    仅在源码运行模式（非打包 exe）下需要。
+    """
+    # 如果已打包成 exe，跳过依赖检查
+    if getattr(sys, "frozen", False):
+        return
+
+    REQUIRED = [
+        ("PyQt6",      "PyQt6"),
+        ("PyYAML",     "yaml"),
+        ("pyinstaller", "PyInstaller"),
+    ]
+    missing = []
+    for pip_name, mod_name in REQUIRED:
+        if importlib.util.find_spec(mod_name) is None:
+            missing.append(pip_name)
+
+    if not missing:
+        return
+
+    # 获取启动器管理的 Python 路径
+    try:
+        from core.paths import PYTHON_EXE
+        python_exe = PYTHON_EXE
+    except Exception:
+        python_exe = sys.executable
+
+    print("=" * 60)
+    print(f"正在安装启动器依赖: {', '.join(missing)}")
+    print("=" * 60)
+
+    try:
+        result = subprocess.run(
+            [python_exe, "-m", "pip", "install"] + missing + ["-i", "https://pypi.tuna.tsinghua.edu.cn/simple"],
+            capture_output=True, text=True, timeout=120
+        )
+        if result.returncode == 0:
+            print("✅ 依赖安装成功")
+        else:
+            print(f"⚠️  pip 安装失败，尝试直接安装...")
+            print(result.stderr)
+            # 备选：不带镜像源重试
+            result2 = subprocess.run(
+                [python_exe, "-m", "pip", "install"] + missing,
+                capture_output=True, text=True, timeout=120
+            )
+            if result2.returncode != 0:
+                print(f"❌ 依赖安装失败: {result2.stderr}")
+                print("请手动运行 launcher/启动器依赖.bat 安装依赖")
+    except Exception as e:
+        print(f"❌ 依赖安装异常: {e}")
+
+
 from PyQt6.QtWidgets import QApplication, QMessageBox, QDialog, QVBoxLayout, QTextEdit, QPushButton, QLabel
 from PyQt6.QtCore import Qt
 from gui.main_window import MainWindow
@@ -58,6 +117,9 @@ class ErrorDialog(QDialog):
 
 
 def main():
+    # 启动前检查并安装依赖
+    _ensure_dependencies()
+    
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     
