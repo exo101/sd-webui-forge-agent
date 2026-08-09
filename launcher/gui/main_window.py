@@ -457,6 +457,19 @@ class MainWindow(QMainWindow):
                 if hasattr(self.tab_log, 'append_line'):
                     self.tab_log.append_line(f"⚠️  Python 检测失败：{str(e)}")
             
+            # 启动前检测 Git 是否可用，不可用时自动安装
+            try:
+                from core.env_checker import ensure_git_installed
+                git_result = ensure_git_installed()
+                if hasattr(self.tab_log, 'append_line'):
+                    self.tab_log.append_line(git_result["message"])
+                if not git_result["ok"]:
+                    if hasattr(self.tab_log, 'append_line'):
+                        self.tab_log.append_line("⚠️  Git 未就绪，但 WebUI 仍可尝试启动")
+            except Exception as e:
+                if hasattr(self.tab_log, 'append_line'):
+                    self.tab_log.append_line(f"⚠️  Git 检测失败：{str(e)}")
+            
             # 启动前检测端口
             try:
                 from core.config import is_port_in_use, find_available_port
