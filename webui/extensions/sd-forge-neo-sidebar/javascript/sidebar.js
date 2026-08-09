@@ -728,7 +728,7 @@
     }
 
     // ============================================================
-    // Toggle Model Components (3 states: hidden → UI Preset only → All → hidden)
+    // Toggle Model Components (hidden → UI Preset only, then toggle All ↔ Preset)
     // ============================================================
     function toggleModelComponents(item) {
         const uiPreset = document.getElementById('forge_ui_preset');
@@ -748,7 +748,7 @@
         }
 
         if (isHidden) {
-            // State 1: Show UI Preset only
+            // Click 1: Show UI Preset only (first expansion)
             uiPreset.classList.remove('neo-sidebar-hidden-panel');
             uiPreset.style.display = '';
             for (const id of modelIds) {
@@ -760,30 +760,30 @@
             }
             setActiveButton(item.id);
             setItemVisibleState(item.id, 'preset');
-        } else if (uiPreset.style.display !== 'none' && !modelVisible) {
-            // State 2: Show all model elements
-            for (const id of modelIds) {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.classList.remove('neo-sidebar-hidden-panel');
-                    el.style.display = '';
+        } else {
+            // Toggle between 'all' and 'preset' only (no more hide state)
+            if (modelVisible) {
+                // All visible -> back to UI Preset only
+                for (const id of modelIds) {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.classList.add('neo-sidebar-hidden-panel');
+                        el.style.display = 'none';
+                    }
                 }
+                setItemVisibleState(item.id, 'preset');
+            } else {
+                // UI Preset only -> show all
+                for (const id of modelIds) {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.classList.remove('neo-sidebar-hidden-panel');
+                        el.style.display = '';
+                    }
+                }
+                setItemVisibleState(item.id, 'all');
             }
             setActiveButton(item.id);
-            setItemVisibleState(item.id, 'all');
-        } else {
-            // State 3: Hide everything
-            uiPreset.classList.add('neo-sidebar-hidden-panel');
-            uiPreset.style.display = 'none';
-            for (const id of modelIds) {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.classList.add('neo-sidebar-hidden-panel');
-                    el.style.display = 'none';
-                }
-            }
-            clearActiveButton();
-            setItemVisibleState(item.id, false);
         }
     }
 
