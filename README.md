@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.13.12-blue.svg)](https://www.python.org/)
 
-[📖 使用教程](https://www.bilibili.com/video/BV1KfXyBTEXb) | [💬 QQ交流群](#社区支持) | [🚀 快速开始](#快速开始)
+[📖 使用教程](https://www.bilibili.com/video/BV1Zxu86uE6k?spm_id_from=333.788.recommend_more_video.-1&trackid=web_related_0.router-related-2589621-dpmnd.1786250847122.213&vd_source=343e49b703fb5b4137cd6c1987846f37) | [🚀 快速开始](#快速开始)
 
 </div>
 
