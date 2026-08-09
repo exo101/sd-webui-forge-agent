@@ -1,0 +1,4 @@
+modelscope>=1.14.0
+huggingface-hub>=0.22.0
+requests>=2.31.0
+Pillow>=9.0.0

@@ -1,0 +1,41 @@
+__pycache__
+**/tokenizer/tokenizer.json
+*.bin
+*.ckpt
+*.gguf
+*.onnx
+*.pth
+*.safetensors
+*.sft
+.DS_Store
+.vscode
+/.uv-cache
+/cache
+/config.json
+/config_states/
+/embeddings
+# 扩展目录保留代码，仅排除大文件和非代码资源
+/extensions/**/node_modules/
+/extensions/**/.git/
+/extensions/**/__pycache__/
+/extensions-builtin/**/pose/
+
+# HuggingFace 缓存
+/backend/huggingface/
+
+# 模型权重 (包括扩展内的)
+/models/**/*
+/output
+/outputs
+/params.txt
+/repositories
+/styles.csv
+/styles.csv.bak
+/sysinfo*.json
+/tmp
+/ui-config.json
+/user.css
+/venv
+/webui-user.bat
+/webui-user.sh
+notification.mp3

@@ -1,0 +1,1119 @@
+import csv
+import logging
+import os.path
+import random
+import re
+from collections import namedtuple
+from copy import copy
+from io import StringIO
+from itertools import chain, permutations
+from math import sqrt
+from typing import TypeVar
+
+import gradio as gr
+import numpy as np
+from PIL import Image
+
+import modules.scripts as scripts
+import modules.sd_models
+import modules.shared as shared
+from backend.logging import setup_logger
+from modules import (
+    errors,
+    images,
+    processing,
+    sd_models,
+    sd_samplers,
+    sd_schedulers,
+    sd_vae,
+)
+from modules.processing import (
+    Processed,
+    StableDiffusionProcessing,
+    StableDiffusionProcessingTxt2Img,
+    process_images,
+)
+from modules.sd_models import model_data, select_checkpoint
+from modules.shared import cmd_opts, opts, state
+from modules.ui_components import ToolButton
+
+logger = logging.getLogger("xyz")
+setup_logger(logger)
+
+
+T = TypeVar("T")
+
+fill_values_symbol = "\U0001f4d2"  # 📒
+
+AxisInfo = namedtuple("AxisInfo", ["axis", "values"])
+
+
+# region Apply
+
+
+def apply_field(field: str):
+    def fun(p: StableDiffusionProcessing, x: T, xs: list[T]):
+        setattr(p, field, x)
+
+    return fun
+
+
+def apply_prompt(p: StableDiffusionProcessing, x: str, xs: list[str]):
+    if xs[0] not in p.prompt and xs[0] not in p.negative_prompt:
+        raise RuntimeError(f'Prompt S/R did not find "{xs[0]}" in either prompt or negative prompt...')
+
+    p.prompt = p.prompt.replace(xs[0], x)
+    p.negative_prompt = p.negative_prompt.replace(xs[0], x)
+
+
+def apply_order(p: StableDiffusionProcessing, x: list[str], _):
+    token_order = []
+
+    # Initially grab the tokens from the prompt, so they can be replaced in order of earliest seen
+    for token in x:
+        token_order.append((p.prompt.find(token), token))
+
+    token_order.sort(key=lambda t: t[0])
+
+    prompt_parts = []
+
+    # Split the prompt up, taking out the tokens
+    for _, token in token_order:
+        n = p.prompt.find(token)
+        prompt_parts.append(p.prompt[0:n])
+        p.prompt = p.prompt[n + len(token) :]
+
+    # Rebuild the prompt with the tokens in the order we want
+    prompt_tmp = ""
+    for idx, part in enumerate(prompt_parts):
+        prompt_tmp += part
+        prompt_tmp += x[idx]
+
+    p.prompt = prompt_tmp + p.prompt
+
+
+def apply_checkpoint(p: StableDiffusionProcessing, x: str, _):
+    if (info := modules.sd_models.get_closet_checkpoint_match(x)) is None:
+        raise ValueError(f'Unknown Checkpoint: "{x}"')
+
+    if info.name == p.override_settings.get("sd_model_checkpoint", None):
+        return
+
+    orig_ckpt = getattr(opts, "sd_model_checkpoint", None)
+
+    opts.set("sd_model_checkpoint", info.name)
+    refresh_loading_params_for_xyz_grid()
+    opts.set("sd_model_checkpoint", orig_ckpt)
+
+
+# 全局变量：批量提示词文件索引计数器（用于XYZ Grid跨迭代追踪）
+_batch_prompt_global_index = 0
+_batch_prompt_files_cache = []
+_batch_prompt_original_prompt_cache = ""
+
+
+def apply_batch_prompts_from_file(p: StableDiffusionProcessing, x: str, xs: list[str]):
+    """从txt文件读取提示词并应用
+    
+    智能模式：
+    - 如果txt文件包含<lora:>等标签，则完全替换prompt（完整控制模式）
+    - 如果txt文件只是纯描述文本，则保留原始prompt中的LoRA和质量标签（追加模式）
+    
+    注意：此函数不应与Prompt S/R等其他文本替换轴同时使用。
+    
+    参数说明：
+    - x: 当前处理的单个文件路径（由prepare_batch_prompts展开后传入）
+    - xs: 所有文件路径列表
+    """
+    global _batch_prompt_global_index, _batch_prompt_files_cache, _batch_prompt_original_prompt_cache
+    
+    import os
+    
+    # 严格的路径验证
+    if not x or not isinstance(x, str):
+        logger.warning(f"[批量提示词] 跳过无效路径（类型错误或空值）: {type(x).__name__}")
+        return
+    
+    x = x.strip()
+    
+    # 检查是否为有效路径（至少要有长度且不是纯斜杠）
+    if len(x) < 2 or x in ['\\', '/', '\\\\', '//']:
+        logger.warning(f"[批量提示词] 跳过无效路径（太短或格式错误）: '{x}'")
+        return
+    
+    if not os.path.exists(x):
+        logger.warning(f"[批量提示词] 文件不存在: {x}")
+        return
+    
+    if not os.path.isfile(x):
+        logger.warning(f"[批量提示词] 路径不是文件: {x}")
+        return
+    
+    # 初始化全局状态（只在第一次调用时）
+    if not _batch_prompt_original_prompt_cache:
+        _batch_prompt_original_prompt_cache = p.prompt
+        _batch_prompt_global_index = 0
+        _batch_prompt_files_cache = xs  # xs已经是文件路径列表
+        
+        logger.info(f"[批量提示词] 初始化，共 {len(xs)} 个文件")
+        logger.info(f"[批量提示词] 原始Prompt: {_batch_prompt_original_prompt_cache[:100]}...")
+        
+        # 打印所有文件路径用于调试
+        for i, f in enumerate(xs):
+            logger.debug(f"  [{i+1}] {f}")
+    
+    try:
+        with open(x, 'r', encoding='utf-8') as f:
+            prompt_text = f.read().strip()
+        
+        if prompt_text:
+            # 智能判断：检查txt文件是否包含LoRA或其他特殊标签
+            has_lora = '<lora:' in prompt_text or '<hypernet:' in prompt_text
+            has_embedding = '<embeddings:' in prompt_text
+            
+            if has_lora or has_embedding:
+                # 完整控制模式：txt文件包含完整提示词（包括LoRA）
+                p.prompt = prompt_text
+                logger.info(f"[批量提示词-完整模式] 使用文件 [{_batch_prompt_global_index + 1}/{len(xs)}]: {os.path.basename(x)}")
+            else:
+                # 追加模式：保留原始prompt的前缀（LoRA、质量标签等），追加场景描述
+                base_prompt = _batch_prompt_original_prompt_cache.rstrip(', ').rstrip()
+                
+                # 拼接：原始前缀 + 场景描述
+                if base_prompt:
+                    p.prompt = f"{base_prompt}, {prompt_text}"
+                else:
+                    p.prompt = prompt_text
+                
+                logger.info(f"[批量提示词-追加模式] 使用文件 [{_batch_prompt_global_index + 1}/{len(xs)}]: {os.path.basename(x)}")
+            
+            logger.debug(f"[批量提示词] 最终Prompt预览: {p.prompt[:120]}...")
+        
+        # 递增全局索引
+        _batch_prompt_global_index += 1
+        
+    except UnicodeDecodeError:
+        logger.error(f"[批量提示词] 文件编码错误，请确保使用UTF-8编码: {x}")
+        logger.info(f"[批量提示词] 尝试使用GBK编码读取...")
+        try:
+            with open(x, 'r', encoding='gbk') as f:
+                prompt_text = f.read().strip()
+            if prompt_text:
+                base_prompt = _batch_prompt_original_prompt_cache.rstrip(', ').rstrip()
+                p.prompt = f"{base_prompt}, {prompt_text}" if base_prompt else prompt_text
+                logger.info(f"[批量提示词-追加模式(GBK)] 使用文件 [{_batch_prompt_global_index + 1}/{len(xs)}]: {os.path.basename(x)}")
+                _batch_prompt_global_index += 1
+        except Exception as e2:
+            logger.error(f"[批量提示词] GBK编码也失败: {e2}")
+    except Exception as e:
+        logger.error(f"[批量提示词] 读取提示词文件失败 {x}: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+
+
+def reset_batch_prompt_state():
+    """重置批量提示词的全局状态（在每次XYZ Grid运行前调用）"""
+    global _batch_prompt_global_index, _batch_prompt_files_cache, _batch_prompt_original_prompt_cache
+    _batch_prompt_global_index = 0
+    _batch_prompt_files_cache = []
+    _batch_prompt_original_prompt_cache = ""
+
+
+def format_batch_prompts_value(p: StableDiffusionProcessing, opt: "AxisOption", x: str) -> str:
+    """格式化批量提示词的显示值"""
+    import os
+    if x and os.path.exists(x):
+        import glob
+        txt_count = len(glob.glob(os.path.join(x, "*.txt")))
+        return f"{os.path.basename(x)} ({txt_count}个文件)"
+    return x
+
+
+def prepare_batch_prompts(vals):
+    """准备批量提示词轴的值
+    
+    将目录路径展开为多个txt文件路径，每个文件作为一个独立的值。
+    这样XYZ Grid会为每个文件创建一次迭代。
+    
+    参数:
+        vals: XYZ Grid传入的值（可能是字符串或列表）
+              - 如果是字符串：单个目录路径
+              - 如果是列表：多个路径
+    
+    返回:
+        展开后的文件路径列表
+    """
+    import os
+    import glob
+    
+    # 兼容处理：如果vals是字符串，转换为列表
+    if isinstance(vals, str):
+        vals = [vals]
+    
+    # 安全检查：确保vals不为空
+    if not vals or len(vals) == 0:
+        logger.warning("[批量提示词] 输入值列表为空")
+        return []
+    
+    # 如果vals只有一个元素且是目录路径，则展开为所有txt文件
+    if len(vals) == 1:
+        prompt_dir = vals[0].strip() if isinstance(vals[0], str) else str(vals[0])
+        
+        # 验证路径有效性
+        if not prompt_dir:
+            logger.warning("[批量提示词] 目录路径为空")
+            return []
+        
+        # 打印调试信息
+        logger.info(f"[批量提示词] 接收到路径: '{prompt_dir}' (长度: {len(prompt_dir)})")
+        
+        if not os.path.exists(prompt_dir):
+            logger.warning(f"[批量提示词] 目录不存在: {prompt_dir}")
+            return []
+        
+        if not os.path.isdir(prompt_dir):
+            logger.warning(f"[批量提示词] 路径不是目录: {prompt_dir}")
+            return []
+        
+        # 扫描txt文件
+        try:
+            txt_files = sorted(glob.glob(os.path.join(prompt_dir, "*.txt")))
+            
+            if not txt_files:
+                logger.warning(f"[批量提示词] 目录中未找到txt文件: {prompt_dir}")
+                return []
+            
+            # 验证每个文件路径的有效性
+            valid_files = []
+            for file_path in txt_files:
+                if os.path.exists(file_path) and os.path.isfile(file_path):
+                    valid_files.append(file_path)
+                else:
+                    logger.warning(f"[批量提示词] 跳过无效文件: {file_path}")
+            
+            if valid_files:
+                logger.info(f"[批量提示词] 展开目录 {prompt_dir} 为 {len(valid_files)} 个文件")
+                # 打印前几个文件用于调试
+                for i, f in enumerate(valid_files[:3]):
+                    logger.debug(f"  [{i+1}] {os.path.basename(f)}")
+                if len(valid_files) > 3:
+                    logger.debug(f"  ... 还有 {len(valid_files) - 3} 个文件")
+                return valid_files
+            else:
+                logger.warning(f"[批量提示词] 没有有效的txt文件: {prompt_dir}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"[批量提示词] 扫描目录失败: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return []
+    
+    # 否则返回原始值（可能是用户手动输入的多个文件路径）
+    return vals
+
+
+def apply_size(p: StableDiffusionProcessing, x: str, _):
+    try:
+        width, height = x.split("x")
+        p.width = int(width.strip())
+        p.height = int(height.strip())
+    except ValueError:
+        logger.error(f'Invalid Size "{x}" for X/Y/Z Plot')
+
+
+def apply_vae(p: StableDiffusionProcessing, x: str, _):
+    p.override_settings["sd_vae"] = find_vae(x)
+
+
+def apply_styles(p: StableDiffusionProcessing, x: str, _):
+    p.styles.extend(x.split(","))
+
+
+def apply_uni_pc_order(p: StableDiffusionProcessing, x: int, _):
+    p.override_settings["uni_pc_order"] = min(x, p.steps - 1)
+
+
+def apply_face_restore(p: StableDiffusionProcessing, x: str, _):
+    opt = x.lower()
+    if opt == "codeformer":
+        is_active = True
+        p.face_restoration_model = "CodeFormer"
+    elif opt == "gfpgan":
+        is_active = True
+        p.face_restoration_model = "GFPGAN"
+    else:
+        is_active = opt in ("true", "yes", "y", "1")
+
+    p.restore_faces = is_active
+
+
+def apply_override(field: str, boolean: bool = False):
+    def fun(p: StableDiffusionProcessing, x: T, xs: list[T]):
+        if boolean:
+            p.override_settings[field] = True if x.lower() == "true" else False
+        else:
+            p.override_settings[field] = x
+
+    return fun
+
+
+# region Validation
+
+
+def confirm_samplers(p: StableDiffusionProcessing, xs: list[str]):
+    for x in xs:
+        if x.lower() not in sd_samplers.samplers_map:
+            raise ValueError(f'Unknown Sampler: "{x}"')
+
+
+def confirm_checkpoints(p: StableDiffusionProcessing, xs: list[str]):
+    for x in xs:
+        if modules.sd_models.get_closet_checkpoint_match(x) is None:
+            raise RuntimeError(f'Unknown Checkpoint: "{x}"')
+
+
+def confirm_checkpoints_or_none(p: StableDiffusionProcessing, xs: list[str]):
+    for x in xs:
+        if x in (None, "None", "none", ""):
+            continue
+
+        if modules.sd_models.get_closet_checkpoint_match(x) is None:
+            raise RuntimeError(f'Unknown Checkpoint: "{x}"')
+
+
+def confirm_range(min_val: float, max_val: float, axis_label: str):
+    """Generates a AxisOption.confirm() function that checks all values are within the specified range."""
+
+    def confirm_range_fun(p: StableDiffusionProcessing, xs: list[float]):
+        for x in xs:
+            if not (max_val >= x >= min_val):
+                raise ValueError(f'"{axis_label}" value "{x}" is out of range [{min_val}, {max_val}]')
+
+    return confirm_range_fun
+
+
+def refresh_loading_params_for_xyz_grid():
+    """
+    Refreshes the loading parameters for the model,
+    causes a reload in sd_models.forge_model_reload()
+    """
+    checkpoint_info = select_checkpoint()
+
+    model_data.forge_loading_parameters = dict(checkpoint_info=checkpoint_info, additional_modules=shared.opts.forge_additional_modules, unet_storage_dtype=model_data.forge_loading_parameters.get("unet_storage_dtype", None))
+
+
+def find_vae(name: str) -> str:
+    if name is None or (name := name.strip().lower()) == "none":
+        return "None"
+    elif name in ("auto", "automatic"):
+        return "Automatic"
+    else:
+        return sd_vae.vae_dict[name]
+
+
+def boolean_choice(reverse: bool = False):
+    def choice():
+        return ["False", "True"] if reverse else ["True", "False"]
+
+    return choice
+
+
+def format_value_add_label(p: StableDiffusionProcessing, opt: "AxisOption", x: T) -> str:
+    if type(x) == float:
+        x = round(x, 8)
+
+    return f"{opt.label}: {x}"
+
+
+def format_value(p: StableDiffusionProcessing, opt: "AxisOption", x: T) -> T:
+    if type(x) == float:
+        x = round(x, 8)
+    return x
+
+
+def format_value_join_list(p: StableDiffusionProcessing, opt: "AxisOption", x: str) -> str:
+    return ", ".join(x)
+
+
+def do_nothing(*args, **kwargs):
+    pass
+
+
+def format_nothing(*args, **kwargs) -> str:
+    return ""
+
+
+def format_remove_path(p: StableDiffusionProcessing, opt: "AxisOption", x: os.PathLike) -> str:
+    return os.path.basename(x)
+
+
+def str_permutations(x: str) -> str:
+    """dummy function for specifying it in AxisOption's type when you want to get a list of permutations"""
+    return x
+
+
+def list_to_csv_string(data_list: list[str]) -> str:
+    with StringIO() as o:
+        csv.writer(o).writerow(data_list)
+        return o.getvalue().strip()
+
+
+def csv_string_to_list_strip(data_str: str) -> list[str]:
+    return list(map(str.strip, chain.from_iterable(csv.reader(StringIO(data_str), skipinitialspace=True))))
+
+
+# region Options
+
+
+class AxisOption:
+    def __init__(self, label, type, apply, format_value=format_value_add_label, confirm=None, cost=0.0, choices=None, prepare=None):
+        self.label = label
+        self.type = type
+        self.apply = apply
+        self.format_value = format_value
+        self.confirm = confirm
+        self.cost = cost
+        self.prepare = prepare
+        self.choices = choices
+
+
+class AxisOptionImg2Img(AxisOption):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.is_img2img = True
+
+
+class AxisOptionTxt2Img(AxisOption):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.is_img2img = False
+
+
+axis_options = [
+    AxisOption("Nothing", str, do_nothing, format_value=format_nothing),
+    AxisOption("Seed", int, apply_field("seed")),
+    AxisOption("Steps", int, apply_field("steps")),
+    AxisOptionTxt2Img("Hires steps", int, apply_field("hr_second_pass_steps")),
+    AxisOption("Size", str, apply_size),
+    AxisOption("CFG Scale", float, apply_field("cfg_scale")),
+    AxisOption("Distilled CFG Scale", float, apply_field("distilled_cfg_scale")),
+    AxisOption("Shift", float, apply_field("distilled_cfg_scale")),
+    AxisOption("Rescale CFG", float, apply_field("rescale_cfg")),
+    AxisOption("MaHiRo", str, apply_field("mahiro"), choices=boolean_choice(reverse=True)),
+    AxisOption("Prompt S/R", str, apply_prompt, format_value=format_value),
+    AxisOption("Prompt order", str_permutations, apply_order, format_value=format_value_join_list),
+    AxisOptionTxt2Img("Sampler", str, apply_field("sampler_name"), format_value=format_value, confirm=confirm_samplers, choices=lambda: [x.name for x in sd_samplers.samplers if x.name not in opts.hide_samplers]),
+    AxisOptionTxt2Img("Hires sampler", str, apply_field("hr_sampler_name"), confirm=confirm_samplers, choices=lambda: [x.name for x in sd_samplers.samplers_for_img2img if x.name not in opts.hide_samplers]),
+    AxisOptionImg2Img("Sampler", str, apply_field("sampler_name"), format_value=format_value, confirm=confirm_samplers, choices=lambda: [x.name for x in sd_samplers.samplers_for_img2img if x.name not in opts.hide_samplers]),
+    AxisOption("Schedule type", str, apply_field("scheduler"), choices=lambda: [x.label for x in sd_schedulers.schedulers]),
+    AxisOption("Checkpoint name", str, apply_checkpoint, format_value=format_remove_path, confirm=confirm_checkpoints, cost=1.0, choices=lambda: sorted(sd_models.checkpoints_list, key=str.casefold)),
+    AxisOption("VAE", str, apply_vae, cost=0.7, choices=lambda: ["Automatic", "None"] + list(sd_vae.vae_dict)),
+    AxisOption("Clip skip", int, apply_override("CLIP_stop_at_last_layers")),
+    AxisOption("Denoising", float, apply_field("denoising_strength")),
+    AxisOption("Initial noise multiplier", float, apply_field("initial_noise_multiplier")),
+    AxisOption("Extra noise", float, apply_override("img2img_extra_noise")),
+    AxisOptionTxt2Img("Hires upscaler", str, apply_field("hr_upscaler"), choices=lambda: [*shared.latent_upscale_modes, *[x.name for x in shared.sd_upscalers]]),
+    AxisOption("Styles", str, apply_styles, choices=lambda: list(shared.prompt_styles.styles)),
+    AxisOption("Face restore", str, apply_face_restore, format_value=format_value),
+    AxisOption("Negative Guidance minimum sigma", float, apply_field("s_min_uncond")),
+    AxisOption("Token merging ratio", float, apply_override("token_merging_ratio")),
+    AxisOption("Token merging ratio high-res", float, apply_override("token_merging_ratio_hr")),
+    AxisOption("Refiner checkpoint", str, apply_field("refiner_checkpoint"), format_value=format_remove_path, confirm=confirm_checkpoints_or_none, cost=1.0, choices=lambda: ["None"] + sorted(sd_models.checkpoints_list, key=str.casefold)),
+    AxisOption("Refiner switch at", float, apply_field("refiner_switch_at")),
+    AxisOption("RNG source", str, apply_override("randn_source"), choices=lambda: ["GPU", "CPU", "NV"]),
+    AxisOptionTxt2Img("批量提示词文件", str, apply_batch_prompts_from_file, format_value=format_batch_prompts_value, prepare=prepare_batch_prompts),
+]
+
+if cmd_opts.adv_samplers:
+    axis_options.extend(
+        [
+            AxisOption("Var. seed", int, apply_field("subseed")),
+            AxisOption("Var. strength", float, apply_field("subseed_strength")),
+            AxisOptionImg2Img("Image CFG Scale", float, apply_field("image_cfg_scale")),
+            AxisOption("Sigma Churn", float, apply_field("s_churn")),
+            AxisOption("Sigma min", float, apply_field("s_tmin")),
+            AxisOption("Sigma max", float, apply_field("s_tmax")),
+            AxisOption("Sigma noise", float, apply_field("s_noise")),
+            AxisOption("Schedule min sigma", float, apply_override("sigma_min")),
+            AxisOption("Schedule max sigma", float, apply_override("sigma_max")),
+            AxisOption("Schedule rho", float, apply_override("rho")),
+            AxisOption("Beta schedule alpha", float, apply_override("beta_dist_alpha")),
+            AxisOption("Beta schedule beta", float, apply_override("beta_dist_beta")),
+            AxisOption("Eta", float, apply_field("eta")),
+            AxisOptionImg2Img("Cond. Image Mask Weight", float, apply_field("inpainting_mask_weight")),
+            AxisOption("UniPC Order", int, apply_uni_pc_order, cost=0.5),
+            AxisOption("Always discard next-to-last sigma", str, apply_override("always_discard_next_to_last_sigma", boolean=True), choices=boolean_choice(reverse=True)),
+            AxisOption("SGM noise multiplier", str, apply_override("sgm_noise_multiplier", boolean=True), choices=boolean_choice(reverse=True)),
+        ]
+    )
+
+
+# region Main
+
+
+def draw_xyz_grid(p, xs, ys, zs, x_labels, y_labels, z_labels, cell, draw_legend, include_lone_images, include_sub_grids, first_axes_processed, second_axes_processed, margin_size):
+    hor_texts = [[images.GridAnnotation(x)] for x in x_labels]
+    ver_texts = [[images.GridAnnotation(y)] for y in y_labels]
+    title_texts = [[images.GridAnnotation(z)] for z in z_labels]
+
+    list_size = len(xs) * len(ys) * len(zs)
+
+    processed_result = None
+
+    state.job_count = list_size * p.n_iter
+
+    def process_cell(x, y, z, ix, iy, iz):
+        nonlocal processed_result
+
+        def index(ix, iy, iz):
+            return ix + iy * len(xs) + iz * len(xs) * len(ys)
+
+        state.job = f"{index(ix, iy, iz) + 1} out of {list_size}"
+
+        processed: Processed = cell(x, y, z, ix, iy, iz)
+
+        if processed_result is None:
+            # Use our first processed result object as a template container to hold our full results
+            processed_result = copy(processed)
+            processed_result.images = [None] * list_size
+            processed_result.all_prompts = [None] * list_size
+            processed_result.all_seeds = [None] * list_size
+            processed_result.infotexts = [None] * list_size
+            processed_result.index_of_first_image = 1
+
+        idx = index(ix, iy, iz)
+        if processed.images:
+            # Non-empty list indicates some degree of success.
+            processed_result.images[idx] = processed.images[0]
+            processed_result.all_prompts[idx] = processed.prompt
+            processed_result.all_seeds[idx] = processed.seed
+            processed_result.infotexts[idx] = processed.infotexts[0]
+        else:
+            cell_mode = "P"
+            cell_size = (processed_result.width, processed_result.height)
+            if processed_result.images[0] is not None:
+                cell_mode = processed_result.images[0].mode
+                # This corrects size in case of batches:
+                cell_size = processed_result.images[0].size
+            processed_result.images[idx] = Image.new(cell_mode, cell_size)
+
+    if first_axes_processed == "x":
+        for ix, x in enumerate(xs):
+            if second_axes_processed == "y":
+                for iy, y in enumerate(ys):
+                    for iz, z in enumerate(zs):
+                        process_cell(x, y, z, ix, iy, iz)
+            else:
+                for iz, z in enumerate(zs):
+                    for iy, y in enumerate(ys):
+                        process_cell(x, y, z, ix, iy, iz)
+    elif first_axes_processed == "y":
+        for iy, y in enumerate(ys):
+            if second_axes_processed == "x":
+                for ix, x in enumerate(xs):
+                    for iz, z in enumerate(zs):
+                        process_cell(x, y, z, ix, iy, iz)
+            else:
+                for iz, z in enumerate(zs):
+                    for ix, x in enumerate(xs):
+                        process_cell(x, y, z, ix, iy, iz)
+    elif first_axes_processed == "z":
+        for iz, z in enumerate(zs):
+            if second_axes_processed == "x":
+                for ix, x in enumerate(xs):
+                    for iy, y in enumerate(ys):
+                        process_cell(x, y, z, ix, iy, iz)
+            else:
+                for iy, y in enumerate(ys):
+                    for ix, x in enumerate(xs):
+                        process_cell(x, y, z, ix, iy, iz)
+
+    if not processed_result:
+        # Should never happen, I've only seen it on one of four open tabs and it needed to refresh.
+        logger.error("Processing could not begin, you may need to refresh the page or restart the WebUI")
+        return Processed(p, [])
+    elif not any(processed_result.images):
+        logger.error("draw_xyz_grid failed to return any processed image...")
+        return Processed(p, [])
+
+    z_count = len(zs)
+
+    for i in range(z_count):
+        start_index = (i * len(xs) * len(ys)) + i
+        end_index = start_index + len(xs) * len(ys)
+        grid = images.image_grid(processed_result.images[start_index:end_index], rows=len(ys))
+        if draw_legend:
+            grid_max_w, grid_max_h = map(max, zip(*(img.size for img in processed_result.images[start_index:end_index])))
+            grid = images.draw_grid_annotations(grid, grid_max_w, grid_max_h, hor_texts, ver_texts, margin_size)
+        processed_result.images.insert(i, grid)
+        processed_result.all_prompts.insert(i, processed_result.all_prompts[start_index])
+        processed_result.all_seeds.insert(i, processed_result.all_seeds[start_index])
+        processed_result.infotexts.insert(i, processed_result.infotexts[start_index])
+
+    z_grid = images.image_grid(processed_result.images[:z_count], rows=1)
+    z_sub_grid_max_w, z_sub_grid_max_h = map(max, zip(*(img.size for img in processed_result.images[:z_count])))
+    if draw_legend:
+        z_grid = images.draw_grid_annotations(z_grid, z_sub_grid_max_w, z_sub_grid_max_h, title_texts, [[images.GridAnnotation()]])
+    processed_result.images.insert(0, z_grid)
+    # TODO: Deeper aspects of the program rely on grid info being misaligned between metadata arrays, which is not ideal.
+    # processed_result.all_prompts.insert(0, processed_result.all_prompts[0])
+    # processed_result.all_seeds.insert(0, processed_result.all_seeds[0])
+    processed_result.infotexts.insert(0, processed_result.infotexts[0])
+
+    return processed_result
+
+
+class SharedSettingsStackHelper:
+    def __enter__(self):
+        pass
+
+    def __exit__(self, *args, **kwargs):
+        pass
+
+
+re_range = re.compile(r"\s*([+-]?\s*\d+)\s*-\s*([+-]?\s*\d+)(?:\s*\(([+-]\d+)\s*\))?\s*")
+re_range_float = re.compile(r"\s*([+-]?\s*\d+(?:.\d*)?)\s*-\s*([+-]?\s*\d+(?:.\d*)?)(?:\s*\(([+-]\d+(?:.\d*)?)\s*\))?\s*")
+
+re_range_count = re.compile(r"\s*([+-]?\s*\d+)\s*-\s*([+-]?\s*\d+)(?:\s*\[(\d+)\s*])?\s*")
+re_range_count_float = re.compile(r"\s*([+-]?\s*\d+(?:.\d*)?)\s*-\s*([+-]?\s*\d+(?:.\d*)?)(?:\s*\[(\d+(?:.\d*)?)\s*])?\s*")
+
+
+# region Script
+
+
+class Script(scripts.Script):
+    def title(self):
+        return "X/Y/Z plot"
+
+    def ui(self, is_img2img):
+        self.current_axis_options = [x for x in axis_options if type(x) == AxisOption or x.is_img2img == is_img2img]
+
+        with gr.Group(elem_classes=["xyz_entries"]):
+            with gr.Row():
+                x_type = gr.Dropdown(label="X type", choices=[x.label for x in self.current_axis_options], value=self.current_axis_options[1].label, type="index", elem_id=self.elem_id("x_type"), scale=2)
+                x_values = gr.Textbox(label="X values", lines=1, elem_id=self.elem_id("x_values"), scale=5)
+                x_values_dropdown = gr.Dropdown(label="X values", visible=False, multiselect=True, interactive=True, scale=5)
+                fill_x_button = ToolButton(value=fill_values_symbol, elem_id="xyz_grid_fill_x_tool_button", visible=False, scale=1)
+            with gr.Row():
+                y_type = gr.Dropdown(label="Y type", choices=[x.label for x in self.current_axis_options], value=self.current_axis_options[0].label, type="index", elem_id=self.elem_id("y_type"), scale=2)
+                y_values = gr.Textbox(label="Y values", lines=1, elem_id=self.elem_id("y_values"), scale=5)
+                y_values_dropdown = gr.Dropdown(label="Y values", visible=False, multiselect=True, interactive=True, scale=5)
+                fill_y_button = ToolButton(value=fill_values_symbol, elem_id="xyz_grid_fill_y_tool_button", visible=False, scale=1)
+            with gr.Row():
+                z_type = gr.Dropdown(label="Z type", choices=[x.label for x in self.current_axis_options], value=self.current_axis_options[0].label, type="index", elem_id=self.elem_id("z_type"), scale=2)
+                z_values = gr.Textbox(label="Z values", lines=1, elem_id=self.elem_id("z_values"), scale=5)
+                z_values_dropdown = gr.Dropdown(label="Z values", visible=False, multiselect=True, interactive=True, scale=5)
+                fill_z_button = ToolButton(value=fill_values_symbol, elem_id="xyz_grid_fill_z_tool_button", visible=False, scale=1)
+
+        with gr.Row(variant="compact"):
+            row_count = gr.Slider(label="Row Count", info="(set to 0 for auto)", minimum=0, maximum=8, value=0, step=1, elem_id=self.elem_id("row_count"))
+            margin_size = gr.Slider(label="Grid Margins", info="(in pixels)", minimum=0, maximum=500, value=0, step=2, elem_id=self.elem_id("margin_size"))
+
+        with gr.Row(variant="compact", elem_id="axis_options"):
+            with gr.Column(variant="compact", scale=3):
+                draw_legend = gr.Checkbox(label="Draw legend", value=True, elem_id=self.elem_id("draw_legend"))
+                no_fixed_seeds = gr.Checkbox(label="Keep -1 for seeds", value=False, elem_id=self.elem_id("no_fixed_seeds"))
+                with gr.Row(variant="compact"):
+                    vary_seeds_x = gr.Checkbox(label="Vary seeds for X", value=False, min_width=80, elem_id=self.elem_id("vary_seeds_x"), tooltip="Use different seeds for images along X axis.")
+                    vary_seeds_y = gr.Checkbox(label="Vary seeds for Y", value=False, min_width=80, elem_id=self.elem_id("vary_seeds_y"), tooltip="Use different seeds for images along Y axis.")
+                    vary_seeds_z = gr.Checkbox(label="Vary seeds for Z", value=False, min_width=80, elem_id=self.elem_id("vary_seeds_z"), tooltip="Use different seeds for images along Z axis.")
+            with gr.Column(variant="compact", scale=2):
+                include_lone_images = gr.Checkbox(label="Include Sub Images", value=False, elem_id=self.elem_id("include_lone_images"))
+                include_sub_grids = gr.Checkbox(label="Include Sub Grids", value=False, elem_id=self.elem_id("include_sub_grids"))
+                csv_mode = gr.Checkbox(label="Use text inputs instead of dropdowns", value=False, elem_id=self.elem_id("csv_mode"))
+
+        with gr.Row(variant="compact", elem_id="swap_axes"):
+            swap_xy_axes_button = gr.Button(value="Swap X/Y axes", elem_id="xy_grid_swap_axes_button")
+            swap_yz_axes_button = gr.Button(value="Swap Y/Z axes", elem_id="yz_grid_swap_axes_button")
+            swap_xz_axes_button = gr.Button(value="Swap X/Z axes", elem_id="xz_grid_swap_axes_button")
+
+        def swap_axes(axis1_type, axis1_values, axis1_values_dropdown, axis2_type, axis2_values, axis2_values_dropdown):
+            return self.current_axis_options[axis2_type].label, axis2_values, axis2_values_dropdown, self.current_axis_options[axis1_type].label, axis1_values, axis1_values_dropdown
+
+        xy_swap_args = [x_type, x_values, x_values_dropdown, y_type, y_values, y_values_dropdown]
+        swap_xy_axes_button.click(swap_axes, inputs=xy_swap_args, outputs=xy_swap_args)
+        yz_swap_args = [y_type, y_values, y_values_dropdown, z_type, z_values, z_values_dropdown]
+        swap_yz_axes_button.click(swap_axes, inputs=yz_swap_args, outputs=yz_swap_args)
+        xz_swap_args = [x_type, x_values, x_values_dropdown, z_type, z_values, z_values_dropdown]
+        swap_xz_axes_button.click(swap_axes, inputs=xz_swap_args, outputs=xz_swap_args)
+
+        def fill(axis_type, csv_mode):
+            axis = self.current_axis_options[axis_type]
+            if axis.choices:
+                if csv_mode:
+                    return list_to_csv_string(axis.choices()), gr.skip()
+                else:
+                    return gr.skip(), axis.choices()
+            else:
+                return gr.skip(), gr.skip()
+
+        fill_x_button.click(fn=fill, inputs=[x_type, csv_mode], outputs=[x_values, x_values_dropdown])
+        fill_y_button.click(fn=fill, inputs=[y_type, csv_mode], outputs=[y_values, y_values_dropdown])
+        fill_z_button.click(fn=fill, inputs=[z_type, csv_mode], outputs=[z_values, z_values_dropdown])
+
+        def select_axis(axis_type, axis_values, axis_values_dropdown, csv_mode):
+            axis_type = axis_type or 0  # if axle type is None set to 0
+
+            choices = self.current_axis_options[axis_type].choices
+            has_choices = choices is not None
+
+            if has_choices:
+                choices = choices()
+                if csv_mode:
+                    if axis_values_dropdown:
+                        axis_values = list_to_csv_string(list(filter(lambda x: x in choices, axis_values_dropdown)))
+                        axis_values_dropdown = []
+                else:
+                    if axis_values:
+                        axis_values_dropdown = list(filter(lambda x: x in choices, csv_string_to_list_strip(axis_values)))
+                        axis_values = ""
+
+            return (gr.update(visible=has_choices), gr.update(visible=not has_choices or csv_mode, value=axis_values), gr.update(choices=choices if has_choices else None, visible=has_choices and not csv_mode, value=axis_values_dropdown))
+
+        x_type.change(fn=select_axis, inputs=[x_type, x_values, x_values_dropdown, csv_mode], outputs=[fill_x_button, x_values, x_values_dropdown])
+        y_type.change(fn=select_axis, inputs=[y_type, y_values, y_values_dropdown, csv_mode], outputs=[fill_y_button, y_values, y_values_dropdown])
+        z_type.change(fn=select_axis, inputs=[z_type, z_values, z_values_dropdown, csv_mode], outputs=[fill_z_button, z_values, z_values_dropdown])
+
+        def change_choice_mode(csv_mode, x_type, x_values, x_values_dropdown, y_type, y_values, y_values_dropdown, z_type, z_values, z_values_dropdown):
+            _fill_x_button, _x_values, _x_values_dropdown = select_axis(x_type, x_values, x_values_dropdown, csv_mode)
+            _fill_y_button, _y_values, _y_values_dropdown = select_axis(y_type, y_values, y_values_dropdown, csv_mode)
+            _fill_z_button, _z_values, _z_values_dropdown = select_axis(z_type, z_values, z_values_dropdown, csv_mode)
+            return _fill_x_button, _x_values, _x_values_dropdown, _fill_y_button, _y_values, _y_values_dropdown, _fill_z_button, _z_values, _z_values_dropdown
+
+        csv_mode.change(fn=change_choice_mode, inputs=[csv_mode, x_type, x_values, x_values_dropdown, y_type, y_values, y_values_dropdown, z_type, z_values, z_values_dropdown], outputs=[fill_x_button, x_values, x_values_dropdown, fill_y_button, y_values, y_values_dropdown, fill_z_button, z_values, z_values_dropdown])
+
+        def get_dropdown_update_from_params(axis, params):
+            val_key = f"{axis} Values"
+            vals = params.get(val_key, "")
+            valslist = csv_string_to_list_strip(vals)
+            return gr.update(value=valslist)
+
+        self.infotext_fields = (
+            (x_type, "X Type"),
+            (x_values, "X Values"),
+            (x_values_dropdown, lambda params: get_dropdown_update_from_params("X", params)),
+            (y_type, "Y Type"),
+            (y_values, "Y Values"),
+            (y_values_dropdown, lambda params: get_dropdown_update_from_params("Y", params)),
+            (z_type, "Z Type"),
+            (z_values, "Z Values"),
+            (z_values_dropdown, lambda params: get_dropdown_update_from_params("Z", params)),
+        )
+
+        return [x_type, x_values, x_values_dropdown, y_type, y_values, y_values_dropdown, z_type, z_values, z_values_dropdown, draw_legend, include_lone_images, include_sub_grids, no_fixed_seeds, vary_seeds_x, vary_seeds_y, vary_seeds_z, row_count, margin_size, csv_mode]
+
+    def run(self, p, x_type, x_values, x_values_dropdown, y_type, y_values, y_values_dropdown, z_type, z_values, z_values_dropdown, draw_legend, include_lone_images, include_sub_grids, no_fixed_seeds, vary_seeds_x, vary_seeds_y, vary_seeds_z, row_count, margin_size, csv_mode):
+        # 重置批量提示词的全局状态（每次XYZ Grid运行时）
+        reset_batch_prompt_state()
+        
+        x_type, y_type, z_type = x_type or 0, y_type or 0, z_type or 0  # if axle type is None set to 0
+
+        if not no_fixed_seeds:
+            modules.processing.fix_seed(p)
+
+        if not opts.return_grid:
+            p.batch_size = 1
+
+        def process_axis(opt, vals, vals_dropdown):
+            if opt.label == "Nothing":
+                return [0]
+
+            if opt.choices is not None and not csv_mode:
+                valslist = vals_dropdown
+            elif opt.prepare is not None:
+                valslist = opt.prepare(vals)
+            else:
+                valslist = csv_string_to_list_strip(vals)
+
+            if opt.type == int:
+                valslist_ext = []
+
+                for val in valslist:
+                    if val.strip() == "":
+                        continue
+                    m = re_range.fullmatch(val)
+                    mc = re_range_count.fullmatch(val)
+                    if m is not None:
+                        start = int(m.group(1))
+                        end = int(m.group(2)) + 1
+                        step = int(m.group(3)) if m.group(3) is not None else 1
+
+                        valslist_ext += list(range(start, end, step))
+                    elif mc is not None:
+                        start = int(mc.group(1))
+                        end = int(mc.group(2))
+                        num = int(mc.group(3)) if mc.group(3) is not None else 1
+
+                        valslist_ext += [int(x) for x in np.linspace(start=start, stop=end, num=num).tolist()]
+                    else:
+                        valslist_ext.append(val)
+
+                valslist = valslist_ext
+            elif opt.type == float:
+                valslist_ext = []
+
+                for val in valslist:
+                    if val.strip() == "":
+                        continue
+                    m = re_range_float.fullmatch(val)
+                    mc = re_range_count_float.fullmatch(val)
+                    if m is not None:
+                        start = float(m.group(1))
+                        end = float(m.group(2))
+                        step = float(m.group(3)) if m.group(3) is not None else 1
+
+                        valslist_ext += np.arange(start, end + step, step).tolist()
+                    elif mc is not None:
+                        start = float(mc.group(1))
+                        end = float(mc.group(2))
+                        num = int(mc.group(3)) if mc.group(3) is not None else 1
+
+                        valslist_ext += np.linspace(start=start, stop=end, num=num).tolist()
+                    else:
+                        valslist_ext.append(val)
+
+                valslist = valslist_ext
+            elif opt.type == str_permutations:
+                valslist = list(permutations(valslist))
+
+            valslist = [opt.type(x) for x in valslist]
+
+            # Confirm options are valid before starting
+            if opt.confirm:
+                opt.confirm(p, valslist)
+
+            return valslist
+
+        x_opt = self.current_axis_options[x_type]
+        if x_opt.choices is not None and not csv_mode:
+            x_values = list_to_csv_string(x_values_dropdown)
+        xs = process_axis(x_opt, x_values, x_values_dropdown)
+
+        y_opt = self.current_axis_options[y_type]
+        if y_opt.choices is not None and not csv_mode:
+            y_values = list_to_csv_string(y_values_dropdown)
+        ys = process_axis(y_opt, y_values, y_values_dropdown)
+
+        z_opt = self.current_axis_options[z_type]
+        if z_opt.choices is not None and not csv_mode:
+            z_values = list_to_csv_string(z_values_dropdown)
+        zs = process_axis(z_opt, z_values, z_values_dropdown)
+
+        # this could be moved to common code, but unlikely to be ever triggered anywhere else
+        Image.MAX_IMAGE_PIXELS = None  # disable check in Pillow and rely on check below to allow large custom image sizes
+        grid_mp = round(len(xs) * len(ys) * len(zs) * p.width * p.height / 1000000)
+        assert grid_mp < opts.img_max_size_mp, f"Error: Resulting grid would be too large ({grid_mp} MPixels) (max configured size is {opts.img_max_size_mp} MPixels)"
+
+        def fix_axis_seeds(axis_opt, axis_list):
+            if axis_opt.label in ["Seed", "Var. seed"]:
+                return [int(random.randrange(4294967294)) if val is None or val == "" or val == -1 else val for val in axis_list]
+            else:
+                return axis_list
+
+        if not no_fixed_seeds:
+            xs = fix_axis_seeds(x_opt, xs)
+            ys = fix_axis_seeds(y_opt, ys)
+            zs = fix_axis_seeds(z_opt, zs)
+
+        if x_opt.label == "Steps":
+            total_steps = sum(xs) * len(ys) * len(zs)
+        elif y_opt.label == "Steps":
+            total_steps = sum(ys) * len(xs) * len(zs)
+        elif z_opt.label == "Steps":
+            total_steps = sum(zs) * len(xs) * len(ys)
+        else:
+            total_steps = p.steps * len(xs) * len(ys) * len(zs)
+
+        if isinstance(p, StableDiffusionProcessingTxt2Img) and p.enable_hr:
+            if x_opt.label == "Hires steps":
+                total_steps += sum(xs) * len(ys) * len(zs)
+            elif y_opt.label == "Hires steps":
+                total_steps += sum(ys) * len(xs) * len(zs)
+            elif z_opt.label == "Hires steps":
+                total_steps += sum(zs) * len(xs) * len(ys)
+            elif p.hr_second_pass_steps:
+                total_steps += p.hr_second_pass_steps * len(xs) * len(ys) * len(zs)
+            else:
+                total_steps *= 2
+
+        total_steps *= p.n_iter
+
+        image_cell_count = p.n_iter * p.batch_size
+        cell_console_text = f"; {image_cell_count} images per cell" if image_cell_count > 1 else ""
+        plural_s = "s" if len(zs) > 1 else ""
+        logger.info(f"X/Y/Z plot will create {len(xs) * len(ys) * len(zs) * image_cell_count} images on {len(zs)} {len(xs)}x{len(ys)} grid{plural_s}{cell_console_text}. (Total steps to process: {total_steps})")
+        shared.total_tqdm.updateTotal(total_steps)
+
+        state.xyz_plot_x = AxisInfo(x_opt, xs)
+        state.xyz_plot_y = AxisInfo(y_opt, ys)
+        state.xyz_plot_z = AxisInfo(z_opt, zs)
+
+        # If one of the axes is very slow to change between (like SD model
+        # checkpoint), then make sure it is in the outer iteration of the nested
+        # `for` loop.
+        first_axes_processed = "z"
+        second_axes_processed = "y"
+        if x_opt.cost > y_opt.cost and x_opt.cost > z_opt.cost:
+            first_axes_processed = "x"
+            if y_opt.cost > z_opt.cost:
+                second_axes_processed = "y"
+            else:
+                second_axes_processed = "z"
+        elif y_opt.cost > x_opt.cost and y_opt.cost > z_opt.cost:
+            first_axes_processed = "y"
+            if x_opt.cost > z_opt.cost:
+                second_axes_processed = "x"
+            else:
+                second_axes_processed = "z"
+        elif z_opt.cost > x_opt.cost and z_opt.cost > y_opt.cost:
+            first_axes_processed = "z"
+            if x_opt.cost > y_opt.cost:
+                second_axes_processed = "x"
+            else:
+                second_axes_processed = "y"
+
+        grid_infotext = [None] * (1 + len(zs))
+
+        def cell(x, y, z, ix, iy, iz):
+            if shared.state.interrupted or state.stopping_generation:
+                return Processed(p, [], p.seed, "")
+
+            pc = copy(p)
+            pc.styles = pc.styles[:]
+            x_opt.apply(pc, x, xs)
+            y_opt.apply(pc, y, ys)
+            z_opt.apply(pc, z, zs)
+
+            xdim = len(xs) if vary_seeds_x else 1
+            ydim = len(ys) if vary_seeds_y else 1
+
+            if vary_seeds_x:
+                pc.seed += ix
+            if vary_seeds_y:
+                pc.seed += iy * xdim
+            if vary_seeds_z:
+                pc.seed += iz * xdim * ydim
+
+            try:
+                res = process_images(pc)
+            except Exception as e:
+                errors.display(e, "generating image for xyz plot")
+
+                res = Processed(p, [], p.seed, "")
+
+            # Sets subgrid infotexts
+            subgrid_index = 1 + iz
+            if grid_infotext[subgrid_index] is None and ix == 0 and iy == 0:
+                pc.extra_generation_params = copy(pc.extra_generation_params)
+                pc.extra_generation_params["Script"] = self.title()
+
+                if x_opt.label != "Nothing":
+                    pc.extra_generation_params["X Type"] = x_opt.label
+                    pc.extra_generation_params["X Values"] = x_values
+                    if x_opt.label in ["Seed", "Var. seed"] and not no_fixed_seeds:
+                        pc.extra_generation_params["Fixed X Values"] = ", ".join([str(x) for x in xs])
+
+                if y_opt.label != "Nothing":
+                    pc.extra_generation_params["Y Type"] = y_opt.label
+                    pc.extra_generation_params["Y Values"] = y_values
+                    if y_opt.label in ["Seed", "Var. seed"] and not no_fixed_seeds:
+                        pc.extra_generation_params["Fixed Y Values"] = ", ".join([str(y) for y in ys])
+
+                grid_infotext[subgrid_index] = processing.create_infotext(pc, pc.all_prompts, pc.all_seeds, pc.all_subseeds)
+
+            # Sets main grid infotext
+            if grid_infotext[0] is None and ix == 0 and iy == 0 and iz == 0:
+                pc.extra_generation_params = copy(pc.extra_generation_params)
+
+                if z_opt.label != "Nothing":
+                    pc.extra_generation_params["Z Type"] = z_opt.label
+                    pc.extra_generation_params["Z Values"] = z_values
+                    if z_opt.label in ["Seed", "Var. seed"] and not no_fixed_seeds:
+                        pc.extra_generation_params["Fixed Z Values"] = ", ".join([str(z) for z in zs])
+
+                grid_infotext[0] = processing.create_infotext(pc, pc.all_prompts, pc.all_seeds, pc.all_subseeds)
+
+            return res
+
+        with SharedSettingsStackHelper():
+            processed = draw_xyz_grid(p, xs=xs, ys=ys, zs=zs, x_labels=[x_opt.format_value(p, x_opt, x) for x in xs], y_labels=[y_opt.format_value(p, y_opt, y) for y in ys], z_labels=[z_opt.format_value(p, z_opt, z) for z in zs], cell=cell, draw_legend=draw_legend, include_lone_images=include_lone_images, include_sub_grids=include_sub_grids, first_axes_processed=first_axes_processed, second_axes_processed=second_axes_processed, margin_size=margin_size)
+
+        # reset loading params to previous state
+        refresh_loading_params_for_xyz_grid()
+
+        if not processed.images:
+            # It broke, no further handling needed.
+            return processed
+
+        z_count = len(zs)
+
+        # Set the grid infotexts to the real ones with extra_generation_params (1 main grid + z_count sub-grids)
+        processed.infotexts[: 1 + z_count] = grid_infotext[: 1 + z_count]
+
+        if not include_lone_images:
+            # Don't need sub-images anymore, drop from list:
+            processed.images = processed.images[: z_count + 1]
+
+        def rearrange_image(original_image: Image.Image, target_count: int):
+            width, height = original_image.size
+            width_per_image = int(width // len(xs))
+
+            imgs_per_row = (len(xs) // target_count) + int(len(xs) % target_count != 0)
+            logger.info(f"Converting to {imgs_per_row}x{target_count} grid...")
+
+            new_width = width_per_image * imgs_per_row
+            new_height = height * target_count
+
+            new_image = Image.new("RGB", (new_width, new_height), "white")
+
+            for y in range(target_count):
+                row = original_image.crop(
+                    (
+                        y * (width_per_image * imgs_per_row),
+                        0,
+                        min(width, ((y + 1) * (width_per_image * imgs_per_row))),
+                        height,
+                    )
+                )
+                new_image.paste(row, (0, height * y))
+
+            return new_image
+
+        if row_count == 0:  # Automatic
+            if y_type + z_type > 0:
+                target_count = 1
+            else:
+                target_count = int(sqrt(len(xs)))
+                if target_count > 1:
+                    logger.debug(f"Automatically split into {target_count} rows")
+        else:
+            if y_type + z_type == 0:
+                target_count = row_count
+            else:
+                target_count = 1
+                if row_count > 1:
+                    logger.error("Row Count currently only supports X-Axis...")
+
+        if target_count > 1:
+            processed.images[0] = rearrange_image(processed.images[0], target_count)
+
+        if opts.grid_save:
+            # Auto-save main and sub-grids:
+            grid_count = z_count + 1 if z_count > 1 else 1
+            for g in range(grid_count):
+                # TODO: See previous comment about intentional data misalignment.
+                adj_g = g - 1 if g > 0 else g
+                images.save_image(processed.images[g], p.outpath_grids, "xyz_grid", info=processed.infotexts[g], extension=opts.grid_format, prompt=processed.all_prompts[adj_g], seed=processed.all_seeds[adj_g], grid=True, p=processed)
+                if not include_sub_grids:  # if not include_sub_grids then skip saving after the first grid
+                    break
+
+        if not include_sub_grids:
+            # Done with sub-grids, drop all related information:
+            for _ in range(z_count):
+                del processed.images[1]
+                del processed.all_prompts[1]
+                del processed.all_seeds[1]
+                del processed.infotexts[1]
+
+        return processed

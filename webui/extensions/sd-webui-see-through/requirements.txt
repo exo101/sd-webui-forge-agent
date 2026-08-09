@@ -1,0 +1,32 @@
+# See-Through Plugin Dependencies
+# 基础依赖
+numpy
+opencv-python
+Pillow
+torchvision
+transformers
+
+# See-Through核心依赖
+segment-anything
+groundingdino-py
+diffusers
+accelerate
+omegaconf
+einops
+pytorch-lightning
+
+# 图像处理
+opencv-contrib-python
+scikit-image
+imageio
+
+# COCO数据集工具
+pycocotools
+
+# PSD文件处理
+psd-tools
+
+# 可选依赖（根据需要安装）
+# detectron2  # 用于身体解析
+# mmcv       # 用于动漫实例分割
+# mmdet      # 用于动漫实例分割

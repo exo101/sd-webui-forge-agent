@@ -1,0 +1,28 @@
+# TRELLIS.2 Extension Dependencies
+# Install these packages to use the extension
+
+# Core dependencies (should already be installed in SD WebUI)
+torch>=2.6.0
+torchvision>=0.15.0
+gradio>=4.40.0
+numpy>=1.24.0
+Pillow>=9.5.0
+opencv-python>=4.8.0
+
+# TRELLIS.2 specific dependencies
+huggingface-hub>=0.20.0
+transformers>=4.35.0
+diffusers>=0.24.0
+accelerate>=0.25.0
+
+# Git-based dependencies
+utils3d @ git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8
+git+https://github.com/microsoft/MoGe.git
+
+# 3D processing libraries (install from TRELLIS.2 project)
+# These need to be compiled/installed from source:
+# - o-voxel
+# - nvdiffrast
+# - nvdiffrec
+# - CuMesh
+# - FlexGEMM

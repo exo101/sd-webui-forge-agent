@@ -1,0 +1,3 @@
+__creatures/mtg/cephalid/cephalid_general__
+__creatures/mtg/cephalid/cephalid_rogue__
+__creatures/mtg/cephalid/cephalid_wizard__

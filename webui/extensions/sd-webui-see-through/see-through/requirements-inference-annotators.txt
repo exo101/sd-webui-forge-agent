@@ -1,0 +1,12 @@
+# Annotator extras: detectron2 (bizarre_tagger) + SAM2 (lang_sam)
+# Requires C++ compiler + torch already installed.
+# Install (two steps, order matters for iopath compatibility):
+#   pip install --no-build-isolation -r requirements-inference-annotators.txt
+#   pip install --no-build-isolation "sam-2 @ git+https://github.com/facebookresearch/segment-anything-2@c2ec8e14a185632b0a5d8b161928ceb50197eddc"
+#   (--no-build-isolation needed because detectron2's setup.py imports torch)
+#
+# Step 1: detectron2 + deps (installs iopath<0.1.10 via fvcore)
+detectron2 @ git+https://github.com/facebookresearch/detectron2@a25898a09d6ee232767647e92c6177fb1c642369
+hydra-core
+pydantic>=2.9.2
+uvloop
