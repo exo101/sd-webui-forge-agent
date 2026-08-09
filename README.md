@@ -210,7 +210,6 @@ models/diffusion_models/
 └── flux-2-klein-9b-fp8.safetensors
 
 models/text_encoder/
-├── qwen_3_8b_fp8mixed.safetensors
 └── qwen_3_4b.safetensors
 
 models/vae/
@@ -289,7 +288,6 @@ models/VAE/
 | 插件名称 | 功能说明 |
 |---------|---------|
 | **🎨 美学提升** | Qwen3.5 图像与视频美学质量分析 |
-| **🎬 分镜助手** | 专业的剧本与分镜管理系统，支持多故事、多角色管理，可视化分镜墙编排 |
 | **📷 相机角度选择器** | 3D 可视化多角度提示词选择，支持方位角、高程角、距离调整 |
 | **🎥 多媒体处理** | Qwen3-TTS 语音合成、唇形同步多媒体处理 |
 | **👁️ 图像识别与对话** | 基于 Qwen3.5 视觉模型的图像识别与对话功能 |
@@ -298,7 +296,6 @@ models/VAE/
 | **🌄 无边图像浏览** | 快速浏览和管理历史生成图片 |
 | **🖼️ 图像对比** | 并排对比两张生成图片的差异 |
 
-**使用参考**：[WebUI分镜助手插件与Qwen3-TTS协作教程](https://www.bilibili.com/video/BV1foQzBMErp/)
 
 ### 优化插件
 
@@ -330,7 +327,6 @@ models/VAE/
 ## 📚 学习资源
 
 - **视频教程**: [B站教程合集](https://www.bilibili.com/video/BV1KfXyBTEXb)
-- **分镜助手教程**: [B站分镜教程](https://www.bilibili.com/video/BV1foQzBMErp/)
 - **Wiki**: [Haoming02 Wiki](https://github.com/Haoming02/sd-webui-forge-classic/wiki)
 
 ---
