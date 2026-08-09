@@ -20,8 +20,9 @@ __pycache__
 /extensions/**/__pycache__/
 /extensions-builtin/**/pose/
 
-# HuggingFace 缓存
-/backend/huggingface/
+# HuggingFace 缓存（仅排除大权重文件，保留 __init__.py 和配置）
+/backend/huggingface/**/model.safetensors
+/backend/huggingface/**/model-*.safetensors
 
 # 模型权重 (包括扩展内的)
 /models/**/*
