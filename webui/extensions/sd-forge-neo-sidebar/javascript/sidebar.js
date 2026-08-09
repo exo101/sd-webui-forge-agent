@@ -302,11 +302,6 @@
                 console.log(`[NEO] ✗ Skipping topbar item "${item.label}" (not installed)`);
                 continue;
             }
-            // Check visibility state: show by default, hide only if explicitly saved as false
-            const visibleState = isItemVisibleFromState(item.id);
-            if (visibleState === false) {
-                continue;
-            }
             const btn = createToolbarButton(item, 'topbar');
             topbarElement.appendChild(btn);
         }
@@ -1071,11 +1066,6 @@
             }
             if (!isItemInstalled(item)) {
                 console.log(`[NEO] ✗ Skipping topbar item "${item.label}" (not installed)`);
-                continue;
-            }
-            // Check visibility state: show by default, hide only if explicitly saved as false
-            const visibleState = isItemVisibleFromState(item.id);
-            if (visibleState === false) {
                 continue;
             }
             const btn = createToolbarButton(item, 'topbar');
@@ -2165,22 +2155,6 @@
         }
 
         console.log('[NEO] Initializing...');
-
-        // Fix corrupted visibility state: if no topbar item is explicitly saved as visible,
-        // clear the state so all items show by default
-        (function fixCorruptedState() {
-            const saved = loadVisibleItems();
-            if (!saved) return;
-            let hasAnyTopbarVisible = false;
-            for (const item of TOPBAR_ITEMS) {
-                if (item.type === 'separator') continue;
-                if (saved[item.id] === true) { hasAnyTopbarVisible = true; break; }
-            }
-            if (!hasAnyTopbarVisible && Object.keys(saved).length > 0) {
-                console.log('[NEO] Migration: cleared visibility state so all items show by default');
-                localStorage.removeItem(STORAGE_KEY_VISIBLE_ITEMS);
-            }
-        })();
 
         // Apply saved item order from localStorage
         applySavedOrder();
