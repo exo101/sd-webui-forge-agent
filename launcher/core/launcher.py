@@ -154,7 +154,7 @@ def build_bat(args: list[str], proxy: str = "", skip_update: bool = False, gpu_d
     
     # 先设置 PYTHON 环境变量，确保 webui.bat 使用启动器管理的 Python
     # 同时设置 SKIP_VENV=1，跳过旧 venv（旧 venv 可能是不同 Python 版本创建的）
-    python_lines = f'set PYTHON={get_python_exe()}\nset SKIP_VENV=1\n'
+    python_lines = f'set PYTHON={get_python_exe()}\nset SKIP_VENV=1\nset PYTHONIOENCODING=utf-8\n'
     # 如果 environment.bat 存在则加载，否则跳过
     env_lines = ""
     if os.path.exists(ENV_BAT):

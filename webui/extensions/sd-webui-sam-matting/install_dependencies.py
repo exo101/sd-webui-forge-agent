@@ -19,6 +19,10 @@ import sys
 import subprocess
 from pathlib import Path
 
+# 解决 Windows GBK 编码下 emoji 打印报错的问题
+if sys.stdout.encoding and sys.stdout.encoding.lower() == "gbk":
+    sys.stdout.reconfigure(encoding="utf-8")
+
 
 def get_python_executable():
     """获取当前 Python 可执行文件路径"""
