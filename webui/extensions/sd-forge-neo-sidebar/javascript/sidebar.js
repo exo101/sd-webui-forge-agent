@@ -1341,7 +1341,19 @@
                     }
                 }
             } else if (item.type === 'tab' || item.type === 'subtab' || item.type === 'extra_tab') {
-                // For top toolbar tab items, just trigger a rebuild after all items are processed
+                // Show/hide the tab panel on the main page (permanently show)
+                if (item.type === 'tab') {
+                    const panel = document.getElementById('tab_' + item.tabId);
+                    if (panel) {
+                        if (visible) {
+                            panel.style.display = '';
+                            panel.classList.remove('neo-sidebar-hidden-panel');
+                        } else {
+                            panel.style.display = 'none';
+                            panel.classList.add('neo-sidebar-hidden-panel');
+                        }
+                    }
+                }
                 return;
             }
         }
@@ -1618,6 +1630,29 @@
                         }
                         console.log(`[NEO] ✓ (retry) Hidden accordion "${item.label}"`);
                     }
+                }
+            }
+        }
+    }
+
+    // ============================================================
+    // Apply topbar panel visibility state (permanently show/hide tab panels)
+    // ============================================================
+    function applyTopbarPanelState() {
+        const saved = loadVisibleItems();
+        if (!saved) return;
+        for (const item of TOPBAR_ITEMS) {
+            if (item.type !== 'tab' || !item.tabId) continue;
+            if (!isItemInstalled(item)) continue;
+            const visible = saved[item.id] === true;
+            const panel = document.getElementById('tab_' + item.tabId);
+            if (panel) {
+                if (visible) {
+                    panel.style.display = '';
+                    panel.classList.remove('neo-sidebar-hidden-panel');
+                } else {
+                    panel.style.display = 'none';
+                    panel.classList.add('neo-sidebar-hidden-panel');
                 }
             }
         }
@@ -2156,11 +2191,17 @@
         createBottombar();
         hideTabs();
         hideAllPanels();
+        applyTopbarPanelState();
 
         setTimeout(retryHidePanels, 1500);
         setTimeout(retryHidePanels, 3000);
         setTimeout(retryHidePanels, 6000);
         setTimeout(retryHidePanels, 10000);
+
+        setTimeout(applyTopbarPanelState, 1500);
+        setTimeout(applyTopbarPanelState, 3000);
+        setTimeout(applyTopbarPanelState, 6000);
+        setTimeout(applyTopbarPanelState, 10000);
 
         setInterval(function () {
             const savedVisibleState = loadVisibleItems();
