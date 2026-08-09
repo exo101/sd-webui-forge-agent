@@ -333,15 +333,12 @@ class GitPullWorker(QThread):
         self.log_line.emit("=" * 60)
 
         try:
-            # Step 1: Check if it's a git repository
-            r1 = subprocess.run(
-                [git_cmd, "rev-parse", "--git-dir"],
-                capture_output=True, text=True, timeout=10,
-                cwd=BASE_DIR, env=git_env,
-                creationflags=subprocess.CREATE_NO_WINDOW
-            )
-            if r1.returncode != 0:
-                self.log_line.emit("[WARN] Not a git repository, cannot update")
+            # Step 1: Check if it's a git repository using Python first
+            git_dir = os.path.join(BASE_DIR, ".git")
+            if not os.path.isdir(git_dir):
+                self.log_line.emit("[WARN] Not a git repository (.git not found)")
+                self.log_line.emit("[WARN] This project was likely downloaded as a ZIP, not cloned with git")
+                self.log_line.emit("[WARN] To enable updates, run: git clone https://github.com/exo101/sd-webui-forge-neo-v3.git")
                 self.finished.emit(False, "Not a git repository")
                 return
 
