@@ -236,8 +236,7 @@ models/VAE/
 
 ```
 models/Stable-diffusion/
-├── svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors
-└── svdq-fp4_r128-qwen-image-lightningv1.1-8steps.safetensors
+└── qwen_image_edit_2511_int8_convrot.safetensors
 
 models/text_encoder/
 └── qwen_2.5_vl_7b_fp8_scaled.safetensors

@@ -105,10 +105,6 @@ class ModelGuideTab(QWidget):
         krea2_section = self._create_krea2_section()
         content_layout.addWidget(krea2_section)
         
-        # Wan 2.2
-        wan_section = self._create_wan_section()
-        content_layout.addWidget(wan_section)
-        
         # ControlNet
         controlnet_section = self._create_controlnet_section()
         content_layout.addWidget(controlnet_section)
@@ -224,12 +220,6 @@ class ModelGuideTab(QWidget):
                 <td style="padding:8px;border:1px solid #374151;">12GB+</td>
                 <td style="padding:8px;border:1px solid #374151;">3D Gaussian Splatting 模型，支持图像转3D</td>
             </tr>
-            <tr>
-                <td style="padding:8px;border:1px solid #374151;"><b>Wan 2.2</b></td>
-                <td style="padding:8px;border:1px solid #374151;">视频生成</td>
-                <td style="padding:8px;border:1px solid #374151;">16GB+</td>
-                <td style="padding:8px;border:1px solid #374151;">文生视频模型，支持高/低噪声切换</td>
-            </tr>
             <tr style="background:#111827;">
                 <td style="padding:8px;border:1px solid #374151;"><b>Qwen-Image</b></td>
                 <td style="padding:8px;border:1px solid #374151;">图像生成</td>
@@ -264,7 +254,7 @@ class ModelGuideTab(QWidget):
                 <td style="padding:8px;border:1px solid #374151;"><b>Flux.2-Klein</b></td>
                 <td style="padding:8px;border:1px solid #374151;">图像生成</td>
                 <td style="padding:8px;border:1px solid #374151;">12GB+</td>
-                <td style="padding:8px;border:1px solid #374151;">多模态编辑模型，4B/9B 版本</td>
+                <td style="padding:8px;border:1px solid #374151;">多模态编辑模型</td>
             </tr>
             <tr>
                 <td style="padding:8px;border:1px solid #374151;"><b>Flux</b></td>
@@ -318,7 +308,7 @@ class ModelGuideTab(QWidget):
         
         layout.addWidget(self._create_subsection_title("模型组件结构"))
         layout.addWidget(self._create_description("需要以下文件才能正常运行："))
-        layout.addWidget(self._create_code_block("""models/diffusion_models/
+        layout.addWidget(self._create_code_block("""models/Stable-diffusion/
 └── your_model.safetensors      # 主模型文件（Checkpoint）
 
 models/vae/
@@ -341,7 +331,7 @@ models/vae/
         
         layout.addWidget(self._create_subsection_title("模型组件结构"))
         layout.addWidget(self._create_description("同样只需一个 checkpoint 文件："))
-        layout.addWidget(self._create_code_block("""models/diffusion_models/
+        layout.addWidget(self._create_code_block("""models/Stable-diffusion/
 └── xl-lustrious_4.0.safetensors  # SDXL主模型"""))
         
 
@@ -359,7 +349,7 @@ models/vae/
         
         layout.addWidget(self._create_subsection_title("模型组件结构"))
         layout.addWidget(self._create_description("Flux 模型采用 DiT 架构，组件分离存储："))
-        layout.addWidget(self._create_code_block("""models/diffusion_models/
+        layout.addWidget(self._create_code_block("""models/Stable-diffusion/
 └── flux1-dev-fp8.safetensors    # 或 flux-schnell.safetensors
 
 models/text_encoder/         # T5 文本编码器
@@ -386,13 +376,11 @@ models/VAE/                  # Flux 专用 VAE（可选）
         layout.addWidget(self._create_description("Flux.2-Klein 是多模态编辑模型"))
         
         layout.addWidget(self._create_subsection_title("模型组件结构"))
-        layout.addWidget(self._create_code_block("""models/diffusion_models/
-├── flux2-klein-4b.safetensors   # 4B 轻量版
-└── flux-2-klein-9b-fp8.safetensors   # 9B 标准版
+        layout.addWidget(self._create_code_block("""models/Stable-diffusion/
+└── flux-2-klein-9b-fp8.safetensors
 
 models/text_encoder/              # 文本编码器
-├── qwen_3_8b_fp8mixed.safetensors
-└── qwen_3_4b.safetensors
+└── qwen_3_8b_fp8mixed.safetensors
 
 models/vae/
 └── flux2-vae.safetensors"""))
@@ -412,7 +400,7 @@ models/vae/
         layout.addWidget(self._create_description("Ernie-Image 是百度文心一言图像模型"))
         
         layout.addWidget(self._create_subsection_title("模型组件结构"))
-        layout.addWidget(self._create_code_block("""models/diffusion_models/
+        layout.addWidget(self._create_code_block("""models/Stable-diffusion/
 ├── ernie-image-turbo.safetensors    # Ernie-Image Turbo 版本
 └── ernie-image.safetensors          # Ernie-Image 标准版
 
@@ -439,7 +427,7 @@ models/VAE/
         layout.addWidget(self._create_description("Anima 是二次元高质量专用模型"))
         
         layout.addWidget(self._create_subsection_title("模型组件结构"))
-        layout.addWidget(self._create_code_block("""models/diffusion_models/
+        layout.addWidget(self._create_code_block("""models/Stable-diffusion/
 └── anima.safetensors            # Anima 主模型
 
 models/text_encoder/              # 文本编码器
@@ -462,9 +450,8 @@ models/VAE/
         layout.addWidget(self._create_section_title("🤖 Qwen-Image 模型"))
         
         layout.addWidget(self._create_subsection_title("模型组件结构"))
-        layout.addWidget(self._create_code_block("""models/diffusion_models/
-├── svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors  # 编辑模型
-└── svdq-fp4_r128-qwen-image-lightningv1.1-8steps.safetensors  # 文生图模型
+        layout.addWidget(self._create_code_block("""models/Stable-diffusion/
+└── qwen_image_edit_2511_int8_convrot.safetensors  # 主模型
 
 models/text_encoder/              # 文本编码器
 └── qwen_2.5_vl_7b_fp8_scaled.safetensors   # 通义千问编码器
@@ -518,7 +505,7 @@ models/VAE/
         layout.addWidget(self._create_section_title("🌟 Zimage 模型"))
         
         layout.addWidget(self._create_subsection_title("模型组件结构"))
-        layout.addWidget(self._create_code_block("""models/diffusion_models/
+        layout.addWidget(self._create_code_block("""models/Stable-diffusion/
 └── z_image_turbo_bf16.safetensors  # Zimage 模型
 
 models/text_encoder/              # 文本编码器
@@ -526,34 +513,6 @@ models/text_encoder/              # 文本编码器
 
 models/VAE/
 └── flux-vae.safetensors  # Flux VAE"""))
-        
-
-        
-        return container
-    
-    def _create_wan_section(self) -> QWidget:
-        """创建 Wan 2.2 部分"""
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
-        
-        layout.addWidget(self._create_section_title("🎬 Wan 2.2 视频模型"))
-        
-        layout.addWidget(self._create_subsection_title("文生视频模型组件结构"))
-        layout.addWidget(self._create_code_block("""models/diffusion_models/
-├── wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors  # 文生视频模型（高噪声）
-└── wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors   # 文生视频模型（低噪声）
-
-models/text_encoder/   # 文本编码器          
-├── umt5-xx-fp8-scaled.safetensors  # 文本编码器
-└── umt5-xxl-enc-bf16.safetensors    # 文本编码器
-
-models/VAE/
-└── wan_2.2_vae.safetensors      # Wan 2.2 专用 VAE"""))
-        
-        layout.addWidget(self._create_note("""• 高噪声模型：适合需要更多创意的视频生成<br>
-• 低噪声模型：适合需要更稳定输出的视频生成""", "tip"))
         
 
         
