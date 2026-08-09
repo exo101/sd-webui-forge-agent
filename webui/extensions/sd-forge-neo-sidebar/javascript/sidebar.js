@@ -180,6 +180,19 @@
             return document.getElementById(`tab_${item.tabId}-button`) !== null;
         }
 
+        if (item.type === 'subtab') {
+            return document.getElementById(`tab_${item.tabId}-button`) !== null;
+        }
+
+        if (item.type === 'extra_tab') {
+            if (item.tabIds && item.tabIds.length > 0) {
+                return item.tabIds.some(function (id) {
+                    return document.getElementById(`tab_${id}-button`) !== null;
+                });
+            }
+            return true;
+        }
+
         if (item.type === 'accordion') {
             return findAccordionContainers(item.match).length > 0;
         }
@@ -193,6 +206,10 @@
                 return item.elemIds.some(function (id) { return document.getElementById(id); });
             }
             return true;
+        }
+
+        if (item.type === 'model_components') {
+            return true; // always show, custom UI element
         }
 
         return true; // unknown type, show it
