@@ -9,7 +9,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QProcess
 from .theme import COLORS
 from core.env_checker import (
-    check_python, check_git, check_cuda, check_vram,
+    check_python, check_git, ensure_git_installed,
+    check_cuda, check_vram,
     check_webui_installed, get_webui_version,
     check_all_system_deps, check_all_gpus,
 )
@@ -21,7 +22,7 @@ class CheckWorker(QThread):
     def run(self):
         data = {
             "python":   check_python(),
-            "git":      check_git(),
+            "git":      ensure_git_installed(),
             "cuda":     check_cuda(),
             "vram":     check_vram(),
             "webui":    check_webui_installed(),
