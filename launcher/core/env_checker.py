@@ -1,6 +1,7 @@
 """环境检测 - Python/Git/CUDA/显存等"""
 import os
 import subprocess
+import sys
 import re
 from .paths import BASE_DIR, PYTHON_EXE, GIT_EXE
 
@@ -23,6 +24,48 @@ def check_python() -> dict:
     code, out = _run([PYTHON_EXE, "--version"])
     ok = code == 0
     return {"ok": ok, "version": out if ok else "未找到", "path": PYTHON_EXE}
+
+
+def ensure_python_installed() -> dict:
+    """
+    检查 Python 是否可用，如果不可用则尝试从 launcher/python-3.13.12-amd64.exe 自动安装。
+    
+    Returns:
+        dict: {"ok": bool, "message": str}
+    """
+    # 先检查 Python 是否已存在
+    code, out = _run([PYTHON_EXE, "--version"])
+    if code == 0:
+        return {"ok": True, "message": f"Python 已就绪: {out.strip()}"}
+    
+    # Python 不存在，查找安装包
+    installer = os.path.join(BASE_DIR, "launcher", "python-3.13.12-amd64.exe")
+    if not os.path.exists(installer):
+        return {"ok": False, "message": f"未找到 Python 安装包，请将 python-3.13.12-amd64.exe 放入 launcher 目录"}
+    
+    # 执行静默安装
+    python_dir = os.path.join(BASE_DIR, "system", "python")
+    os.makedirs(python_dir, exist_ok=True)
+    
+    try:
+        result = subprocess.run(
+            [installer, "/quiet", f"TargetDir={python_dir}", "InstallAllUsers=0", "PrependPath=0",
+             "Include_launcher=0", "InstallLauncherAllUsers=0", "AssociateFiles=0", "Shortcuts=0"],
+            capture_output=True, text=True, timeout=300
+        )
+        if result.returncode != 0:
+            return {"ok": False, "message": f"Python 安装失败 (code={result.returncode}): {result.stderr}"}
+        
+        # 验证安装结果
+        code2, out2 = _run([PYTHON_EXE, "--version"])
+        if code2 == 0:
+            return {"ok": True, "message": f"Python 安装成功: {out2.strip()}"}
+        else:
+            return {"ok": False, "message": "Python 安装完成但无法运行，请检查 system/python 目录"}
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "message": "Python 安装超时（超过 5 分钟），请手动安装"}
+    except Exception as e:
+        return {"ok": False, "message": f"Python 安装异常: {e}"}
 
 
 def check_git() -> dict:
