@@ -1,0 +1,13 @@
+button.reset {
+    min-width: min(100px,100%);
+}
+
+button.compact_button {
+    min-width: min(100px,100%);
+}
+
+#model_converter_model_name .options,
+#model_converter_model_name ul.options {
+    min-width: min(80vw, 72rem) !important;
+    max-width: min(90vw, 96rem) !important;
+}

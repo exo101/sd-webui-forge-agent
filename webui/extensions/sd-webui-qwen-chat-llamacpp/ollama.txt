@@ -1,0 +1,11 @@
+# Qwen 图像识别与语言交互插件依赖
+
+# 本插件主要通过 Ollama API 与 Qwen 模型交互
+# 无需额外的 Python 依赖库
+
+# 前置要求:
+# 1. 安装 Ollama: https://ollama.com/
+# 2. 下载 Qwen 模型:
+#    ollama pull qwen3.5:9b
+#    或
+#    ollama pull qwen3-vl:8b

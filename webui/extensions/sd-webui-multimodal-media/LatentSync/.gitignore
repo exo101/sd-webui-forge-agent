@@ -1,0 +1,52 @@
+# PyCharm files
+.idea/
+
+# macOS dir files
+.DS_Store
+
+# VS Code configuration dir
+.vscode/
+
+# Jupyter Notebook cache files
+.ipynb_checkpoints/
+*.ipynb
+
+# Python cache files
+__pycache__/
+
+# folders
+wandb/
+*debug*
+/debug
+/output
+/validation
+/test
+/models/
+/venv/
+/detect_results/
+/temp
+
+# checkpoint files
+*.safetensors
+*.ckpt
+*.pt
+
+# data files
+*.mp4
+*.avi
+*.wav
+*.png
+*.jpg
+*.jpeg
+*.csv
+*.pdf
+
+# log files
+*.log
+
+!/latentsync/utils/mask*.png
+/checkpoints/
+!/assets/*
+!/docs/*
+!/internal/*.png
+.cog/

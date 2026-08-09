@@ -1,0 +1,91 @@
+#txt2img_size_toolbox, #img2img_size_toolbox {
+    min-width: unset !important;
+    gap: 0;
+}
+
+#txt2img_ratio, #img2img_ratio {
+    padding: 0px;
+    min-width: unset;
+    max-width: fit-content;
+}
+
+#txt2img_ratio select, #img2img_ratio select {
+    background: var(--background-fill-primary);
+    border: 1px solid var(--block-border-color);
+    color: var(--block-label-text-color);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: none;
+    tab-size: 4;
+    font-size: 14px;
+    line-height: 1.4;
+    box-sizing: border-box;
+    position: relative;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    padding-right: 1px;
+    margin-bottom: 10px;
+    padding-left: 2px;
+    text-align: center;
+    min-width: 2.5em;
+}
+
+.arh-btn-row button {
+    min-width: fit-content;
+}
+
+/* ============================================================
+   Graphical Aspect Ratio Shape Buttons
+   ============================================================ */
+.arh-shape-buttons {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 0;
+    justify-content: flex-start;
+}
+.arh-shape-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    min-width: 52px;
+    user-select: none;
+}
+.arh-shape-btn:hover {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.4);
+    box-shadow: 0 0 6px rgba(59, 130, 246, 0.15);
+}
+.arh-shape-btn:active {
+    transform: scale(0.95);
+}
+.arh-shape-rect {
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.arh-shape-btn:hover .arh-shape-rect {
+    border-color: #93c5fd;
+    background: rgba(59, 130, 246, 0.15);
+}
+.arh-shape-label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+}
+.arh-shape-btn:hover .arh-shape-label {
+    color: #93c5fd;
+}

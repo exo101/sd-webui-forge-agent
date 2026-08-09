@@ -1,0 +1,29 @@
+{
+  "name": "sd-webui-trellis2",
+  "description": "TRELLIS.2 - Image to 3D Generation Extension",
+  "version": "1.0.0",
+  "author": "SD WebUI Forge Community",
+  "license": "MIT",
+  "repository": "https://github.com/microsoft/TRELLIS.2",
+  "dependencies": [
+    "torch>=2.6.0",
+    "gradio>=4.40.0",
+    "huggingface-hub>=0.20.0",
+    "transformers>=4.35.0",
+    "diffusers>=0.24.0"
+  ],
+  "trellis2_version": "4B-2025",
+  "model_url": "https://huggingface.co/microsoft/TRELLIS.2-4B",
+  "features": [
+    "Image to 3D generation",
+    "High resolution output (up to 1536³)",
+    "PBR material support",
+    "Arbitrary topology handling",
+    "OBJ and GLB export"
+  ],
+  "requirements": {
+    "gpu_memory": "24GB+",
+    "python_version": "3.10+",
+    "cuda_version": "12.4+"
+  }
+}

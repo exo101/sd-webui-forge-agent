@@ -1,0 +1,46 @@
+model:
+  audio_encoder: # input (1, 80, 52)
+    in_channels: 1
+    block_out_channels: [32, 64, 128, 256, 512, 1024, 2048]
+    downsample_factors: [[2, 1], 2, 2, 1, 2, 2, [2, 3]]
+    attn_blocks: [0, 0, 0, 1, 1, 0, 0]
+    dropout: 0.0
+  visual_encoder: # input (48, 128, 256)
+    in_channels: 48
+    block_out_channels: [64, 128, 256, 256, 512, 1024, 2048, 2048]
+    downsample_factors: [[1, 2], 2, 2, 2, 2, 2, 2, 2]
+    attn_blocks: [0, 0, 0, 0, 1, 1, 0, 0]
+    dropout: 0.0
+
+ckpt:
+  resume_ckpt_path: ""
+  inference_ckpt_path: checkpoints/stable_syncnet.pt
+  save_ckpt_steps: 2500
+
+data:
+  train_output_dir: debug/syncnet
+  num_val_samples: 2048
+  batch_size: 256 # 256
+  gradient_accumulation_steps: 1
+  num_workers: 12 # 12
+  latent_space: false
+  num_frames: 16
+  resolution: 256
+  train_fileslist: /mnt/bn/maliva-gen-ai-v2/chunyu.li/fileslist/data_v10_core.txt
+  train_data_dir: ""
+  val_fileslist: ""
+  val_data_dir: /mnt/bn/maliva-gen-ai-v2/chunyu.li/VoxCeleb2/high_visual_quality/val
+  audio_mel_cache_dir: /mnt/bn/maliva-gen-ai-v2/chunyu.li/audio_cache/mel
+  lower_half: true
+  audio_sample_rate: 16000
+  video_fps: 25
+
+optimizer:
+  lr: 1e-5
+  max_grad_norm: 1.0
+
+run:
+  max_train_steps: 10000000
+  validation_steps: 2500
+  mixed_precision_training: true
+  seed: 42

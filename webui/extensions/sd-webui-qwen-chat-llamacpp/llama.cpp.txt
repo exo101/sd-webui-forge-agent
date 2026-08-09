@@ -1,0 +1,12 @@
+在项目目录输入cmd进入命令行
+
+.\llama-server.exe --model .\models\HY-MT2-7B-Q6_K.gguf --host 0.0.0.0 --port 8080    （翻译模型）
+       
+.\llama-server.exe --model .\models\Qwen3.5-4B-Q6_K.gguf --host 0.0.0.0 --port 8080      （视觉模型）
+
+.\llama-server.exe --model .\models\Qwen3.5-4B-Q6_K.gguf --host 0.0.0.0 --port 8081 --n-gpu-layers -1   
+ 
+注：一个端口只能使用一个模型，如果同时使用两个就像这样--port 8081 --n-gpu-layers -1
+
+
+http://localhost:8080/

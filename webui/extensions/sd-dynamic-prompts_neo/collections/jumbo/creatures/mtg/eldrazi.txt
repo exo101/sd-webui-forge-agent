@@ -1,0 +1,4 @@
+__creatures/mtg/eldrazi/eldrazi__
+__creatures/mtg/eldrazi/eldrazi_drone__
+__creatures/mtg/eldrazi/eldrazi_insect__
+__creatures/mtg/eldrazi/eldrazi_processor__

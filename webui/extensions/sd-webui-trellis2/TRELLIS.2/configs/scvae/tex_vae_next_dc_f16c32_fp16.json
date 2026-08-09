@@ -1,0 +1,134 @@
+{
+    "models": {
+        "encoder": {
+            "name": "SparseUnetVaeEncoder",
+            "args": {
+                "in_channels": 6,
+                "model_channels": [64, 128, 256, 512, 1024],
+                "latent_channels": 32,
+                "num_blocks": [0, 4, 8, 16, 4],
+                "block_type": [
+                    "SparseConvNeXtBlock3d",
+                    "SparseConvNeXtBlock3d",
+                    "SparseConvNeXtBlock3d",
+                    "SparseConvNeXtBlock3d",
+                    "SparseConvNeXtBlock3d"                    
+                ],
+                "down_block_type": [
+                    "SparseResBlockS2C3d",
+                    "SparseResBlockS2C3d",
+                    "SparseResBlockS2C3d",
+                    "SparseResBlockS2C3d"                    
+                ],
+                "block_args": [
+                    {
+                        "use_checkpoint": true
+                    },
+                    {
+                        "use_checkpoint": true
+                    },
+                    {
+                        "use_checkpoint": false
+                    },
+                    {
+                        "use_checkpoint": false
+                    },
+                    {
+                        "use_checkpoint": false
+                    }
+                ],
+                "use_fp16": true
+            }
+        },
+        "decoder": {
+            "name": "SparseUnetVaeDecoder",
+            "args": {
+                "out_channels": 6,
+                "model_channels": [1024, 512, 256, 128, 64],
+                "latent_channels": 32,
+                "num_blocks": [4, 16, 8, 4, 0],
+                "block_type": [
+                    "SparseConvNeXtBlock3d",
+                    "SparseConvNeXtBlock3d",
+                    "SparseConvNeXtBlock3d",
+                    "SparseConvNeXtBlock3d",
+                    "SparseConvNeXtBlock3d"                    
+                ],
+                "up_block_type": [
+                    "SparseResBlockC2S3d",
+                    "SparseResBlockC2S3d",
+                    "SparseResBlockC2S3d",
+                    "SparseResBlockC2S3d"
+                ],
+                "block_args": [
+                    {
+                        "use_checkpoint": false
+                    },
+                    {
+                        "use_checkpoint": false
+                    },
+                    {
+                        "use_checkpoint": false
+                    },
+                    {
+                        "use_checkpoint": true
+                    },
+                    {
+                        "use_checkpoint": true
+                    }
+                ],
+                "use_fp16": true,
+                "pred_subdiv": false
+            }
+        }
+    },
+    "dataset": {
+        "name": "SparseVoxelPbrDataset",
+        "args": {
+            "resolution": 256,
+            "min_aesthetic_score": 4.5,
+            "max_active_voxels": 1000000,
+            "max_num_faces": 1000000,
+            "with_mesh": false,
+            "attrs": [
+                "base_color",
+                "metallic",
+                "roughness",
+                "alpha"
+            ]
+        }
+    },
+    "trainer": {
+        "name": "PbrVaeTrainer",
+        "args": {
+            "max_steps": 1000000,
+            "batch_size_per_gpu": 8,
+            "batch_split": 1,
+            "optimizer": {
+                "name": "AdamW",
+                "args": {
+                    "lr": 1e-4,
+                    "weight_decay": 0.0
+                }
+            },
+            "ema_rate": [
+                0.9999
+            ],
+            "fp16_mode": "inflat_all",
+            "fp16_scale_growth": 0.001,
+            "grad_clip": {
+                "name": "AdaptiveGradClipper",
+                "args": {
+                    "max_norm": 1.0,
+                    "clip_percentile": 95
+                }
+            },
+            "i_log": 500,
+            "i_sample": 10000,
+            "i_save": 10000,
+            "lambda_kl": 1e-6,
+            "loss_type": "l1",
+            "lambda_render": 0.0
+        }
+    }
+}
