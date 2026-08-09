@@ -163,8 +163,7 @@ cd sd-webui-forge-neo-v3
 
 ```
 webui/models/
-├── Stable-diffusion/          # Stable-diffusion（SD1.5 / SDXL）
-├── diffusion_models/          # DiT 架构模型（Flux、Anima、Qwen-Image、Wan）
+├── Stable-diffusion/          # 所有主模型（SD1.5、SDXL、Flux、Anima、Qwen-Image、Wan 等）
 ├── Lora/                      # LoRA 微调模型
 ├── VAE/                       # 变分自编码器
 ├── text_encoder/              # 文本编码器 ⚠️ 需手动下载
@@ -191,7 +190,7 @@ models/Stable-diffusion/
 Flux 采用 DiT 架构，组件分离存储：
 
 ```
-models/diffusion_models/
+models/Stable-diffusion/
 └── flux1-dev-fp8.safetensors
 
 models/text_encoder/          # T5 编码器（必需，约 4.7GB）
@@ -206,7 +205,7 @@ models/clip/                  # CLIP 编码器（必需，约 235MB）
 多模态编辑模型，支持图像编辑与生成：
 
 ```
-models/diffusion_models/
+models/Stable-diffusion/
 └── flux-2-klein-9b-fp8.safetensors
 
 models/text_encoder/
@@ -221,7 +220,7 @@ models/vae/
 二次元高质量专用模型：
 
 ```
-models/diffusion_models/
+models/Stable-diffusion/
 └── anima.safetensors
 
 models/text_encoder/
@@ -236,7 +235,7 @@ models/VAE/
 通义千问图像生成/编辑模型：
 
 ```
-models/diffusion_models/
+models/Stable-diffusion/
 ├── svdq-fp4_r128-qwen-image-edit-2509-lightningv2.0-8steps.safetensors
 └── svdq-fp4_r128-qwen-image-lightningv1.1-8steps.safetensors
 
@@ -252,7 +251,7 @@ models/VAE/
 视频生成模型：
 
 ```
-models/diffusion_models/
+models/Stable-diffusion/
 ├── wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors
 └── wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors
 
