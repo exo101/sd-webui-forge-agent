@@ -2,6 +2,7 @@
 import os
 import subprocess
 import sys
+import glob
 import re
 from .paths import BASE_DIR, PYTHON_EXE, GIT_EXE
 
@@ -72,6 +73,54 @@ def check_git() -> dict:
     code, out = _run([GIT_EXE, "--version"])
     ok = code == 0
     return {"ok": ok, "version": out if ok else "未找到", "path": GIT_EXE}
+
+
+def ensure_git_installed() -> dict:
+    """
+    检查 Git 是否可用，如果不可用则检测 system/git/ 下的 PortableGit 安装包并自动安装。
+    同时也检查系统 PATH 中的 git。
+    
+    Returns:
+        dict: {"ok": bool, "message": str, "path": str}
+    """
+    # 1. 检查便携版 Git
+    code, out = _run([GIT_EXE, "--version"])
+    if code == 0:
+        return {"ok": True, "message": f"Git 已就绪: {out.strip()}", "path": GIT_EXE}
+    
+    # 2. 检查系统 PATH 中的 git
+    try:
+        code2, out2 = _run(["git", "--version"])
+        if code2 == 0:
+            return {"ok": True, "message": f"Git 已就绪（系统 PATH）: {out2.strip()}", "path": "git"}
+    except Exception:
+        pass
+    
+    # 3. 查找 system/git/ 目录下的 PortableGit 安装包
+    git_dir = os.path.join(BASE_DIR, "system", "git")
+    installers = glob.glob(os.path.join(git_dir, "PortableGit*.exe"))
+    if not installers:
+        return {"ok": False, "message": "未找到 Git，请将 PortableGit-*.exe 放入 system/git/ 目录"}
+    
+    installer = installers[0]
+    try:
+        result = subprocess.run(
+            [installer, "-o" + git_dir],
+            capture_output=True, text=True, timeout=120
+        )
+        if result.returncode != 0:
+            return {"ok": False, "message": f"Git 安装失败 (code={result.returncode})"}
+        
+        # 验证安装结果
+        code3, out3 = _run([GIT_EXE, "--version"])
+        if code3 == 0:
+            return {"ok": True, "message": f"Git 安装成功: {out3.strip()}", "path": GIT_EXE}
+        else:
+            return {"ok": False, "message": "Git 安装完成但无法运行，请检查 system/git/bin 目录"}
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "message": "Git 安装超时（超过 2 分钟），请手动安装"}
+    except Exception as e:
+        return {"ok": False, "message": f"Git 安装异常: {e}"}
 
 
 def check_cuda() -> dict:
