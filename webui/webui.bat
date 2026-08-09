@@ -1,10 +1,10 @@
 @echo off
+chcp 65001 >nul
 
 if exist webui.settings.bat (
     call webui.settings.bat
 )
 
-:: 优先使用便携版 Python（system\python\python.exe）
 set "SCRIPT_DIR=%~dp0"
 if not defined PYTHON (
     if exist "%SCRIPT_DIR%..\system\python\python.exe" (
