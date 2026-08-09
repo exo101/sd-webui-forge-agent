@@ -302,11 +302,6 @@
                 console.log(`[NEO] ✗ Skipping topbar item "${item.label}" (not installed)`);
                 continue;
             }
-            // Check visibility state: if explicitly hidden, skip
-            const visibleState = isItemVisibleFromState(item.id);
-            if (visibleState === false) {
-                continue;
-            }
             const btn = createToolbarButton(item, 'topbar');
             topbarElement.appendChild(btn);
         }
@@ -1071,12 +1066,6 @@
             }
             if (!isItemInstalled(item)) {
                 console.log(`[NEO] ✗ Skipping topbar item "${item.label}" (not installed)`);
-                continue;
-            }
-            // Check visibility state: if explicitly hidden, skip
-            const visibleState = isItemVisibleFromState(item.id);
-            if (visibleState === false) {
-                console.log(`[NEO] ✗ Skipping topbar item "${item.label}" (hidden by settings)`);
                 continue;
             }
             const btn = createToolbarButton(item, 'topbar');
