@@ -67,7 +67,7 @@ cd sd-webui-forge-neo-v3
 # 安装时勾选 "Add Python to PATH"
 
 # 3. 启动
-双击运行 webui（启动器）.bat
+双击运行启动器
 ```
 
 ### 首次使用
