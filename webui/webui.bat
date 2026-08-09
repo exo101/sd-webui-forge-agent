@@ -4,7 +4,15 @@ if exist webui.settings.bat (
     call webui.settings.bat
 )
 
-if not defined PYTHON (set PYTHON=python)
+:: 优先使用便携版 Python（system\python\python.exe）
+set "SCRIPT_DIR=%~dp0"
+if not defined PYTHON (
+    if exist "%SCRIPT_DIR%..\system\python\python.exe" (
+        set "PYTHON=%SCRIPT_DIR%..\system\python\python.exe"
+    ) else (
+        set PYTHON=python
+    )
+)
 if defined GIT (set "GIT_PYTHON_GIT_EXECUTABLE=%GIT%")
 if not defined VENV_DIR (set "VENV_DIR=%~dp0%venv")
 
@@ -13,11 +21,10 @@ set ERROR_REPORTING=FALSE
 
 mkdir tmp 2>NUL
 
-uv help python >tmp/stdout.txt 2>tmp/stderr.txt
-if %ERRORLEVEL% == 0 goto :check_pip
 %PYTHON% -c "" >tmp/stdout.txt 2>tmp/stderr.txt
 if %ERRORLEVEL% == 0 goto :check_pip
 echo Couldn't launch python
+echo If you are using portable deployment, make sure Python is in system\python\
 goto :show_stdout_stderr
 
 :check_pip
