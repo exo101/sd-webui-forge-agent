@@ -34,13 +34,13 @@
         { id: 'extras',        icon: '📐',  label: '后期处理',              type: 'tab', tabId: 'extras' },
         { id: 'tutorial_center', icon: '📚', label: '教程中心',              type: 'tab', tabId: 'tutorial_center' },
         { id: 'dynamic_prompts', icon: '🃏', label: '通配符',              type: 'accordion', match: 'Dynamic Prompts' },
+        { id: 'model_components', icon: '🧠',  label: '生图模型组件',        type: 'model_components' },
     ];
 
     const SIDEBAR_ITEMS = [
         // Group 1: 显存/编译
         { id: 'hires_fix',     icon: '🔍',  label: '高分辨率修复',        type: 'accordion', match: 'Hires. fix' },
         { id: 'torch_compile', icon: '⚡',  label: '编译集成',            type: 'accordion', match: 'Torch 编译集成' },
-        { id: 'model_components', icon: '🧠',  label: '生图模型组件',        type: 'model_components' },
         { id: 'sep1',          type: 'separator' },
         // Group 2: 插件工具
         { id: 'controlnet',    icon: '🕹️',  label: 'ControlNet',          type: 'accordion', match: 'ControlNet Integrated' },
