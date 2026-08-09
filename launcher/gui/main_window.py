@@ -43,6 +43,9 @@ class MainWindow(QMainWindow):
             # 启动时检测NVIDIA驱动版本（带错误保护）
             self._check_nvidia_driver_on_startup()
             
+            # 启动时检测并自动安装 Git
+            self._install_git_if_missing()
+            
             # 构建UI
             self._build_ui()
             self._setup_shortcuts()
@@ -159,6 +162,20 @@ class MainWindow(QMainWindow):
         except Exception:
             # 如果检测失败（比如没有NVIDIA GPU），跳过即可
             pass
+
+    def _install_git_if_missing(self):
+        """Check if Git is available at startup, auto-install if missing"""
+        try:
+            from core.env_checker import ensure_git_installed
+            result = ensure_git_installed()
+            # Output to console (visible when running from terminal)
+            if result["ok"]:
+                print(f"[启动器] {result['message']}")
+            else:
+                print(f"[启动器] Git 未就绪: {result['message']}")
+                print("[启动器] 某些功能可能需要 Git，请将 PortableGit-*.exe 放入 system/git/ 目录")
+        except Exception as e:
+            print(f"[启动器] Git 检测异常: {e}")
 
     def _build_ui(self):
         central = QWidget()
@@ -741,8 +758,13 @@ class MainWindow(QMainWindow):
 
         from core.llama_launcher import LLAMA_SERVER, scan_llama_models
         if not os.path.exists(LLAMA_SERVER):
-            self.tab_log.append_line(f"❌ 未找到 {LLAMA_SERVER}，请确认 llama.cpp 已正确安装")
-            return
+            self.tab_log.append_line("[llama.cpp] llama-server.exe not found, attempting auto-download...")
+            from core.llama_launcher import download_llama_cpp
+            ok = download_llama_cpp(log_callback=lambda msg: self.tab_log.append_line(f"[llama.cpp] {msg}"))
+            if not ok:
+                self.tab_log.append_line("[llama.cpp] Auto-download failed. Please check network or manually download from GitHub releases")
+                return
+            self.tab_log.append_line("[llama.cpp] Download complete, starting server...")
 
         self.tab_log.append_line("🔍 正在检测 llama.cpp 模型...")
         models = scan_llama_models()
