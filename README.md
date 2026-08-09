@@ -52,7 +52,7 @@
 
 1. 加入 QQ 群下载最新整合包（见底部社区支持）
 2. 解压到任意目录（路径不要包含中文或空格）
-3. 双击运行 `webui（启动器）.bat`
+3. 双击运行启动器
 4. 首次启动会自动安装依赖，完成后浏览器自动打开
 
 #### 方法二：从源码安装
@@ -66,9 +66,6 @@ cd sd-webui-forge-neo-v3
 # 从 https://www.python.org/downloads/release/python-31312/ 下载
 # 安装时勾选 "Add Python to PATH"
 
-# 3. 启动
-双击运行启动器
-```
 
 ### 首次使用
 
