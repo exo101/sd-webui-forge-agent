@@ -302,6 +302,11 @@
                 console.log(`[NEO] ✗ Skipping topbar item "${item.label}" (not installed)`);
                 continue;
             }
+            // Check visibility state: if explicitly hidden, skip
+            const visibleState = isItemVisibleFromState(item.id);
+            if (visibleState === false) {
+                continue;
+            }
             const btn = createToolbarButton(item, 'topbar');
             topbarElement.appendChild(btn);
         }
@@ -1054,6 +1059,12 @@
                 console.log(`[NEO] ✗ Skipping topbar item "${item.label}" (not installed)`);
                 continue;
             }
+            // Check visibility state: if explicitly hidden, skip
+            const visibleState = isItemVisibleFromState(item.id);
+            if (visibleState === false) {
+                console.log(`[NEO] ✗ Skipping topbar item "${item.label}" (hidden by settings)`);
+                continue;
+            }
             const btn = createToolbarButton(item, 'topbar');
             topbarElement.appendChild(btn);
         }
@@ -1316,6 +1327,9 @@
                         b.style.display = 'none';
                     }
                 }
+            } else if (item.type === 'tab' || item.type === 'subtab' || item.type === 'extra_tab') {
+                // For top toolbar tab items, just trigger a rebuild after all items are processed
+                return;
             }
         }
 
@@ -1331,6 +1345,9 @@
                 setActiveButton(item.id);
             }
         }
+
+        // Rebuild topbar to reflect hidden/shown tab items
+        rebuildTopbar();
 
         console.log('[NEO] ✓ Applied visibility settings');
     }

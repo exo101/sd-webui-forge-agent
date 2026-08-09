@@ -19,7 +19,7 @@ from .tab_model_guide import ModelGuideTab
 from .tab_plugin_guide import PluginGuideTab
 from .tab_commands import CommandsTab
 from core.config import load_config, save_config
-from core.launcher import LaunchWorker
+from core.launcher import LaunchWorker, GitPullWorker
 from core.llama_launcher import LlamaWorker
 from core.paths import BASE_DIR
 
@@ -215,6 +215,30 @@ class MainWindow(QMainWindow):
         sub.setStyleSheet(f"color:{COLORS['accent_light']};font-size:11px;margin-left:4px;margin-top:4px;")
         layout.addWidget(sub)
         layout.addStretch()
+
+        # Update kernel button
+        self.btn_update = QPushButton("  Update  ")
+        self.btn_update.setFixedHeight(30)
+        self.btn_update.setStyleSheet(f"""
+            QPushButton {{
+                background: {COLORS['accent']};
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: bold;
+                padding: 4px 12px;
+            }}
+            QPushButton:hover {{
+                background: {COLORS['accent_light']};
+            }}
+            QPushButton:disabled {{
+                background: #3a3a5c;
+                color: {COLORS['text_dim']};
+            }}
+        """)
+        self.btn_update.clicked.connect(self._on_update_kernel)
+        layout.addWidget(self.btn_update)
 
         return header
 
@@ -637,6 +661,35 @@ class MainWindow(QMainWindow):
         # 2. 启动新的进程
         self.tab_log.append_line("[重新启动] 正在启动新进程...")
         self._on_launch()
+
+    def _on_update_kernel(self):
+        """Pull the latest project code from git"""
+        self.btn_update.setEnabled(False)
+        self.btn_update.setText("  Updating...  ")
+        
+        # Switch to log tab to show progress
+        self._switch_tab(1)
+        
+        self.tab_log.append_line("")
+        self.tab_log.append_line("=" * 60)
+        self.tab_log.append_line("Starting kernel update (git pull)...")
+        self.tab_log.append_line("=" * 60)
+        
+        self._git_worker = GitPullWorker()
+        self._git_worker.log_line.connect(self.tab_log.append_line)
+        
+        def on_update_finished(success, message):
+            self.btn_update.setEnabled(True)
+            self.btn_update.setText("  Update  ")
+            if success:
+                self.tab_log.append_line(f"[OK] Kernel update completed: {message}")
+            else:
+                self.tab_log.append_line(f"[WARN] Kernel update failed: {message}")
+            self._git_worker.deleteLater()
+            self._git_worker = None
+        
+        self._git_worker.finished.connect(on_update_finished)
+        self._git_worker.start()
 
     def _on_finished(self, code: int):
         self.tab_launch.set_running(False)

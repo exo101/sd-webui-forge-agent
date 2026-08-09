@@ -216,7 +216,7 @@ class LaunchWorker(QThread):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                encoding="gbk",
+                encoding="utf-8",
                 errors="replace",
                 creationflags=creation_flags,
             )
@@ -312,6 +312,139 @@ class LaunchWorker(QThread):
                     )
                 except Exception:
                     pass
+
+
+class GitPullWorker(QThread):
+    """Background worker for git pull to update the project kernel"""
+    log_line = pyqtSignal(str)
+    finished = pyqtSignal(bool, str)  # success, message
+
+    def run(self):
+        from core.paths import GIT_EXE, BASE_DIR
+        # Try portable git first, then system git
+        git_cmd = GIT_EXE if os.path.exists(GIT_EXE) else "git"
+
+        # Use extended env to bypass SSL issues on Windows
+        git_env = os.environ.copy()
+        git_env.setdefault("GIT_SSL_NO_VERIFY", "1")
+
+        self.log_line.emit("=" * 60)
+        self.log_line.emit("[UPDATE] Checking for kernel updates...")
+        self.log_line.emit("=" * 60)
+
+        try:
+            # Step 1: Check if it's a git repository
+            r1 = subprocess.run(
+                [git_cmd, "rev-parse", "--git-dir"],
+                capture_output=True, text=True, timeout=10,
+                cwd=BASE_DIR, env=git_env,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            if r1.returncode != 0:
+                self.log_line.emit("[WARN] Not a git repository, cannot update")
+                self.finished.emit(False, "Not a git repository")
+                return
+
+            # Step 2: Get current branch
+            r2 = subprocess.run(
+                [git_cmd, "rev-parse", "--abbrev-ref", "HEAD"],
+                capture_output=True, text=True, timeout=10,
+                cwd=BASE_DIR, env=git_env,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            branch = r2.stdout.strip() if r2.returncode == 0 else "unknown"
+            self.log_line.emit(f"[INFO] Current branch: {branch}")
+
+            # Step 3: Fetch latest changes
+            self.log_line.emit("[UPDATE] Fetching latest changes...")
+            r3 = subprocess.run(
+                [git_cmd, "fetch", "origin"],
+                capture_output=True, text=True, timeout=30,
+                cwd=BASE_DIR, env=git_env,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            if r3.returncode != 0:
+                error_msg = r3.stderr.strip() or "Fetch failed"
+                self.log_line.emit(f"[FAIL] Fetch failed: {error_msg}")
+                self.finished.emit(False, error_msg)
+                return
+            self.log_line.emit("[OK] Fetch completed")
+
+            # Step 4: Check if there are local changes
+            r4 = subprocess.run(
+                [git_cmd, "status", "--porcelain"],
+                capture_output=True, text=True, timeout=10,
+                cwd=BASE_DIR, env=git_env,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            has_local_changes = bool(r4.stdout.strip())
+            if has_local_changes:
+                self.log_line.emit("[WARN] Local changes detected, stashing...")
+                subprocess.run(
+                    [git_cmd, "stash"],
+                    capture_output=True, timeout=10,
+                    cwd=BASE_DIR, env=git_env,
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                )
+
+            # Step 5: Get the current and remote HEAD
+            r5 = subprocess.run(
+                [git_cmd, "rev-parse", "--short", "HEAD"],
+                capture_output=True, text=True, timeout=10,
+                cwd=BASE_DIR, env=git_env,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            local_commit = r5.stdout.strip() if r5.returncode == 0 else "?"
+
+            r6 = subprocess.run(
+                [git_cmd, "rev-parse", "--short", f"origin/{branch}"],
+                capture_output=True, text=True, timeout=10,
+                cwd=BASE_DIR, env=git_env,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            remote_commit = r6.stdout.strip() if r6.returncode == 0 else "?"
+
+            if local_commit == remote_commit:
+                self.log_line.emit(f"[OK] Already up to date ({local_commit})")
+                self.finished.emit(True, "Already up to date")
+                return
+
+            # Step 6: Pull the latest code
+            self.log_line.emit(f"[UPDATE] Pulling latest code ({remote_commit})...")
+            r7 = subprocess.run(
+                [git_cmd, "pull", "origin", branch],
+                capture_output=True, text=True, timeout=60,
+                cwd=BASE_DIR, env=git_env,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+
+            if r7.returncode == 0:
+                # Show what changed
+                r8 = subprocess.run(
+                    [git_cmd, "log", f"{local_commit}..HEAD", "--oneline", "--no-decorate"],
+                    capture_output=True, text=True, timeout=10,
+                    cwd=BASE_DIR, env=git_env,
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                )
+                log_entries = r8.stdout.strip() if r8.returncode == 0 else ""
+                if log_entries:
+                    self.log_line.emit(f"[OK] Update completed! New commits:")
+                    for entry in log_entries.splitlines():
+                        self.log_line.emit(f"      {entry}")
+                else:
+                    self.log_line.emit("[OK] Update completed!")
+                self.finished.emit(True, "Update successful")
+            else:
+                error_msg = r7.stderr.strip() or "Pull failed"
+                self.log_line.emit(f"[FAIL] Pull failed: {error_msg}")
+                self.finished.emit(False, error_msg)
+
+        except subprocess.TimeoutExpired as e:
+            self.log_line.emit(f"[FAIL] Operation timed out: {str(e)}")
+            self.finished.emit(False, f"Timeout: {str(e)}")
+        except Exception as e:
+            self.log_line.emit(f"[FAIL] Update failed: {str(e)}")
+            self.finished.emit(False, str(e))
 
 
 def cleanup_all_temp_files():
