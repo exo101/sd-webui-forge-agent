@@ -151,10 +151,19 @@ def build_bat(args: list[str], proxy: str = "", skip_update: bool = False, gpu_d
         skip_lines = "set SKIP_VENV_TESTS=1\n"
         if "--skip-install" not in cmd_args:
             cmd_args = "--skip-install " + cmd_args
+    
+    # 先设置 PYTHON 环境变量，确保 webui.bat 使用启动器管理的 Python
+    python_lines = f'set PYTHON={get_python_exe()}\n'
+    # 如果 environment.bat 存在则加载，否则跳过
+    env_lines = ""
+    if os.path.exists(ENV_BAT):
+        env_lines = f'call "{ENV_BAT}"\n'
+    
     return (
         "@echo off\n"
-        f'call "{ENV_BAT}"\n'
+        f"{env_lines}"
         f'cd /d "{WEBUI_DIR}"\n'
+        f"{python_lines}"
         f"{proxy_lines}"
         f"{gpu_lines}"
         f"{skip_lines}"
