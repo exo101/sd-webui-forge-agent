@@ -1037,6 +1037,20 @@
     function createTopbar() {
         if (document.getElementById('neo-topbar')) return;
 
+        // Retry if not all tab-type items have their buttons yet (Gradio creates them async)
+        const tabItems = TOPBAR_ITEMS.filter(function (item) {
+            return item.type === 'tab' || item.type === 'subtab' || item.type === 'extra_tab';
+        });
+        const allTabsReady = tabItems.every(function (item) { return isItemInstalled(item); });
+        if (!allTabsReady) {
+            if (!createTopbar._retryCount) createTopbar._retryCount = 0;
+            createTopbar._retryCount++;
+            if (createTopbar._retryCount <= 20) {
+                setTimeout(createTopbar, 500);
+                return;
+            }
+        }
+
         topbarElement = document.createElement('div');
         topbarElement.id = 'neo-topbar';
 
