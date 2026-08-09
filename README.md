@@ -163,7 +163,7 @@ cd sd-webui-forge-neo-v3
 
 ```
 webui/models/
-├── Stable-diffusion/          # 主模型（SD1.5 / SDXL）
+├── Stable-diffusion/          # Stable-diffusion（SD1.5 / SDXL）
 ├── diffusion_models/          # DiT 架构模型（Flux、Anima、Qwen-Image、Wan）
 ├── Lora/                      # LoRA 微调模型
 ├── VAE/                       # 变分自编码器
@@ -207,8 +207,7 @@ models/clip/                  # CLIP 编码器（必需，约 235MB）
 
 ```
 models/diffusion_models/
-├── flux2-klein-4b.safetensors          # 4B 轻量版
-└── flux-2-klein-9b-fp8.safetensors    # 9B 标准版
+└── flux-2-klein-9b-fp8.safetensors
 
 models/text_encoder/
 ├── qwen_3_8b_fp8mixed.safetensors
@@ -273,7 +272,7 @@ models/VAE/
 
 | 模型 | 下载方式 | 说明 |
 |------|---------|------|
-| **SD1.5 / SDXL** | Civitai Helper 插件一键下载 | 主流模型 |
+| **SD1.5 / SDXL** | Civitai Helper 插件一键下载 | Stable-diffusion |
 | **LoRA** | Civitai Helper 插件一键下载 | 风格/角色微调 |
 | **ControlNet** | Civitai Helper 插件一键下载 | 控制网络 |
 | **Flux CLIP** | [HuggingFace 手动下载](https://huggingface.co/comfyanonymous/flux_text_encoders/tree/main/clip_l.safetensors) | 放入 `models/clip/` |
