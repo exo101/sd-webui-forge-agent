@@ -8,11 +8,9 @@
 
     // --- Configuration ---
     const TOPBAR_ITEMS = [
-        { id: 'txt2img_switch', icon: '🎨', label: '文生图',              type: 'tab', tabId: 'txt2img' },
-        { id: 'img2img_switch', icon: '🖌️', label: '图生图',              type: 'tab', tabId: 'img2img' },
+        { id: 'model_components', icon: '🧠',  label: '生图模型组件',        type: 'model_components' },
         { id: 'pnginfo',        icon: '🖼️', label: 'PNG信息',              type: 'tab', tabId: 'pnginfo' },
-        { id: 'aesthetic',      icon: '🎨', label: '美学提升',              type: 'tab', tabId: 'aesthetic_enhancement_tab' },
-        { id: 'vision_chat',    icon: '💬', label: '视觉交互',              type: 'tab', tabId: 'Vision_Chat_Tab' },
+        { id: 'vision_chat', icon: '💬', label: '图像识别',        type: 'tab', tabId: 'Vision_Chat_Tab' },
         { id: 'lighting',       icon: '💡', label: '打光辅助',              type: 'tab', tabId: 'lighting_assistant' },
         { id: 'settings',       icon: '⚙️', label: '设置',                  type: 'tab', tabId: 'settings' },
         { id: 'extensions',     icon: '🧩', label: '扩展',                  type: 'tab', tabId: 'extensions' },
@@ -21,6 +19,7 @@
         { id: 'comparison',     icon: '📊', label: '图像对比',              type: 'tab', tabId: 'sd-webui-image-comparison' },
         { id: 'model_downloader', icon: '📥', label: '模型下载',            type: 'tab', tabId: 'model-downloader' },
         { id: 'tts_voice',     icon: '🎤',  label: '语音合成',              type: 'subtab', tabId: 'multimodal_media_tab', subtabLabel: '1. Qwen3-TTS 语音合成' },
+        { id: 'h3_studio', icon: '🎬', label: '视频生成', type: 'tab', tabId: 'forge_h3_studio' },
         { id: 'video_keyframe', icon: '🎞️', label: '视频关键帧',            type: 'subtab', tabId: 'multimodal_media_tab', subtabLabel: '3. 视频关键帧提取' },
         { id: 'music_gen',      icon: '🎵',  label: '音乐生成',              type: 'subtab', tabId: 'multimodal_media_tab', subtabLabel: '6. ACE-Step 音乐生成' },
         { id: 'matting',        icon: '✂️',  label: '智能抠图',              type: 'subtab', tabId: 'Segmentation_Tab', subtabLabel: '智能抠图' },
@@ -30,11 +29,10 @@
         { id: 'tagger',         icon: '🏷️', label: '标签器',                type: 'tab', tabId: 'tagger' },
         { id: 'civitai',        icon: '🏪', label: 'CivitAI',              type: 'tab', tabId: 'civitai_interface_neo' },
         { id: 'supermerger',    icon: '🔀', label: '模型融合',              type: 'tab', tabId: 'supermerger' },
-        { id: 'lora',           icon: '💪', label: 'Lora',                type: 'extra_tab', tabIds: ['txt2img_lora', 'img2img_lora'] },
         { id: 'extras',        icon: '📐',  label: '后期处理',              type: 'tab', tabId: 'extras' },
         { id: 'tutorial_center', icon: '📚', label: '教程中心',              type: 'tab', tabId: 'tutorial_center' },
         { id: 'dynamic_prompts', icon: '🃏', label: '通配符',              type: 'accordion', match: 'Dynamic Prompts' },
-        { id: 'model_components', icon: '🧠',  label: '生图模型组件',        type: 'model_components' },
+        { id: 'nano_banana', icon: '🍌', label: 'Nano Banana', type: 'tab', tabId: 'nano_banana_tab' },
     ];
 
     const SIDEBAR_ITEMS = [
@@ -58,22 +56,19 @@
 
     // All tab IDs to hide from the main tab bar
     const HIDDEN_TAB_IDS = [
-        'txt2img', 'img2img',
         'pnginfo', 'modelmerger',
         'settings', 'extensions',
-        'aesthetic_enhancement_tab', 'Vision_Chat_Tab', 'lighting_assistant',
+        'Vision_Chat_Tab', 'lighting_assistant',
         'infinite-image-browsing', 'camera_angle_selector', 'sd-webui-image-comparison',
         'model-downloader', 'multimodal_media_tab', 'Segmentation_Tab',
         'trellis2_3d_generator', 'tagger',
         'civitai_interface_neo', 'supermerger', 'sddp-wildcard-manager',
-        'extras', 'tutorial_center'
+        'extras', 'tutorial_center', 'forge_h3_studio', 'nano_banana_tab'
     ];
 
     // Extra networks sub-tab IDs to hide (nested within txt2img/img2img panels)
     const HIDDEN_EXTRA_TAB_IDS = [
         'txt2img_textual_inversion', 'img2img_textual_inversion',
-        'txt2img_checkpoints', 'img2img_checkpoints',
-        'txt2img_lora', 'img2img_lora'
     ];
 
     // --- Storage keys ---
@@ -187,7 +182,7 @@
         if (item.type === 'extra_tab') {
             if (item.tabIds && item.tabIds.length > 0) {
                 return item.tabIds.some(function (id) {
-                    return document.getElementById(`tab_${id}-button`) !== null;
+                    return document.getElementById(`${id}-button`) !== null;
                 });
             }
             return true;
@@ -322,6 +317,23 @@
             const btn = createToolbarButton(item, 'topbar');
             topbarElement.appendChild(btn);
         }
+        appendTopbarConfigButton();
+    }
+
+    function appendTopbarConfigButton() {
+        if (!topbarElement) return;
+        // Remove existing config button if any
+        const existing = topbarElement.querySelector('.neo-topbar-config-btn');
+        if (existing) existing.remove();
+        const topbarConfigBtn = document.createElement('button');
+        topbarConfigBtn.className = 'neo-topbar-btn neo-topbar-config-btn';
+        topbarConfigBtn.setAttribute('title', '上边栏配置');
+        topbarConfigBtn.innerHTML = '⚙️';
+        topbarConfigBtn.style.marginLeft = 'auto';
+        topbarConfigBtn.style.fontSize = '16px';
+        topbarConfigBtn.style.padding = '4px 8px';
+        topbarConfigBtn.addEventListener('click', showTopbarSettingsDialog);
+        topbarElement.appendChild(topbarConfigBtn);
     }
 
     // ============================================================
@@ -837,15 +849,46 @@
         const targetBtn = document.getElementById(`tab_${tabId}-button`);
         if (!targetBtn) return false;
 
+        // Check if this item is hidden by settings
+        const state = loadVisibleItems();
+        const item = TOPBAR_ITEMS.find(i => i.tabId === tabId);
+        const isHiddenBySettings = item && state && state[item.id] === false;
+
+        // If the tab button is hidden, show it temporarily for the click to work
+        const wasHidden = targetBtn.style.display === 'none' || targetBtn.classList.contains('neo-sidebar-hidden-tab');
+        if (wasHidden) {
+            targetBtn.style.display = '';
+            targetBtn.classList.remove('neo-sidebar-hidden-tab');
+        }
+
+        // Always show the panel before switching to it
+        const tabPanel = document.getElementById(`tab_${tabId}`);
+        if (tabPanel) {
+            tabPanel.style.display = '';
+            tabPanel.classList.remove('neo-sidebar-hidden-panel');
+        }
+
         const isActive = targetBtn.classList.contains('selected') || targetBtn.getAttribute('aria-selected') === 'true';
 
         if (isActive) {
-            // Toggle off: switch back to the previous tab
-            const prevBtn = document.getElementById(`tab_${previousTab}-button`);
-            if (prevBtn) {
-                prevBtn.click();
+            if (isHiddenBySettings) {
+                // Toggle off: hide the button first, then switch back to previous tab
+                targetBtn.style.display = 'none';
+                targetBtn.classList.add('neo-sidebar-hidden-tab');
+                const prevBtn = document.getElementById(`tab_${previousTab}-button`);
+                if (prevBtn) {
+                    prevBtn.click();
+                }
                 clearActiveButton();
                 return true;
+            } else {
+                // Permanently displayed: switch back to previous tab
+                const prevBtn = document.getElementById(`tab_${previousTab}-button`);
+                if (prevBtn) {
+                    prevBtn.click();
+                    clearActiveButton();
+                    return true;
+                }
             }
             return false;
         }
@@ -938,7 +981,37 @@
 
         const isAlreadyOnMain = mainBtn.classList.contains('selected') || mainBtn.getAttribute('aria-selected') === 'true';
 
-        if (!isAlreadyOnMain) {
+        // Always show the main tab panel before switching
+        const mainPanel = document.getElementById(`tab_${mainTabId}`);
+        if (mainPanel) {
+            mainPanel.style.display = '';
+            mainPanel.classList.remove('neo-sidebar-hidden-panel');
+        }
+
+        if (isAlreadyOnMain) {
+            // Check if the main tab is hidden by settings
+            const state = loadVisibleItems();
+            const topItem = TOPBAR_ITEMS.find(i => i.tabId === mainTabId);
+            const isHiddenBySettings = topItem && state && state[topItem.id] === false;
+            if (isHiddenBySettings) {
+                // Toggle off: hide the button first, then switch back to previous tab
+                mainBtn.style.display = 'none';
+                mainBtn.classList.add('neo-sidebar-hidden-tab');
+                const prevBtn = document.getElementById(`tab_${previousTab}-button`);
+                if (prevBtn) {
+                    prevBtn.click();
+                }
+                clearActiveButton();
+                return;
+            }
+            // Permanently displayed: proceed to click sub-tab
+        } else {
+            // If the main tab button is hidden by CSS/JS, show it temporarily
+            const wasHidden = mainBtn.style.display === 'none' || mainBtn.classList.contains('neo-sidebar-hidden-tab');
+            if (wasHidden) {
+                mainBtn.style.display = '';
+                mainBtn.classList.remove('neo-sidebar-hidden-tab');
+            }
             mainBtn.click();
         }
 
@@ -1049,19 +1122,8 @@
     function createTopbar() {
         if (document.getElementById('neo-topbar')) return;
 
-        // Retry if not all tab-type items have their buttons yet (Gradio creates them async)
-        const tabItems = TOPBAR_ITEMS.filter(function (item) {
-            return item.type === 'tab' || item.type === 'subtab' || item.type === 'extra_tab';
-        });
-        const allTabsReady = tabItems.every(function (item) { return isItemInstalled(item); });
-        if (!allTabsReady) {
-            if (!createTopbar._retryCount) createTopbar._retryCount = 0;
-            createTopbar._retryCount++;
-            if (createTopbar._retryCount <= 20) {
-                setTimeout(createTopbar, 500);
-                return;
-            }
-        }
+        // Create topbar immediately without waiting for all tab items to load
+        // Missing items will be skipped and can be added on page refresh
 
         topbarElement = document.createElement('div');
         topbarElement.id = 'neo-topbar';
@@ -1090,6 +1152,9 @@
         }
 
         document.body.appendChild(topbarElement);
+
+        // Topbar config button (last)
+        appendTopbarConfigButton();
     }
 
     // ============================================================
@@ -1228,9 +1293,7 @@
             return section;
         }
 
-        // Topbar section
-        content.appendChild(createSection('上边栏', TOPBAR_ITEMS));
-        // Sidebar section
+        // Sidebar items only
         content.appendChild(createSection('侧边栏', SIDEBAR_ITEMS));
 
         dialog.appendChild(content);
@@ -1285,7 +1348,126 @@
     }
 
     // ============================================================
-    // Apply visibility settings (show/hide panels based on state)
+    // Topbar settings dialog
+    // ============================================================
+    function showTopbarSettingsDialog() {
+        // Remove existing dialog if any
+        const existing = document.getElementById('neo-topbar-settings-dialog');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'neo-topbar-settings-dialog';
+        overlay.className = 'neo-settings-overlay';
+
+        const dialog = document.createElement('div');
+        dialog.className = 'neo-settings-dialog';
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'neo-settings-header';
+        header.innerHTML = '<span class="neo-settings-title">⚙️ 上边栏配置</span>';
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'neo-settings-close';
+        closeBtn.innerHTML = '✕';
+        closeBtn.addEventListener('click', function () { overlay.remove(); });
+        header.appendChild(closeBtn);
+        dialog.appendChild(header);
+
+        // Subtitle
+        const subtitle = document.createElement('div');
+        subtitle.className = 'neo-settings-subtitle';
+        subtitle.textContent = '勾选 = 永久显示在标签栏，取消勾选 = 默认隐藏（点击图标可临时显示）';
+        dialog.appendChild(subtitle);
+
+        // Load current state
+        const currentState = loadVisibleItems() || {};
+
+        // Content - scrollable list
+        const content = document.createElement('div');
+        content.className = 'neo-settings-content';
+
+        // Topbar items only
+        for (const item of TOPBAR_ITEMS) {
+            if (item.type === 'separator' || !item.id) continue;
+            if (!isItemInstalled(item)) continue;
+            if (item.id === 'model_components') continue; // model_components always visible
+
+            const row = document.createElement('label');
+            row.className = 'neo-settings-row';
+
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'neo-settings-cb';
+            cb.dataset.itemId = item.id;
+            cb.checked = currentState[item.id] !== false;
+
+            const icon = document.createElement('span');
+            icon.className = 'neo-settings-item-icon';
+            icon.textContent = item.icon || '▪️';
+
+            const label = document.createElement('span');
+            label.className = 'neo-settings-item-label';
+            label.textContent = item.label;
+
+            const hint = document.createElement('span');
+            hint.className = 'neo-settings-item-hint';
+            hint.textContent = cb.checked ? '永久显示' : '默认隐藏';
+
+            cb.addEventListener('change', function () {
+                hint.textContent = this.checked ? '永久显示' : '默认隐藏';
+            });
+
+            row.appendChild(cb);
+            row.appendChild(icon);
+            row.appendChild(label);
+            row.appendChild(hint);
+            content.appendChild(row);
+        }
+
+        dialog.appendChild(content);
+
+        // Footer with buttons
+        const footer = document.createElement('div');
+        footer.className = 'neo-settings-footer';
+
+        const resetBtn = document.createElement('button');
+        resetBtn.className = 'neo-settings-btn neo-settings-btn-reset';
+        resetBtn.textContent = '全部默认隐藏';
+        resetBtn.addEventListener('click', function () {
+            const cbs = dialog.querySelectorAll('.neo-settings-cb');
+            for (const cb of cbs) {
+                cb.checked = false;
+            }
+            const hints = dialog.querySelectorAll('.neo-settings-item-hint');
+            for (const h of hints) {
+                h.textContent = '默认隐藏';
+            }
+        });
+        footer.appendChild(resetBtn);
+
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'neo-settings-btn neo-settings-btn-save';
+        saveBtn.textContent = '✅ 保存设置';
+        saveBtn.addEventListener('click', function () {
+            const newState = loadVisibleItems() || {};
+            const cbs = dialog.querySelectorAll('.neo-settings-cb');
+            for (const cb of cbs) {
+                newState[cb.dataset.itemId] = cb.checked;
+            }
+            saveVisibleItems(newState);
+            applyVisibilitySettings(newState);
+            overlay.remove();
+        });
+        footer.appendChild(saveBtn);
+
+        dialog.appendChild(footer);
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) overlay.remove();
+        });
+    }
     // ============================================================
     function applyVisibilitySettings(state) {
         // Helper: show or hide a panel
@@ -1347,8 +1529,31 @@
                         b.style.display = 'none';
                     }
                 }
-            } else if (item.type === 'tab' || item.type === 'subtab' || item.type === 'extra_tab') {
-                // For top toolbar tab items, just trigger a rebuild after all items are processed
+            } else if (item.type === 'tab' || item.type === 'subtab') {
+                // Show/hide tab panel and its button based on settings
+                const tabPanel = document.getElementById(`tab_${item.tabId}`);
+                const tabBtn = document.getElementById(`tab_${item.tabId}-button`);
+                if (visible) {
+                    if (tabPanel) {
+                        tabPanel.style.display = '';
+                        tabPanel.classList.remove('neo-sidebar-hidden-panel');
+                    }
+                    if (tabBtn) {
+                        tabBtn.style.display = '';
+                        tabBtn.classList.remove('neo-sidebar-hidden-tab');
+                    }
+                } else {
+                    if (tabPanel) {
+                        tabPanel.style.display = 'none';
+                        tabPanel.classList.add('neo-sidebar-hidden-panel');
+                    }
+                    if (tabBtn) {
+                        tabBtn.style.display = 'none';
+                        tabBtn.classList.add('neo-sidebar-hidden-tab');
+                    }
+                }
+            } else if (item.type === 'extra_tab') {
+                // extra_tab visibility is handled by parent tab
                 return;
             }
         }
@@ -2147,6 +2352,14 @@
         createBottombar();
         hideTabs();
         hideAllPanels();
+
+        // Apply saved visibility settings from localStorage
+        const savedState = loadVisibleItems();
+        if (savedState) {
+            setTimeout(function () {
+                applyVisibilitySettings(savedState);
+            }, 500);
+        }
 
         setTimeout(retryHidePanels, 1500);
         setTimeout(retryHidePanels, 3000);

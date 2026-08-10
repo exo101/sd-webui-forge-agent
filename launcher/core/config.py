@@ -38,6 +38,12 @@ DEFAULT_CONFIG = {
         "ngl": 100,
         "host": "0.0.0.0",
     },
+    "comfyui": {
+        "enabled": False,
+        "path": "",
+        "port": 8188,
+        "python": "",
+    },
     "paths": {
         "ckpt_dir": "",
         "diffusion_models_dir": "",
@@ -62,6 +68,8 @@ def load_config() -> dict:
             merged["paths"] = _resolve_paths(merged["paths"])
             # deep-merge llama config
             merged["llama"] = {**DEFAULT_CONFIG["llama"], **data.get("llama", {})}
+            # deep-merge comfyui config
+            merged["comfyui"] = {**DEFAULT_CONFIG["comfyui"], **data.get("comfyui", {})}
             return merged
         except Exception:
             # 配置损坏，备份后用默认值

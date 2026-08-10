@@ -57,6 +57,8 @@ class SettingsTab(QWidget):
         layout.addWidget(self._group_wallpaper())
         # llama.cpp 设置
         layout.addWidget(self._group_llama())
+        # ComfyUI 设置
+        layout.addWidget(self._group_comfyui())
         
         layout.addStretch()
 
@@ -308,6 +310,68 @@ class SettingsTab(QWidget):
         layout.addWidget(lbl_hint, 2, 0, 1, 5)
         return g
 
+    def _group_comfyui(self) -> QGroupBox:
+        from PyQt6.QtWidgets import QFileDialog
+        g = QGroupBox("🖥️ ComfyUI 服务")
+        layout = QGridLayout(g)
+        layout.setSpacing(10)
+
+        # 启用开关
+        chk_enable = QCheckBox("启用 ComfyUI（与 WebUI 同时启动）")
+        layout.addWidget(chk_enable, 0, 0, 1, 4)
+        self._widgets["comfyui_enabled"] = chk_enable
+
+        layout.addWidget(QLabel("ComfyUI 目录:"), 1, 0)
+        path_input = QLineEdit()
+        path_input.setPlaceholderText("选择 ComfyUI 目录路径")
+        path_input.setMinimumWidth(300)
+        layout.addWidget(path_input, 1, 1)
+        self._widgets["comfyui_path"] = path_input
+
+        btn_browse = QPushButton("浏览...")
+        btn_browse.setFixedWidth(80)
+        btn_browse.clicked.connect(lambda: self._on_browse_comfyui(path_input))
+        layout.addWidget(btn_browse, 1, 2)
+
+        layout.addWidget(QLabel("端口:"), 2, 0)
+        spin_port = QSpinBox()
+        spin_port.setRange(1024, 65535)
+        spin_port.setFixedWidth(100)
+        layout.addWidget(spin_port, 2, 1)
+        self._widgets["comfyui_port"] = spin_port
+
+        layout.addWidget(QLabel("Python 路径:"), 3, 0)
+        py_input = QLineEdit()
+        py_input.setPlaceholderText("留空则自动检测 Embeded Python")
+        py_input.setMinimumWidth(300)
+        layout.addWidget(py_input, 3, 1)
+        self._widgets["comfyui_python"] = py_input
+
+        btn_py = QPushButton("浏览...")
+        btn_py.setFixedWidth(80)
+        btn_py.clicked.connect(lambda: self._on_browse_python(py_input))
+        layout.addWidget(btn_py, 3, 2)
+
+        lbl_hint = QLabel("💡 启动后 forge-h3-studio 插件会自动连接已运行的 ComfyUI")
+        lbl_hint.setStyleSheet(f"color: {COLORS['text_dim']}; font-size: 10px;")
+        layout.addWidget(lbl_hint, 4, 0, 1, 4)
+        return g
+
+    def _on_browse_comfyui(self, path_input: QLineEdit):
+        from PyQt6.QtWidgets import QFileDialog
+        path = QFileDialog.getExistingDirectory(self, "选择 ComfyUI 目录")
+        if path:
+            path_input.setText(path)
+
+    def _on_browse_python(self, py_input: QLineEdit):
+        from PyQt6.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getOpenFileName(
+            self, "选择 Python 可执行文件", "",
+            "Python (*.exe);;All Files (*.*)"
+        )
+        if path:
+            py_input.setText(path)
+
     def _on_upload_wallpaper(self):
         """上传壁纸"""
         try:
@@ -419,6 +483,13 @@ class SettingsTab(QWidget):
         self._widgets["llama_port"].setValue(llama_cfg.get("port", 8080))
         self._widgets["llama_ngl"].setValue(llama_cfg.get("ngl", 100))
 
+        # ComfyUI 配置加载
+        comfy_cfg = c.get("comfyui", {})
+        self._widgets["comfyui_enabled"].setChecked(comfy_cfg.get("enabled", False))
+        self._widgets["comfyui_path"].setText(comfy_cfg.get("path", ""))
+        self._widgets["comfyui_port"].setValue(comfy_cfg.get("port", 8188))
+        self._widgets["comfyui_python"].setText(comfy_cfg.get("python", ""))
+
     def apply_to_config(self, config: dict):
         config["port"]  = self._widgets["port"].value()
         config["theme"] = self._widgets["theme"].currentText()
@@ -450,5 +521,12 @@ class SettingsTab(QWidget):
         llama_cfg["enabled"] = self._widgets["llama_enabled"].isChecked()
         llama_cfg["port"] = self._widgets["llama_port"].value()
         llama_cfg["ngl"] = self._widgets["llama_ngl"].value()
+
+        # ComfyUI 配置
+        comfy_cfg = config.setdefault("comfyui", {})
+        comfy_cfg["enabled"] = self._widgets["comfyui_enabled"].isChecked()
+        comfy_cfg["path"] = self._widgets["comfyui_path"].text().strip()
+        comfy_cfg["port"] = self._widgets["comfyui_port"].value()
+        comfy_cfg["python"] = self._widgets["comfyui_python"].text().strip()
 
     

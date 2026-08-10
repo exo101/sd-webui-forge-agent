@@ -92,7 +92,7 @@ EXTENSION_DESCRIPTIONS = {
     "adetailer": "ADetailer Neo - 自动检测并修复面部/手部等缺陷，支持多种检测模型",
     "infinite-browsing": "无限图片浏览 - 强大的图片管理和浏览工具，支持标签搜索、批量操作",
     "sd-forge-regional-prompter-neo": "区域提示词 Neo - 为图像不同区域分别指定提示词，实现精细构图控制",
-    "sd-webui-AestheticEnhancement-llama.cpp": "美学增强 - 基于 LLM 的提示词美学评分和优化",
+    "sd-webui-qwen-chat-llamacpp": "图像识别美学 - 图像识别与美学提升综合工具",
     "sd-webui-aspect-ratio-helper": "宽高比助手 - 快速设置常用图像宽高比，一键切换横竖屏",
     "sd-webui-camera-angle-selector": "镜头角度选择器 - 快速选择预设的相机镜头角度和构图",
     "sd-webui-forge-neo-seedvr2": "SeedVR2 - 基于扩散模型的图像超分辨率放大插件",

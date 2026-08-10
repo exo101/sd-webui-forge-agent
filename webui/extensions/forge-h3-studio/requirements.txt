@@ -1,0 +1,4 @@
+# Forge Neo currently includes this already. Keeping it explicit also makes
+# backend-only development and tests reproducible.
+httpx>=0.28,<1
+websocket-client>=1.8,<2
