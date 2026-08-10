@@ -16,6 +16,7 @@ if not defined PYTHON (
 set SD_WEBUI_RESTART=tmp/restart
 set SKIP_VENV=1
 set PYTHONIOENCODING=utf-8
+set PYTHONUTF8=1
 set ERROR_REPORTING=FALSE
 
 mkdir tmp 2>NUL
