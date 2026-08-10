@@ -56,7 +56,11 @@ class ModelGuideTab(QWidget):
         # 模型概述
         overview_section = self._create_overview_section()
         content_layout.addWidget(overview_section)
-        
+
+        # Ollama / llama.cpp 模型下载说明
+        ollama_llamacpp_section = self._create_ollama_llamacpp_section()
+        content_layout.addWidget(ollama_llamacpp_section)
+
         # ACE-Step 音乐生成
         ace_step_section = self._create_ace_step_section()
         content_layout.addWidget(ace_step_section)
@@ -186,7 +190,77 @@ class ModelGuideTab(QWidget):
         return label
     
 
-    
+    def _create_ollama_llamacpp_section(self) -> QWidget:
+        """创建 Ollama / llama.cpp 模型下载说明部分"""
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+
+        layout.addWidget(self._create_section_title("🦙 Ollama / llama.cpp 模型下载说明"))
+
+        layout.addWidget(self._create_subsection_title("Ollama 模型下载"))
+        layout.addWidget(self._create_description("Ollama 提供一键式模型下载和运行，打开终端执行以下命令即可："))
+
+        layout.addWidget(self._create_code_block("""# 视觉模型（支持图片识别）
+ollama pull qwen3-vl:8b      # 高精度版
+ollama pull qwen3-vl:4b      # 平衡版（推荐）
+ollama pull qwen3-vl:2b      # 轻量版
+
+# 语言模型（仅文本对话）
+ollama pull qwen3:latest     # 最新版语言模型
+ollama pull qwen3.5:4b       # 平衡版语言模型
+
+# 查看已下载的模型
+ollama list
+
+# 删除模型
+ollama rm 模型名称"""))
+
+        layout.addWidget(self._create_note("""Ollama 安装包下载地址：<a href='https://ollama.com/' style='color:#60A5FA;'>https://ollama.com/</a><br>
+首次运行模型时自动下载，下载后保存在本地，下次使用无需重新下载""", "info"))
+
+        layout.addWidget(self._create_subsection_title("llama.cpp 模型下载"))
+        layout.addWidget(self._create_description("llama.cpp 使用 GGUF 格式模型，推荐从以下源下载："))
+
+        layout.addWidget(self._create_subsection_title("推荐下载源"))
+        layout.addWidget(self._create_description("""• <b>ModelScope（魔搭）</b>：<a href='https://modelscope.cn/' style='color:#60A5FA;'>https://modelscope.cn/</a>（国内访问更快）
+• <b>HuggingFace</b>：<a href='https://huggingface.co/' style='color:#60A5FA;'>https://huggingface.co/</a>"""))
+
+        layout.addWidget(self._create_subsection_title("推荐的视觉模型"))
+        layout.addWidget(self._create_description("""• qwen3-vl-2b / qwen3-vl-4b / qwen3-vl-8b
+• qwen2.5-vl-3b / qwen2.5-vl-7b / qwen2.5-vl-32b
+• llava-v1.6-vicuna-7b / llava-v1.6-vicuna-13b
+• deepseek-vl-7b / deepseek-vl-16b"""))
+
+        layout.addWidget(self._create_subsection_title("推荐的文本模型（用于翻译）"))
+        layout.addWidget(self._create_description("""• qwen3.5-4b / qwen3.5-7b / qwen3.5-9b
+• qwen2.5-7b-instruct / qwen2.5-14b-instruct
+• llama-3-8b-instruct
+• hy-mt2-1.8b / hy-mt2-7b（翻译专用模型）"""))
+
+        layout.addWidget(self._create_subsection_title("推荐下载命令（使用 huggingface-cli）"))
+        layout.addWidget(self._create_code_block("""# 下载 Qwen3.5 视觉模型
+huggingface-cli download Qwen/Qwen3.5-VL-4B-GGUF --local-dir models/llamacpp --include "qwen3.5-4b-*.gguf"
+
+# 下载 Qwen3 视觉模型
+huggingface-cli download Qwen/Qwen3-VL-4B-GGUF --local-dir models/llamacpp --include "qwen3-vl-4b-*.gguf"""))
+
+        layout.addWidget(self._create_subsection_title("启动 llama.cpp 服务器"))
+        layout.addWidget(self._create_description("下载模型后，使用以下命令启动服务器："))
+        layout.addWidget(self._create_code_block("""# Windows (PowerShell)
+./llama-server.exe --model "D:/path/to/your-model.gguf" --host 127.0.0.1 --port 8080 --n-gpu-layers -1
+
+# 参数说明：
+# --host 127.0.0.1  仅本机访问
+# --port 8080       服务端口
+# --n-gpu-layers -1 所有层加载到 GPU（0 为 CPU 模式）"""))
+
+        layout.addWidget(self._create_note("""• GGUF 模型文件通常较大，请确保有足够磁盘空间<br>
+• 使用 --n-gpu-layers -1 利用 GPU 加速<br>
+• 如需停止服务器，按 Ctrl+C""", "tip"))
+
+        return container
 
     
     def _create_overview_section(self) -> QWidget:

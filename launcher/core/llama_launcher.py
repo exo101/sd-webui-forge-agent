@@ -1,10 +1,7 @@
-"""llama.cpp launcher - manage llama-server process with auto-download"""
+"""llama.cpp launcher - manage llama-server process"""
 import os
 import json
-import zipfile
 import subprocess
-import urllib.request
-import urllib.error
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from core.paths import BASE_DIR
@@ -15,151 +12,6 @@ LLAMA_SERVER = os.path.join(LLAMA_DIR, "llama-server.exe")
 MODELS_DIR = os.path.join(LLAMA_DIR, "models")
 # Shared port config file for WebUI plugin reading
 LLAMA_PORT_FILE = os.path.join(BASE_DIR, "launcher", "llama_port.json")
-LLAMA_GITHUB_REPO = "ggml-org/llama.cpp"
-
-
-def download_llama_cpp(log_callback=None) -> bool:
-    """
-    Download the latest llama.cpp Windows CUDA release from GitHub and extract it.
-    Uses stdlib only (urllib), no external dependency required.
-
-    Args:
-        log_callback: optional callback(str) for progress messages
-
-    Returns:
-        bool: True if download and extraction succeeded
-    """
-    def log(msg):
-        if log_callback:
-            log_callback(msg)
-        else:
-            print(f"[llama.cpp] {msg}")
-
-    os.makedirs(LLAMA_DIR, exist_ok=True)
-
-    # Step 1: fetch latest release info from GitHub API
-    api_url = f"https://api.github.com/repos/{LLAMA_GITHUB_REPO}/releases/latest"
-    log(f"Fetching latest release info from {LLAMA_GITHUB_REPO}...")
-
-    try:
-        req = urllib.request.Request(api_url, headers={
-            "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "SD-WebUI-Forge-Neo-Launcher",
-        })
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            release_data = json.loads(resp.read().decode("utf-8"))
-    except Exception as e:
-        log(f"Failed to fetch release info: {e}")
-        return False
-
-    # Step 2: find the Windows CUDA asset
-    assets = release_data.get("assets", [])
-    cuda_asset = None
-    for asset in assets:
-        name = asset.get("name", "")
-        if "win" in name.lower() and "cuda" in name.lower() and name.endswith(".zip"):
-            cuda_asset = asset
-            break
-
-    if not cuda_asset:
-        # fallback: try any win zip
-        for asset in assets:
-            name = asset.get("name", "")
-            if "win" in name.lower() and name.endswith(".zip"):
-                cuda_asset = asset
-                break
-
-    if not cuda_asset:
-        log("No Windows CUDA release asset found on GitHub")
-        return False
-
-    download_url = cuda_asset["browser_download_url"]
-    file_name = cuda_asset["name"]
-    file_size = cuda_asset.get("size", 0)
-    tag = release_data.get("tag_name", "latest")
-
-    log(f"Found release: {tag}")
-    log(f"Downloading: {file_name} ({_format_size(file_size)})...")
-
-    # Step 3: download the zip
-    zip_path = os.path.join(LLAMA_DIR, file_name)
-    try:
-        req = urllib.request.Request(download_url, headers={
-            "User-Agent": "SD-WebUI-Forge-Neo-Launcher",
-        })
-        with urllib.request.urlopen(req, timeout=300) as resp:
-            total = int(resp.headers.get("Content-Length", 0))
-            downloaded = 0
-            chunk_size = 8192
-            with open(zip_path, "wb") as f:
-                while True:
-                    chunk = resp.read(chunk_size)
-                    if not chunk:
-                        break
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if total > 0:
-                        pct = int(downloaded * 100 / total)
-                        if pct % 10 == 0 and downloaded < total:
-                            log(f"Download progress: {pct}% ({_format_size(downloaded)}/{_format_size(total)})")
-        log(f"Download complete: {_format_size(downloaded)}")
-    except Exception as e:
-        log(f"Download failed: {e}")
-        # Cleanup partial download
-        if os.path.exists(zip_path):
-            os.unlink(zip_path)
-        return False
-
-    # Step 4: extract the zip
-    log("Extracting...")
-    try:
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            # Get list of members to extract (only files we need)
-            members = []
-            for m in zf.infolist():
-                # Normalize path: remove top-level dir like "llama-b4464-bin-win-cuda-cu12.4.0-x64/"
-                parts = m.filename.split("/", 1)
-                if len(parts) > 1:
-                    m.filename = parts[1]
-                else:
-                    m.filename = parts[0]
-                if m.filename:
-                    members.append(m)
-
-            zf.extractall(LLAMA_DIR, members)
-
-        log(f"Extracted to: {LLAMA_DIR}")
-    except Exception as e:
-        log(f"Extraction failed: {e}")
-        return False
-    finally:
-        # Cleanup zip
-        if os.path.exists(zip_path):
-            try:
-                os.unlink(zip_path)
-                log("Cleaned up downloaded zip")
-            except Exception:
-                pass
-
-    # Verify
-    if os.path.exists(LLAMA_SERVER):
-        log(f"llama-server.exe is ready at: {LLAMA_SERVER}")
-        return True
-    else:
-        log("llama-server.exe not found after extraction, something went wrong")
-        return False
-
-
-def _format_size(bytes_val: int) -> str:
-    """Format bytes to human-readable string"""
-    if bytes_val < 1024:
-        return f"{bytes_val} B"
-    elif bytes_val < 1024 * 1024:
-        return f"{bytes_val / 1024:.1f} KB"
-    elif bytes_val < 1024 * 1024 * 1024:
-        return f"{bytes_val / 1024 / 1024:.1f} MB"
-    else:
-        return f"{bytes_val / 1024 / 1024 / 1024:.2f} GB"
 
 
 def scan_llama_models() -> list[dict]:
@@ -254,13 +106,9 @@ class LlamaWorker(QThread):
             self.log_line.emit(f"⚠️ 写入共享端口配置失败: {e}")
 
         if not os.path.exists(LLAMA_SERVER):
-            self.log_line.emit("[llama.cpp] llama-server.exe not found, attempting auto-download...")
-            ok = download_llama_cpp(log_callback=lambda msg: self.log_line.emit(f"[llama.cpp] {msg}"))
-            if not ok:
-                self.log_line.emit("[llama.cpp] Auto-download failed. Please check network or manually download from GitHub releases")
-                self.finished.emit(1)
-                return
-            self.log_line.emit("[llama.cpp] Download complete, starting server...")
+            self.log_line.emit(f"❌ llama-server.exe not found at {LLAMA_SERVER}, please install llama.cpp manually")
+            self.finished.emit(1)
+            return
 
         models = scan_llama_models()
         if not models:

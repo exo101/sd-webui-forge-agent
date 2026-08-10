@@ -26,11 +26,17 @@
   "extra_args": "",
   "wallpaper": "",
   "llama": {
-    "enabled": true,
+    "enabled": false,
     "port": 8079,
     "model": "",
     "ngl": 100,
     "host": "0.0.0.0"
+  },
+  "comfyui": {
+    "enabled": true,
+    "path": "D:\\ai\\sd-webui-forge-neo-v3.5\\ComfyUI-aki-v2.1",
+    "port": 8188,
+    "python": "D:\\ai\\sd-webui-forge-neo-v3.5\\ComfyUI-aki-v2.1\\python\\python.exe"
   },
   "paths": {
     "ckpt_dir": "webui\\models\\Stable-diffusion",

@@ -686,23 +686,7 @@ body {
 }
 
 /* --- Hide tab buttons managed by top toolbar --- */
-#tab_pnginfo-button,
-#tab_settings-button,
-#tab_extensions-button,
-#tab_aesthetic_enhancement_tab-button,
-#tab_Vision_Chat_Tab-button,
-#tab_lighting_assistant-button,
-#tab_camera_angle_selector-button,
-#tab_sd-webui-image-comparison-button,
-#tab_multimodal_media_tab-button,
-#tab_Segmentation_Tab-button,
-#tab_trellis2_3d_generator-button,
-#tab_tagger-button,
-#tab_infinite-image-browsing-button,
-#tab_model-downloader-button,
-#tab_civitai_interface_neo-button,
-#tab_supermerger-button,
-#tab_sddp-wildcard-manager-button {
+.neo-sidebar-hidden-tab {
     display: none !important;
 }
 

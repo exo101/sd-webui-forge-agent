@@ -21,6 +21,7 @@ from .tab_commands import CommandsTab
 from core.config import load_config, save_config
 from core.launcher import LaunchWorker, GitPullWorker
 from core.llama_launcher import LlamaWorker
+from core.comfy_launcher import ComfyUIWorker
 from core.paths import BASE_DIR
 
 
@@ -30,6 +31,7 @@ class MainWindow(QMainWindow):
         self.config = None
         self.worker: LaunchWorker | None = None
         self.llama_worker: LlamaWorker | None = None
+        self.comfy_worker: ComfyUIWorker | None = None
         
         try:
             self.setWindowTitle("SD WebUI Forge 启动器")
@@ -419,6 +421,12 @@ class MainWindow(QMainWindow):
                 self.tab_launch.sig_llama_stop.connect(self._on_llama_stop)
             if hasattr(self.tab_launch, 'sig_llama_open'):
                 self.tab_launch.sig_llama_open.connect(self._on_llama_open_browser)
+            if hasattr(self.tab_launch, 'sig_comfy_launch'):
+                self.tab_launch.sig_comfy_launch.connect(self._on_comfy_launch)
+            if hasattr(self.tab_launch, 'sig_comfy_stop'):
+                self.tab_launch.sig_comfy_stop.connect(self._on_comfy_stop)
+            if hasattr(self.tab_launch, 'sig_comfy_open'):
+                self.tab_launch.sig_comfy_open.connect(self._on_comfy_open_browser)
         except Exception as e:
             print(f"Failed to connect launch signals: {e}")
         
@@ -572,6 +580,17 @@ class MainWindow(QMainWindow):
                     except Exception as e:
                         if hasattr(self.tab_log, 'append_line'):
                             self.tab_log.append_line(f"⚠️  llama 自动启动失败：{str(e)}")
+                
+                # 自动启动 ComfyUI（如果启用）
+                if self.config.get("comfyui", {}).get("enabled", False):
+                    try:
+                        if hasattr(self.tab_log, 'append_line'):
+                            self.tab_log.append_line("⏱  WebUI 启动后自动启动 ComfyUI...")
+                        from PyQt6.QtCore import QTimer
+                        QTimer.singleShot(4000, self._on_comfy_launch)
+                    except Exception as e:
+                        if hasattr(self.tab_log, 'append_line'):
+                            self.tab_log.append_line(f"⚠️  ComfyUI 自动启动失败：{str(e)}")
             except Exception as e:
                 if hasattr(self.tab_log, 'append_line'):
                     self.tab_log.append_line(f"❌  启动失败：{str(e)}")
@@ -758,13 +777,8 @@ class MainWindow(QMainWindow):
 
         from core.llama_launcher import LLAMA_SERVER, scan_llama_models
         if not os.path.exists(LLAMA_SERVER):
-            self.tab_log.append_line("[llama.cpp] llama-server.exe not found, attempting auto-download...")
-            from core.llama_launcher import download_llama_cpp
-            ok = download_llama_cpp(log_callback=lambda msg: self.tab_log.append_line(f"[llama.cpp] {msg}"))
-            if not ok:
-                self.tab_log.append_line("[llama.cpp] Auto-download failed. Please check network or manually download from GitHub releases")
-                return
-            self.tab_log.append_line("[llama.cpp] Download complete, starting server...")
+            self.tab_log.append_line(f"❌ llama-server.exe not found at {LLAMA_SERVER}, please install llama.cpp manually")
+            return
 
         self.tab_log.append_line("🔍 正在检测 llama.cpp 模型...")
         models = scan_llama_models()
@@ -823,6 +837,84 @@ class MainWindow(QMainWindow):
         url = f"http://127.0.0.1:{port}"
         QDesktopServices.openUrl(QUrl(url))
 
+    def _on_comfy_launch(self):
+        """启动 ComfyUI"""
+        # 先保存配置
+        try:
+            if hasattr(self.tab_settings, 'apply_to_config'):
+                self.tab_settings.apply_to_config(self.config)
+            save_config(self.config)
+        except Exception as e:
+            self.tab_log.append_line(f"⚠️  保存配置失败：{str(e)}")
+
+        comfy_cfg = self.config.get("comfyui", {})
+        port = comfy_cfg.get("port", 8188)
+
+        # 如果 ComfyUI 已在运行中，则只更新端口配置
+        if self.comfy_worker and self.comfy_worker.isRunning():
+            self.tab_log.append_line("⚠️  ComfyUI 已在运行中")
+            return
+
+        # 检测端口是否已被占用（手动启动的场景）
+        import socket
+        _port_in_use = False
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.3):
+                _port_in_use = True
+        except (OSError, socket.timeout):
+            pass
+        if _port_in_use:
+            self.tab_log.append_line(f"⚠️  端口 {port} 已被占用，检测到 ComfyUI 可能已手动启动")
+            return
+
+        from core.comfy_launcher import COMFY_PORT_FILE
+        comfy_path = comfy_cfg.get("path", "")
+        if not comfy_path or not os.path.isdir(comfy_path):
+            self.tab_log.append_line("❌ ComfyUI 目录未配置或不存在，请在参数设置中配置")
+            return
+
+        self.tab_log.append_line(f"🚀 正在启动 ComfyUI → 端口 {port}...")
+
+        self.comfy_worker = ComfyUIWorker(self.config)
+        self.comfy_worker.log_line.connect(self.tab_log.append_line)
+        self.comfy_worker.finished.connect(self._on_comfy_finished)
+        self.comfy_worker.start()
+
+    def _on_comfy_stop(self):
+        """停止 ComfyUI"""
+        if self.comfy_worker and self.comfy_worker.isRunning():
+            try:
+                self.comfy_worker.log_line.disconnect()
+                self.comfy_worker.finished.disconnect()
+            except Exception:
+                pass
+            self.comfy_worker.stop()
+            if not self.comfy_worker.wait(3000):
+                try:
+                    self.comfy_worker.force_kill() if hasattr(self.comfy_worker, 'force_kill') else None
+                except Exception:
+                    pass
+            try:
+                self.comfy_worker.deleteLater()
+            except Exception:
+                pass
+            self.comfy_worker = None
+            self.tab_log.append_line("🛑 ComfyUI 已停止")
+
+    def _on_comfy_open_browser(self):
+        """打开 ComfyUI 的 Web 页面"""
+        from PyQt6.QtGui import QDesktopServices
+        from PyQt6.QtCore import QUrl
+        port = self.config.get("comfyui", {}).get("port", 8188)
+        url = f"http://127.0.0.1:{port}"
+        QDesktopServices.openUrl(QUrl(url))
+
+    def _on_comfy_finished(self, code: int):
+        self.tab_log.append_line(f"\n[ComfyUI 进程结束] 退出码: {code}")
+        if self.comfy_worker:
+            self.comfy_worker.deleteLater()
+            self.comfy_worker = None
+
     def _on_llama_finished(self, code: int):
         self.tab_log.append_line(f"\n[llama.cpp 进程结束] 退出码: {code}")
         if self.llama_worker:
@@ -874,6 +966,16 @@ class MainWindow(QMainWindow):
                 except Exception:
                     pass
             threading.Thread(target=stop_llama, daemon=True).start()
+        
+        # 停止 ComfyUI 进程
+        if self.comfy_worker and self.comfy_worker.isRunning():
+            def stop_comfy():
+                try:
+                    self.comfy_worker.stop()
+                    self.comfy_worker.deleteLater()
+                except Exception:
+                    pass
+            threading.Thread(target=stop_comfy, daemon=True).start()
         
         # 立即接受退出事件，避免卡顿
         event.accept()

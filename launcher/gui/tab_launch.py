@@ -100,6 +100,9 @@ class LaunchTab(QWidget):
     sig_llama_launch = pyqtSignal()
     sig_llama_stop   = pyqtSignal()
     sig_llama_open   = pyqtSignal()
+    sig_comfy_launch = pyqtSignal()
+    sig_comfy_stop   = pyqtSignal()
+    sig_comfy_open   = pyqtSignal()
 
     def __init__(self, config: dict, parent=None):
         super().__init__(parent)
@@ -875,6 +878,42 @@ class LaunchTab(QWidget):
         row3.addWidget(self.btn_llama_open, 1)
 
         grid_layout.addLayout(row3)
+
+        # 第四行：ComfyUI 按钮
+        row4 = QHBoxLayout()
+        row4.setSpacing(6)
+
+        self.btn_comfy_launch = QPushButton("🚀 ComfyUI")
+        self.btn_comfy_launch.setMinimumHeight(32)
+        self.btn_comfy_launch.setStyleSheet(f"""
+            QPushButton{{background:{COLORS['bg_card']};color:{COLORS['text_secondary']};
+                border:1px solid {COLORS['border']};border-radius:6px;font-size:11px;}}
+            QPushButton:hover{{background:{COLORS['bg_hover']};}}
+        """)
+        self.btn_comfy_launch.clicked.connect(self.sig_comfy_launch.emit)
+        row4.addWidget(self.btn_comfy_launch, 1)
+
+        self.btn_comfy_stop = QPushButton("⏹ 停止 ComfyUI")
+        self.btn_comfy_stop.setMinimumHeight(32)
+        self.btn_comfy_stop.setStyleSheet(f"""
+            QPushButton{{background:#3d1f1f;color:{COLORS['red']};
+                border:1px solid #5a2020;border-radius:6px;font-size:11px;}}
+            QPushButton:hover{{background:#5a2020;}}
+        """)
+        self.btn_comfy_stop.clicked.connect(self.sig_comfy_stop.emit)
+        row4.addWidget(self.btn_comfy_stop, 1)
+
+        self.btn_comfy_open = QPushButton("🌐 ComfyUI 页面")
+        self.btn_comfy_open.setMinimumHeight(32)
+        self.btn_comfy_open.setStyleSheet(f"""
+            QPushButton{{background:{COLORS['bg_card']};color:{COLORS['text_secondary']};
+                border:1px solid {COLORS['border']};border-radius:6px;font-size:11px;}}
+            QPushButton:hover{{background:{COLORS['bg_hover']};}}
+        """)
+        self.btn_comfy_open.clicked.connect(self.sig_comfy_open.emit)
+        row4.addWidget(self.btn_comfy_open, 1)
+
+        grid_layout.addLayout(row4)
 
         return frame
 
