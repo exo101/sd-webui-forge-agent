@@ -324,9 +324,12 @@ class GitPullWorker(QThread):
         # Try portable git first, then system git
         git_cmd = GIT_EXE if os.path.exists(GIT_EXE) else "git"
 
-        # Use extended env to bypass SSL issues on Windows
+        # Use extended env to bypass SSL issues on Windows and use portable Git DLLs
         git_env = os.environ.copy()
         git_env.setdefault("GIT_SSL_NO_VERIFY", "1")
+        _git_bin = os.path.join(BASE_DIR, "system", "git", "bin")
+        _git_lib = os.path.join(BASE_DIR, "system", "git", "libexec", "git-core")
+        git_env["PATH"] = f"{_git_bin};{_git_lib};{git_env.get('PATH', '')}"
 
         self.log_line.emit("=" * 60)
         self.log_line.emit("[UPDATE] Checking for kernel updates...")
