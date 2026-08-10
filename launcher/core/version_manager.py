@@ -14,6 +14,9 @@ CURRENT_VERSION_FILE = Path(BASE_DIR / 'launcher' / 'CURRENT_VERSION.txt')
 GITHUB_REPO = "exo101/sd-webui-forge-neo-v3"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}"
 
+# Git subprocess env: disable SSL verification for Windows compatibility
+_GIT_ENV = {**os.environ, "GIT_SSL_NO_VERIFY": "1"}
+
 
 def load_versions():
     """Load versions manifest from local versions.json.
@@ -184,7 +187,8 @@ def update_from_github(progress_callback=None):
             cwd=git_repo_path,
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
+            env=_GIT_ENV
         )
         
         if result.returncode != 0:
@@ -198,7 +202,8 @@ def update_from_github(progress_callback=None):
             cwd=git_repo_path,
             capture_output=True,
             text=True,
-            timeout=120  # 2分钟超时
+            timeout=120,  # 2分钟超时
+            env=_GIT_ENV
         )
         
         if result.returncode != 0:
@@ -216,7 +221,8 @@ def update_from_github(progress_callback=None):
             cwd=git_repo_path,
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
+            env=_GIT_ENV
         )
         
         if result.returncode != 0:
@@ -226,7 +232,8 @@ def update_from_github(progress_callback=None):
                 cwd=git_repo_path,
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
+                env=_GIT_ENV
             )
         
         if result.returncode != 0:
@@ -254,7 +261,8 @@ def update_from_github(progress_callback=None):
             cwd=git_repo_path,
             capture_output=True,
             text=True,
-            timeout=120
+            timeout=120,
+            env=_GIT_ENV
         )
         
         if result.returncode != 0:
@@ -264,7 +272,8 @@ def update_from_github(progress_callback=None):
                 cwd=git_repo_path,
                 capture_output=True,
                 text=True,
-                timeout=120
+                timeout=120,
+                env=_GIT_ENV
             )
         
         if result.returncode != 0:
@@ -324,7 +333,8 @@ def refresh_local_versions():
             cwd=git_repo_path,
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
+            env=_GIT_ENV
         )
         
         if result.returncode != 0:
