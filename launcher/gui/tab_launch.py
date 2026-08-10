@@ -70,19 +70,20 @@ class GitCheckWorker(QThread):
 
     def run(self):
         git = os.path.join(BASE_DIR, "system", "git", "bin", "git.exe")
+        _env = {**os.environ, "GIT_SSL_NO_VERIFY": "1"}
         try:
             r_local = subprocess.run([git, "rev-parse", "--short", "HEAD"],
                 capture_output=True, text=True, timeout=5, cwd=WEBUI_DIR,
-                creationflags=subprocess.CREATE_NO_WINDOW)
+                creationflags=subprocess.CREATE_NO_WINDOW, env=_env)
             local = r_local.stdout.strip() if r_local.returncode == 0 else "?"
 
             subprocess.run([git, "fetch", "origin", "--quiet"],
                 capture_output=True, timeout=15, cwd=WEBUI_DIR,
-                creationflags=subprocess.CREATE_NO_WINDOW)
+                creationflags=subprocess.CREATE_NO_WINDOW, env=_env)
 
             r_remote = subprocess.run([git, "rev-parse", "--short", "origin/HEAD"],
                 capture_output=True, text=True, timeout=5, cwd=WEBUI_DIR,
-                creationflags=subprocess.CREATE_NO_WINDOW)
+                creationflags=subprocess.CREATE_NO_WINDOW, env=_env)
             remote = r_remote.stdout.strip() if r_remote.returncode == 0 else "?"
 
             has_update = bool(local and remote and local != remote and remote != "?")
