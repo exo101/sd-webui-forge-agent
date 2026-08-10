@@ -14,8 +14,11 @@ CURRENT_VERSION_FILE = Path(BASE_DIR / 'launcher' / 'CURRENT_VERSION.txt')
 GITHUB_REPO = "exo101/sd-webui-forge-neo-v3"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}"
 
-# Git subprocess env: disable SSL verification for Windows compatibility
-_GIT_ENV = {**os.environ, "GIT_SSL_NO_VERIFY": "1"}
+# Git subprocess env: disable SSL verification and use portable Git DLLs for Windows compatibility
+_GIT_BIN = str(BASE_DIR / "system" / "git" / "bin")
+_GIT_LIB = str(BASE_DIR / "system" / "git" / "libexec" / "git-core")
+_GIT_PATH = f"{_GIT_BIN};{_GIT_LIB};{os.environ.get('PATH', '')}"
+_GIT_ENV = {**os.environ, "GIT_SSL_NO_VERIFY": "1", "PATH": _GIT_PATH}
 
 
 def load_versions():

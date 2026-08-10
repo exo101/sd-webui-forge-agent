@@ -70,7 +70,10 @@ class GitCheckWorker(QThread):
 
     def run(self):
         git = os.path.join(BASE_DIR, "system", "git", "bin", "git.exe")
-        _env = {**os.environ, "GIT_SSL_NO_VERIFY": "1"}
+        _git_bin = os.path.join(BASE_DIR, "system", "git", "bin")
+        _git_lib = os.path.join(BASE_DIR, "system", "git", "libexec", "git-core")
+        _git_path = f"{_git_bin};{_git_lib};{os.environ.get('PATH', '')}"
+        _env = {**os.environ, "GIT_SSL_NO_VERIFY": "1", "PATH": _git_path}
         try:
             r_local = subprocess.run([git, "rev-parse", "--short", "HEAD"],
                 capture_output=True, text=True, timeout=5, cwd=WEBUI_DIR,
