@@ -103,19 +103,8 @@ def multimodal_media_tab():
                     import traceback
                     traceback.print_exc()
 
-            # 数字人视频生成标签页
-            with gr.TabItem("2. 数字人对口型生成"):
-                try:
-                    from scripts.latent_sync_ui import create_latent_sync_ui
-                    # 创建并添加数字人视频生成功能
-                    latent_sync_components = create_latent_sync_ui()
-                except Exception as e:
-                    gr.Markdown(f"❌ 数字人视频生成模块初始化错误：{e}")
-                    import traceback
-                    traceback.print_exc()
-
             # 视频关键帧提取标签页
-            with gr.TabItem("3. 视频关键帧提取"):
+            with gr.TabItem("2. 视频关键帧提取"):
                 try:
                     from scripts.video_frame_extractor import create_video_frame_extractor
                     # 创建并添加视频分帧组件
@@ -142,7 +131,7 @@ def multimodal_media_tab():
                     traceback.print_exc()
 
             # Qwen Video 万相视频生成标签页
-            with gr.TabItem("4. Qwen Video 万相视频生成"):
+            with gr.TabItem("3. Qwen Video 万相视频生成"):
                 try:
                     from scripts.qwen_video.main_ui import create_qwen_video_gen_ui
                     # 创建 wan 系列视频生成 UI 组件
@@ -153,7 +142,7 @@ def multimodal_media_tab():
                     traceback.print_exc()
 
             # Kling 可灵视频生成标签页
-            with gr.TabItem("5. Kling 可灵视频生成"):
+            with gr.TabItem("4. Kling 可灵视频生成"):
                 try:
                     from scripts.kling_video.main_ui import create_kling_video_gen_ui
                     # 创建 Kling 可灵视频生成 UI 组件
@@ -164,7 +153,7 @@ def multimodal_media_tab():
                     traceback.print_exc()
 
             # ACE-Step 音乐生成标签页
-            with gr.TabItem("6. ACE-Step 音乐生成"):
+            with gr.TabItem("5. ACE-Step 音乐生成"):
                 try:
                     from scripts.ace_step_ui import create_ace_step_ui
                     # 创建并添加 ACE-Step 音乐生成功能
