@@ -48,7 +48,7 @@ def _git(args: list[str], cwd: str, timeout=30, proxy: str = "") -> tuple[int, s
             timeout=timeout, cwd=cwd, env=env,
             creationflags=subprocess.CREATE_NO_WINDOW
         )
-        return r.returncode, (r.stdout + r.stderr).strip()
+        return r.returncode, ((r.stdout or "") + (r.stderr or "")).strip()
     except subprocess.TimeoutExpired:
         return -1, f"超时（>{timeout}s），请检查网络或代理是否可用"
     except Exception as e:

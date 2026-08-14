@@ -210,7 +210,7 @@ def update_from_github(progress_callback=None):
         )
         
         if result.returncode != 0:
-            error_msg = result.stderr.strip()[-300:] if result.stderr else "未知错误"
+            error_msg = (result.stderr or "").strip()[-300:] or "未知错误"
             log(f"❌ Git fetch失败")
             log(f"错误详情: {error_msg[:200]}")
             return False, f"无法连接到GitHub，请检查网络连接\n\n错误: {error_msg[:200]}"
@@ -243,7 +243,7 @@ def update_from_github(progress_callback=None):
             log("无法确定更新状态")
             return False, "无法确定更新状态"
         
-        commit_count = int(result.stdout.strip())
+        commit_count = int((result.stdout or "").strip())
         
         if commit_count == 0:
             log("已是最新版本")
@@ -345,7 +345,7 @@ def refresh_local_versions():
             return []
         
         versions = []
-        for line in result.stdout.strip().split('\n'):
+        for line in (result.stdout or "").strip().split('\n'):
             if '|' in line:
                 parts = line.split('|', 2)
                 if len(parts) == 3:
