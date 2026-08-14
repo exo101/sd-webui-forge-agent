@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from typing import Union, List, Optional
 
@@ -116,7 +117,18 @@ class KDiffusionStableDiffusionXLPipeline(StableDiffusionXLImg2ImgPipeline):
                     "zero": (DPMSolverSinglestepScheduler, {"use_karras_sigmas": True, **config_zero}),
                 },
             }
-            model_id = "frankjoshua/juggernautXL_version6Rundiffusion"
+            # Try to find the local cached model path for scheduler config
+            _hub_cache = os.environ.get('HF_HUB_CACHE', '')
+            _cached_model_dir = os.path.join(_hub_cache, 'models--frankjoshua--juggernautXL_version6Rundiffusion')
+            _snapshots_dir = os.path.join(_cached_model_dir, 'snapshots')
+            if os.path.isdir(_snapshots_dir):
+                _snapshots = sorted(os.listdir(_snapshots_dir), reverse=True)
+                if _snapshots:
+                    model_id = os.path.join(_snapshots_dir, _snapshots[0])
+                else:
+                    model_id = "frankjoshua/juggernautXL_version6Rundiffusion"
+            else:
+                model_id = "frankjoshua/juggernautXL_version6Rundiffusion"
             scheduler_name = "DPMPP_2M_SDE"
             scheduler_config_name = "zero"
             scheduler_configs = schedulers[scheduler_name]

@@ -11,6 +11,7 @@
         { id: 'model_components', icon: '🧠',  label: '生图模型组件',        type: 'model_components' },
         { id: 'pnginfo',        icon: '🖼️', label: 'PNG信息',              type: 'tab', tabId: 'pnginfo' },
         { id: 'vision_chat', icon: '💬', label: '图像识别',        type: 'tab', tabId: 'Vision_Chat_Tab' },
+        { id: 'aesthetic', icon: '🎨', label: '美学提示', type: 'tab', tabId: 'aesthetic_enhancement_tab' },
         { id: 'lighting',       icon: '💡', label: '打光辅助',              type: 'tab', tabId: 'lighting_assistant' },
         { id: 'settings',       icon: '⚙️', label: '设置',                  type: 'tab', tabId: 'settings' },
         { id: 'extensions',     icon: '🧩', label: '扩展',                  type: 'tab', tabId: 'extensions' },
@@ -58,7 +59,7 @@
     const HIDDEN_TAB_IDS = [
         'pnginfo', 'modelmerger',
         'settings', 'extensions',
-        'Vision_Chat_Tab', 'lighting_assistant',
+        'Vision_Chat_Tab', 'lighting_assistant', 'aesthetic_enhancement_tab',
         'infinite-image-browsing', 'camera_angle_selector', 'sd-webui-image-comparison',
         'model-downloader', 'multimodal_media_tab', 'Segmentation_Tab',
         'trellis2_3d_generator', 'tagger',
@@ -75,6 +76,9 @@
     const STORAGE_KEY_TOPBAR = 'neo_sidebar_topbar_order';
     const STORAGE_KEY_SIDEBAR = 'neo_sidebar_sidebar_order';
     const STORAGE_KEY_VISIBLE_ITEMS = 'neo_sidebar_visible_items';
+    const STORAGE_KEY_SIDEBAR_COLLAPSED = 'neo_sidebar_collapsed';
+    const STORAGE_KEY_TOPBAR_COLLAPSED = 'neo_topbar_collapsed';
+    const STORAGE_KEY_RIGHTBAR_COLLAPSED = 'neo_rightbar_collapsed';
 
     // --- Drag & Drop state ---
     let dragSourceId = null;
@@ -318,6 +322,16 @@
             topbarElement.appendChild(btn);
         }
         appendTopbarConfigButton();
+        // 折叠按钮
+        const topbarToggle = document.createElement('button');
+        topbarToggle.className = 'neo-topbar-toggle';
+        topbarToggle.innerHTML = '▲';
+        topbarToggle.title = topbarElement.classList.contains('collapsed') ? '展开上边栏' : '折叠上边栏';
+        topbarToggle.addEventListener('click', function (e) {
+            e.stopPropagation();
+            toggleTopbar();
+        });
+        topbarElement.appendChild(topbarToggle);
     }
 
     function appendTopbarConfigButton() {
@@ -356,6 +370,27 @@
             const btn = createToolbarButton(item, 'sidebar');
             sidebarElement.appendChild(btn);
         }
+        // 配置按钮和折叠按钮
+        const configSep = document.createElement('div');
+        configSep.className = 'neo-sidebar-sep';
+        sidebarElement.appendChild(configSep);
+
+        const configBtn = document.createElement('button');
+        configBtn.className = 'neo-sidebar-btn neo-sidebar-config-btn';
+        configBtn.setAttribute('title', '配置预设 - 选择哪些项目显示在主页面');
+        configBtn.innerHTML = '<span class="btn-icon">⚙️</span><span class="btn-label">配置</span>';
+        configBtn.addEventListener('click', showSettingsDialog);
+        sidebarElement.appendChild(configBtn);
+
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'neo-sidebar-toggle';
+        toggleBtn.innerHTML = '◀';
+        toggleBtn.title = sidebarElement.classList.contains('collapsed') ? '展开侧边栏' : '折叠侧边栏';
+        toggleBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            toggleSidebar();
+        });
+        sidebarElement.appendChild(toggleBtn);
     }
 
     // ============================================================
@@ -1155,6 +1190,49 @@
 
         // Topbar config button (last)
         appendTopbarConfigButton();
+
+        // 折叠/展开切换按钮
+        const topbarToggle = document.createElement('button');
+        topbarToggle.className = 'neo-topbar-toggle';
+        topbarToggle.innerHTML = '▲';
+        topbarToggle.title = '折叠上边栏';
+        topbarToggle.addEventListener('click', function (e) {
+            e.stopPropagation();
+            toggleTopbar();
+        });
+        topbarElement.appendChild(topbarToggle);
+
+        // 恢复保存的折叠状态
+        loadTopbarCollapsedState();
+    }
+
+    // ============================================================
+    // Toggle topbar collapse/expand
+    // ============================================================
+    function toggleTopbar() {
+        if (!topbarElement) return;
+        const isCollapsed = topbarElement.classList.toggle('collapsed');
+        const toggleBtn = topbarElement.querySelector('.neo-topbar-toggle');
+        if (toggleBtn) {
+            toggleBtn.title = isCollapsed ? '展开上边栏' : '折叠上边栏';
+        }
+        document.body.classList.toggle('topbar-collapsed', isCollapsed);
+        try {
+            localStorage.setItem(STORAGE_KEY_TOPBAR_COLLAPSED, isCollapsed ? '1' : '0');
+        } catch (e) {}
+    }
+
+    function loadTopbarCollapsedState() {
+        if (!topbarElement) return;
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY_TOPBAR_COLLAPSED);
+            if (saved === '1') {
+                topbarElement.classList.add('collapsed');
+                document.body.classList.add('topbar-collapsed');
+                const toggleBtn = topbarElement.querySelector('.neo-topbar-toggle');
+                if (toggleBtn) toggleBtn.title = '展开上边栏';
+            }
+        } catch (e) {}
     }
 
     // ============================================================
@@ -1200,7 +1278,55 @@
         configBtn.addEventListener('click', showSettingsDialog);
         sidebarElement.appendChild(configBtn);
 
+        // 折叠/展开切换按钮
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'neo-sidebar-toggle';
+        toggleBtn.innerHTML = '◀';
+        toggleBtn.title = '折叠侧边栏';
+        toggleBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            toggleSidebar();
+        });
+        sidebarElement.appendChild(toggleBtn);
+
         document.body.appendChild(sidebarElement);
+
+        // 恢复保存的折叠状态
+        loadSidebarCollapsedState();
+    }
+
+    // ============================================================
+    // Toggle sidebar collapse/expand
+    // ============================================================
+    function toggleSidebar() {
+        if (!sidebarElement) return;
+        const isCollapsed = sidebarElement.classList.toggle('collapsed');
+        // Update toggle button title
+        const toggleBtn = sidebarElement.querySelector('.neo-sidebar-toggle');
+        if (toggleBtn) {
+            toggleBtn.title = isCollapsed ? '展开侧边栏' : '折叠侧边栏';
+        }
+        // Update body class for CSS selector compatibility
+        document.body.classList.toggle('sidebar-collapsed', isCollapsed);
+        // Save state
+        try {
+            localStorage.setItem(STORAGE_KEY_SIDEBAR_COLLAPSED, isCollapsed ? '1' : '0');
+        } catch (e) {}
+    }
+
+    function loadSidebarCollapsedState() {
+        if (!sidebarElement) return;
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY_SIDEBAR_COLLAPSED);
+            if (saved === '1') {
+                sidebarElement.classList.add('collapsed');
+                document.body.classList.add('sidebar-collapsed');
+                const toggleBtn = sidebarElement.querySelector('.neo-sidebar-toggle');
+                if (toggleBtn) {
+                    toggleBtn.title = '展开侧边栏';
+                }
+            }
+        } catch (e) {}
     }
 
     // ============================================================
@@ -1847,11 +1973,56 @@
         // Will be populated by moveOutputToRightbar() after the elements exist
         document.body.appendChild(rightbar);
 
+        // 折叠/展开切换按钮
+        const rightbarToggle = document.createElement('button');
+        rightbarToggle.className = 'neo-rightbar-toggle';
+        rightbarToggle.innerHTML = '▶';
+        rightbarToggle.title = '折叠右侧边栏';
+        rightbarToggle.addEventListener('click', function (e) {
+            e.stopPropagation();
+            toggleRightbar();
+        });
+        rightbar.appendChild(rightbarToggle);
+
+        // 恢复保存的折叠状态
+        loadRightbarCollapsedState();
+
         // Try to move output elements immediately, and retry if not ready
         moveOutputToRightbar();
         setTimeout(moveOutputToRightbar, 1000);
         setTimeout(moveOutputToRightbar, 3000);
         setTimeout(moveOutputToRightbar, 5000);
+    }
+
+    // ============================================================
+    // Toggle right sidebar collapse/expand
+    // ============================================================
+    function toggleRightbar() {
+        const rightbar = document.getElementById('neo-rightbar');
+        if (!rightbar) return;
+        const isCollapsed = rightbar.classList.toggle('collapsed');
+        const toggleBtn = rightbar.querySelector('.neo-rightbar-toggle');
+        if (toggleBtn) {
+            toggleBtn.title = isCollapsed ? '展开右侧边栏' : '折叠右侧边栏';
+        }
+        document.body.classList.toggle('rightbar-collapsed', isCollapsed);
+        try {
+            localStorage.setItem(STORAGE_KEY_RIGHTBAR_COLLAPSED, isCollapsed ? '1' : '0');
+        } catch (e) {}
+    }
+
+    function loadRightbarCollapsedState() {
+        const rightbar = document.getElementById('neo-rightbar');
+        if (!rightbar) return;
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY_RIGHTBAR_COLLAPSED);
+            if (saved === '1') {
+                rightbar.classList.add('collapsed');
+                document.body.classList.add('rightbar-collapsed');
+                const toggleBtn = rightbar.querySelector('.neo-rightbar-toggle');
+                if (toggleBtn) toggleBtn.title = '展开右侧边栏';
+            }
+        } catch (e) {}
     }
 
     // ============================================================

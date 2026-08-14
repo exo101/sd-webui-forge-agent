@@ -205,6 +205,142 @@
     box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3) !important;
 }
 
+/* ============================================================
+   Collapse/Expand Toggle Buttons
+   ============================================================ */
+
+/* --- Topbar Collapse Toggle --- */
+#neo-topbar .neo-topbar-toggle {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    outline: none;
+    font-size: 11px;
+    transition: color 0.12s ease, background 0.12s ease;
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+#neo-topbar .neo-topbar-toggle:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.06);
+}
+#neo-topbar.collapsed {
+    height: 32px !important;
+    overflow: hidden;
+    padding: 0 4px;
+}
+#neo-topbar.collapsed .neo-topbar-btn,
+#neo-topbar.collapsed .neo-topbar-sep,
+#neo-topbar.collapsed .neo-topbar-config-btn {
+    display: none !important;
+}
+#neo-topbar.collapsed .neo-topbar-toggle {
+    margin-left: 0;
+    transform: rotate(180deg);
+}
+
+/* --- Left Sidebar Collapse Toggle --- */
+#neo-sidebar .neo-sidebar-toggle {
+    width: 78px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    outline: none;
+    font-size: 12px;
+    transition: color 0.12s ease, background 0.12s ease;
+    flex-shrink: 0;
+    margin-top: auto;
+    margin-bottom: 2px;
+}
+#neo-sidebar .neo-sidebar-toggle:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.06);
+}
+#neo-sidebar:not(.collapsed) .neo-sidebar-toggle {
+    transform: rotate(0deg);
+}
+#neo-sidebar.collapsed {
+    width: 32px !important;
+    padding: 4px 2px;
+    overflow: hidden;
+}
+#neo-sidebar.collapsed .neo-sidebar-btn,
+#neo-sidebar.collapsed .neo-sidebar-sep,
+#neo-sidebar.collapsed .neo-sidebar-config-btn {
+    display: none !important;
+}
+#neo-sidebar.collapsed .neo-sidebar-toggle {
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    border-radius: 6px;
+    transform: rotate(180deg);
+}
+#neo-sidebar.collapsed .neo-sidebar-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* --- Right Sidebar Collapse Toggle --- */
+#neo-rightbar .neo-rightbar-toggle {
+    width: 78px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    outline: none;
+    font-size: 12px;
+    transition: color 0.12s ease, background 0.12s ease;
+    flex-shrink: 0;
+    margin-top: auto;
+    margin-bottom: 2px;
+}
+#neo-rightbar .neo-rightbar-toggle:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.06);
+}
+#neo-rightbar:not(.collapsed) .neo-rightbar-toggle {
+    transform: rotate(0deg);
+}
+#neo-rightbar.collapsed {
+    width: 32px !important;
+    padding: 4px 2px;
+    overflow: hidden;
+}
+#neo-rightbar.collapsed .neo-rightbar-tab,
+#neo-rightbar.collapsed .neo-rightbar-actions,
+#neo-rightbar.collapsed .neo-rightbar-action-btn {
+    display: none !important;
+}
+#neo-rightbar.collapsed .neo-rightbar-toggle {
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    border-radius: 6px;
+    transform: rotate(180deg);
+}
+#neo-rightbar.collapsed .neo-rightbar-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
 /* --- Prevent body overflow --- */
 body {
     overflow-x: hidden;
@@ -218,7 +354,25 @@ body {
     max-width: calc(100vw - 180px) !important;
     width: auto !important;
     box-sizing: border-box !important;
-    transition: margin 0.2s ease;
+    transition: margin-left 0.2s ease, margin-right 0.2s ease, margin-top 0.2s ease, max-width 0.2s ease;
+}
+/* When left sidebar is collapsed */
+body.sidebar-collapsed .gradio-container {
+    margin-left: 32px !important;
+    max-width: calc(100vw - 122px) !important;
+}
+/* When right sidebar is collapsed */
+body.rightbar-collapsed .gradio-container {
+    margin-right: 32px !important;
+    max-width: calc(100vw - 122px) !important;
+}
+/* When both left and right collapsed */
+body.sidebar-collapsed.rightbar-collapsed .gradio-container {
+    max-width: calc(100vw - 64px) !important;
+}
+/* When topbar is collapsed */
+body.topbar-collapsed .gradio-container {
+    margin-top: 32px !important;
 }
 
 /* --- Right Sidebar Container (mirrors left sidebar) --- */
@@ -339,6 +493,17 @@ body {
     right: 90px;
     bottom: 0;
     z-index: 9995;
+    transition: left 0.2s ease, right 0.2s ease;
+}
+/* When left sidebar collapsed, adjust bottombar left */
+body.sidebar-collapsed #neo-bottombar {
+    left: 32px;
+}
+/* When right sidebar collapsed, adjust bottombar right */
+body.rightbar-collapsed #neo-bottombar {
+    right: 32px;
+}
+#neo-bottombar {
     display: flex;
     flex-direction: column;
     background: rgba(14, 14, 18, 0.95);
@@ -737,13 +902,17 @@ body {
         font-size: 10px;
         max-width: 48px;
     }
-    .gradio-container {
-        margin-left: 72px !important;
-        margin-top: 56px !important;
-    }
     #neo-sidebar,
     #neo-rightbar {
         display: none !important;
+    }
+    .gradio-container {
+        margin-left: 0 !important;
+        margin-top: 56px !important;
+        max-width: 100vw !important;
+    }
+    #neo-bottombar {
+        left: 0 !important;
     }
 }
 
