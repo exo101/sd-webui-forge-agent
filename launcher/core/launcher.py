@@ -352,7 +352,7 @@ class GitPullWorker(QThread):
                 cwd=BASE_DIR, env=git_env,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
-            branch = r2.stdout.strip() if r2.returncode == 0 else "unknown"
+            branch = (r2.stdout or "").strip() if r2.returncode == 0 else "unknown"
             self.log_line.emit(f"[INFO] Current branch: {branch}")
 
             # Step 3: Fetch latest changes
@@ -364,7 +364,7 @@ class GitPullWorker(QThread):
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             if r3.returncode != 0:
-                error_msg = r3.stderr.strip() or "Fetch failed"
+                error_msg = (r3.stderr or "").strip() or "Fetch failed"
                 self.log_line.emit(f"[FAIL] Fetch failed: {error_msg}")
                 self.finished.emit(False, error_msg)
                 return
@@ -377,7 +377,7 @@ class GitPullWorker(QThread):
                 cwd=BASE_DIR, env=git_env,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
-            has_local_changes = bool(r4.stdout.strip())
+            has_local_changes = bool((r4.stdout or "").strip())
             if has_local_changes:
                 self.log_line.emit("[WARN] Local changes detected, stashing...")
                 subprocess.run(
@@ -394,7 +394,7 @@ class GitPullWorker(QThread):
                 cwd=BASE_DIR, env=git_env,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
-            local_commit = r5.stdout.strip() if r5.returncode == 0 else "?"
+            local_commit = (r5.stdout or "").strip() if r5.returncode == 0 else "?"
 
             r6 = subprocess.run(
                 [git_cmd, "rev-parse", "--short", f"origin/{branch}"],
@@ -402,7 +402,7 @@ class GitPullWorker(QThread):
                 cwd=BASE_DIR, env=git_env,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
-            remote_commit = r6.stdout.strip() if r6.returncode == 0 else "?"
+            remote_commit = (r6.stdout or "").strip() if r6.returncode == 0 else "?"
 
             if local_commit == remote_commit:
                 self.log_line.emit(f"[OK] Already up to date ({local_commit})")
@@ -426,7 +426,7 @@ class GitPullWorker(QThread):
                     cwd=BASE_DIR, env=git_env,
                     creationflags=subprocess.CREATE_NO_WINDOW
                 )
-                log_entries = r8.stdout.strip() if r8.returncode == 0 else ""
+                log_entries = (r8.stdout or "").strip() if r8.returncode == 0 else ""
                 if log_entries:
                     self.log_line.emit(f"[OK] Update completed! New commits:")
                     for entry in log_entries.splitlines():
@@ -435,7 +435,7 @@ class GitPullWorker(QThread):
                     self.log_line.emit("[OK] Update completed!")
                 self.finished.emit(True, "Update successful")
             else:
-                error_msg = r7.stderr.strip() or "Pull failed"
+                error_msg = (r7.stderr or "").strip() or "Pull failed"
                 self.log_line.emit(f"[FAIL] Pull failed: {error_msg}")
                 self.finished.emit(False, error_msg)
 

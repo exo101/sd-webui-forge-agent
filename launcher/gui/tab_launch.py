@@ -78,7 +78,7 @@ class GitCheckWorker(QThread):
             r_local = subprocess.run([git, "rev-parse", "--short", "HEAD"],
                 capture_output=True, text=True, timeout=5, cwd=WEBUI_DIR,
                 creationflags=subprocess.CREATE_NO_WINDOW, env=_env)
-            local = r_local.stdout.strip() if r_local.returncode == 0 else "?"
+            local = (r_local.stdout or "").strip() if r_local.returncode == 0 else "?"
 
             subprocess.run([git, "fetch", "origin", "--quiet"],
                 capture_output=True, timeout=15, cwd=WEBUI_DIR,
@@ -87,7 +87,7 @@ class GitCheckWorker(QThread):
             r_remote = subprocess.run([git, "rev-parse", "--short", "origin/HEAD"],
                 capture_output=True, text=True, timeout=5, cwd=WEBUI_DIR,
                 creationflags=subprocess.CREATE_NO_WINDOW, env=_env)
-            remote = r_remote.stdout.strip() if r_remote.returncode == 0 else "?"
+            remote = (r_remote.stdout or "").strip() if r_remote.returncode == 0 else "?"
 
             has_update = bool(local and remote and local != remote and remote != "?")
             self.result.emit({"has_update": has_update, "local": local, "remote": remote, "error": ""})
