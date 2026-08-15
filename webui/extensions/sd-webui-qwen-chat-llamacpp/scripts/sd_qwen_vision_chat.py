@@ -63,7 +63,7 @@ def vision_chat_tab():
                                     if "folder_path" in tag_management_components:
                                         tag_management_components["folder_path"].elem_classes = ["xykc-accordion"]
                         else:
-                            gr.Markdown("Tag management module is currently unavailable.")
+                            gr.Markdown("标签管理模块当前不可用。")
                     except Exception as e:
                         print(f"Tag management module load failed: {e}")
 
@@ -80,17 +80,17 @@ def vision_chat_tab():
                                     if "gallery" in image_management_ui:
                                         image_management_ui["gallery"]
                         else:
-                            gr.Markdown("Image management module is currently unavailable.")
+                            gr.Markdown("图像管理模块当前不可用。")
                     except Exception as e:
                         print(f"Image management module load failed: {e}")
 
                     # Vision model selection
                     with gr.Group():
-                        gr.Markdown("### Vision Model")
-                        gr.Markdown("📌 **Model suggestion**: 8GB VRAM -> 2B, 12GB-16GB VRAM -> 4B-9B")
+                        gr.Markdown("### 视觉模型")
+                        gr.Markdown("📌 **模型建议**: 8GB显存 -> 2B, 12GB-16GB显存 -> 4B-9B")
 
                         vision_model = gr.Dropdown(
-                            label="Vision Model",
+                            label="视觉模型",
                             choices=[
                                 # llama.cpp vision models
                                 "qwen3-vl-2b", "qwen3-vl-4b", "qwen3-vl-8b",
@@ -100,16 +100,16 @@ def vision_chat_tab():
                                 "deepseek-vl-7b", "deepseek-vl-16b",
                                 "cogvlm2-19b", "cogvlm2-7b"
                             ],
-                            value="qwen3-vl-4b",
+                            value=None,
                             interactive=True,
-                            info="Select vision model (supports image recognition + text chat)",
+                            info="选择视觉模型（支持图片识别+文字对话）",
                             scale=2,
                             elem_classes="larger-text",
                             container=True
                         )
 
                         refresh_models_btn = gr.Button(
-                            "🔄 Refresh Model List",
+                            "🔄 刷新模型列表",
                             size="sm",
                             variant="secondary",
                             scale=1,
@@ -118,13 +118,13 @@ def vision_chat_tab():
 
                     # Image upload area
                     with gr.Group():
-                        gr.Markdown("### 📤 Image Upload")
-                        gr.Markdown("📌 **Usage**: Vision models support uploading images with text chat")
+                        gr.Markdown("### 📤 图片上传")
+                        gr.Markdown("📌 **使用说明**: 视觉模型支持上传图片并附带文字对话")
 
                         upload_method = gr.Radio(
-                            [("Single Image", "single"), ("Batch Images", "batch")],
+                            [("单张图片", "single"), ("批量图片", "batch")],
                             value="single",
-                            label="Upload Method",
+                            label="上传方式",
                             interactive=True,
                             scale=2,
                             elem_classes="larger-text",
@@ -148,7 +148,7 @@ def vision_chat_tab():
                             # Batch upload uses Files
                             multi_images_input = gr.Files(
                                 type="filepath",
-                                label="Multiple Images Input",
+                                label="多图输入",
                                 visible=False,
                                 height=300,
                                 scale=1,
@@ -160,7 +160,7 @@ def vision_chat_tab():
                 # Right area: keyword assistant templates and chat area
                 with gr.Column(scale=1):
                     # Keyword assistant template area
-                    with gr.Accordion("Keyword Assistant Templates", open=False):
+                    with gr.Accordion("关键词辅助模板", open=False):
                         if create_prompt_template_ui is not None:
                             template_ui = create_prompt_template_ui()
                             with gr.Row():
@@ -171,12 +171,12 @@ def vision_chat_tab():
                                 with gr.Column():
                                     template_ui["shot_template"]
                         else:
-                            gr.Markdown("Keyword assistant template module is currently unavailable.")
+                            gr.Markdown("关键词辅助模板模块当前不可用。")
 
                     # Chat area
                     chat_history = gr.Chatbot(
                         elem_id="chatbot",
-                        label="Chat History",
+                        label="聊天历史",
                         height=300,
                         render=True
                     )
@@ -186,7 +186,7 @@ def vision_chat_tab():
 
                     chat_message = gr.Textbox(
                         show_label=False,
-                        placeholder="Enter message (supports multi-turn chat, upload image once then ask questions continuously)",
+                        placeholder="输入消息（支持多轮对话，上传一次图片后可连续提问）",
                         container=True,
                         scale=1,
                         min_width=300,
@@ -194,28 +194,28 @@ def vision_chat_tab():
                     )
                     with gr.Row(equal_height=True):
                         submit_button = gr.Button(
-                            "Send",
+                            "发送",
                             size="lg",
                             variant="primary",
                             elem_classes="orange-button",
                             scale=2
                         )
                         clear_button = gr.Button(
-                            "Clear Chat",
+                            "清空对话",
                             size="lg",
                             variant="primary",
                             elem_classes="orange-button",
                             scale=2
                         )
                         save_button = gr.Button(
-                            "Save Chat",
+                            "保存对话",
                             size="lg",
                             variant="primary",
                             elem_classes="orange-button",
                             scale=2
                         )
                         copy_button = gr.Button(
-                            "Copy Latest Reply",
+                            "复制最新回复",
                             size="lg",
                             variant="primary",
                             elem_classes="orange-button",
@@ -230,8 +230,8 @@ def vision_chat_tab():
                             quick_description_buttons = {}
 
                     # Batch recognition tag generation area
-                    with gr.Accordion("Batch Recognition & Tag Generation", open=False):
-                        gr.Markdown("### Batch process images and generate tag files")
+                    with gr.Accordion("批量识别与标签生成", open=False):
+                        gr.Markdown("### 批量处理图片并生成标签文件")
 
                         import os
                         from pathlib import Path
@@ -241,29 +241,29 @@ def vision_chat_tab():
                         os.makedirs(default_image_dir, exist_ok=True)
 
                         batch_image_dir = gr.Textbox(
-                            label="Image Directory Path",
+                            label="图片目录路径",
                             value=default_image_dir,
-                            placeholder="Enter folder path containing images",
+                            placeholder="输入包含图片的文件夹路径",
                             container=True
                         )
 
                         batch_tag_prompt = gr.Textbox(
-                            label="Tag Generation Prompt",
-                            value="Please identify the image content and generate detailed tags, separated by commas, without any explanatory text",
-                            placeholder="Enter prompt for tag generation",
+                            label="标签生成提示词",
+                            value="请识别图片内容并生成详细标签，用逗号分隔，不要包含解释性文字",
+                            placeholder="输入标签生成提示词",
                             lines=2,
                             container=True
                         )
 
                         batch_start_btn = gr.Button(
-                            "Start Batch Recognition",
+                            "开始批量识别",
                             size="lg",
                             variant="primary",
                             elem_classes="orange-button"
                         )
 
                         batch_result = gr.Textbox(
-                            label="Batch Processing Result",
+                            label="批量处理结果",
                             lines=5,
                             container=True
                         )
@@ -434,7 +434,7 @@ def vision_chat_tab():
                                 print(f"📷 [llama.cpp] Calling vision model: {model_name}, image: {temp_image_paths[0]}")
                                 ai_response = get_response_lvm_llamacpp_api(
                                     input_model_name=model_name,
-                                    input_content=message or "Please describe this image",
+                                    input_content=message or "请描述这张图片",
                                     input_image_path=temp_image_paths[0],
                                     llamacpp_host=_LLAMA_URL,
                                     timeout=300
@@ -443,22 +443,22 @@ def vision_chat_tab():
                                 print(f"💬 [llama.cpp] Calling vision model (text): {model_name}")
                                 ai_response = get_response_lvm_llamacpp_api(
                                     input_model_name=model_name,
-                                    input_content=message or "Hello! How can I help you?",
+                                    input_content=message or "你好！请问有什么可以帮你的？",
                                     input_image_path=None,
                                     llamacpp_host=_LLAMA_URL,
                                     timeout=300
                                 )
 
                             if not ai_response:
-                                ai_response = "[Error] llama.cpp API returned empty response"
+                                ai_response = "[错误] llama.cpp API 返回空结果"
 
                         except Exception as e:
-                            ai_response = f"[Error] {str(e)}"
+                            ai_response = f"[错误] {str(e)}"
                             print(f"❌ llama.cpp API call failed: {e}")
                             import traceback
                             traceback.print_exc()
                     else:
-                        ai_response = "[Not Installed] llama.cpp API module is not available"
+                        ai_response = "[未安装] llama.cpp API 模块不可用"
 
                     print(f"✅ AI reply: {ai_response[:100]}...")
                     print("=================\n")
@@ -502,10 +502,10 @@ def vision_chat_tab():
                 def batch_process_images(image_dir, tag_prompt, vision_model):
                     """Batch process images and generate tag files"""
                     if not image_dir or not os.path.isdir(image_dir):
-                        return "Error: Please provide a valid image directory path"
+                        return "错误：请提供有效的图片目录路径"
 
                     if not LLAMACPP_AVAILABLE:
-                        return "Error: llama.cpp API module is not available, please check installation"
+                        return "错误：llama.cpp API 模块不可用，请检查安装"
 
                     supported_extensions = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"]
 
@@ -518,7 +518,7 @@ def vision_chat_tab():
                                 image_files.append(file_path)
 
                     if not image_files:
-                        return "Error: No supported image files found in the specified directory"
+                        return "错误：指定目录中未找到支持的图片文件"
 
                     results = []
                     success_count = 0
@@ -528,7 +528,7 @@ def vision_chat_tab():
                         try:
                             txt_file_path = os.path.splitext(image_path)[0] + ".txt"
 
-                            print(f"Processing: {os.path.basename(image_path)}")
+                            print(f"正在处理: {os.path.basename(image_path)}")
 
                             tags = get_response_lvm_llamacpp_api(
                                 input_model_name=vision_model,
@@ -542,17 +542,17 @@ def vision_chat_tab():
                                 os.makedirs(os.path.dirname(txt_file_path), exist_ok=True)
                                 with open(txt_file_path, 'w', encoding='utf-8') as f:
                                     f.write(tags)
-                                results.append(f"✅ Success: {os.path.basename(image_path)} -> {os.path.basename(txt_file_path)}")
+                                results.append(f"✅ 成功: {os.path.basename(image_path)} -> {os.path.basename(txt_file_path)}")
                                 success_count += 1
                             else:
-                                results.append(f"❌ Failed: {os.path.basename(image_path)} - model returned empty result")
+                                results.append(f"❌ 失败: {os.path.basename(image_path)} - 模型返回空结果")
                                 failed_count += 1
 
                         except Exception as e:
-                            results.append(f"❌ Error: {os.path.basename(image_path)} - {str(e)}")
+                            results.append(f"❌ 错误: {os.path.basename(image_path)} - {str(e)}")
                             failed_count += 1
 
-                    summary = f"Batch processing complete: {success_count} succeeded, {failed_count} failed\n"
+                    summary = f"批量处理完成：{success_count} 个成功，{failed_count} 个失败\n"
                     return summary + "\n".join(results)
 
                 # Chat event bindings
@@ -617,7 +617,7 @@ def vision_chat_tab():
                     """
                 )
 
-    return [(ui, "Image Recognition & Language Interaction", "Vision_Chat_Tab")]
+    return [(ui, "图像识别与语言交互", "Vision_Chat_Tab")]
 
 
 # Register tab
