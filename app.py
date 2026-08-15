@@ -14,11 +14,11 @@ def main():
     sys.path.insert(0, WEBUI_DIR)
 
     # The ModelScope environment has CUDA 12.8.1 drivers but PyTorch is CPU-only.
-    # Force reinstall of CUDA-enabled PyTorch via the WebUI's default TORCH_COMMAND.
+    # Force reinstall of CUDA-enabled PyTorch via the cu128 index.
     if "TORCH_COMMAND" not in os.environ:
         os.environ["TORCH_COMMAND"] = (
-            "pip install torch==2.11.0+cu130 torchvision==0.26.0+cu130 "
-            "--extra-index-url https://download.pytorch.org/whl/cu130"
+            "pip install torch==2.10.0+cu128 torchvision==0.25.0+cu128 "
+            "--extra-index-url https://download.pytorch.org/whl/cu128"
         )
 
     # Inject command-line args for the ModelScope environment
