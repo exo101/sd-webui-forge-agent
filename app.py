@@ -13,6 +13,10 @@ def main():
     os.chdir(WEBUI_DIR)
     sys.path.insert(0, WEBUI_DIR)
 
+    # Use the existing PyTorch from ModelScope environment, skip reinstall
+    if "TORCH_COMMAND" not in os.environ:
+        os.environ["TORCH_COMMAND"] = "echo 'Using existing torch from ModelScope environment'"
+
     # Inject command-line args for the ModelScope environment
     sys.argv = [
         sys.argv[0],
