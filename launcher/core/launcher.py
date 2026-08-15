@@ -53,9 +53,6 @@ def build_args(config: dict) -> list[str]:
     if not config.get("enable_xformers", True): args.append("--disable-xformers")
     
     if config.get("lowvram"):          args.append("--lowvram")
-    if config.get("no_half"):          args.append("--no-half")
-    if config.get("no_half_vae"):      args.append("--no-half-vae")
-    if config.get("precision_full"):   args += ["--precision", "full"]
     if config.get("api"):              args.append("--api")
     if config.get("share"):            args.append("--share")
     if config.get("skip_install"):     args.append("--skip-install")
