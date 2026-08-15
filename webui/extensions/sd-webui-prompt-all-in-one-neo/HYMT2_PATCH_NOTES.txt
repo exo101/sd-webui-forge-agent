@@ -1,0 +1,6 @@
+Hy-MT2 integration patch v3
+- Correct tencent/* repository IDs.
+- Keep startup API retry fix.
+- If HF_ENDPOINT mirror fails, automatically retry the official https://huggingface.co endpoint.
+- Optional per-plugin endpoint override: PAIO_HYMT2_ENDPOINT.
+- Model is downloaded to webui/models/<Hy-MT2 model> then loaded locally.
