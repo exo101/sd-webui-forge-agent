@@ -32,7 +32,6 @@ def main():
     sys.argv = [
         sys.argv[0],
         "--skip-python-version-check",
-        "--no-half-vae",
         "--api",
     ]
     if not torch_has_cuda:
