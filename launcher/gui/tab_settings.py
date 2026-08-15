@@ -39,8 +39,6 @@ class SettingsTab(QWidget):
         layout.addWidget(self._group_attention())
         # 显存优化
         layout.addWidget(self._group_vram())
-        # 精度设置
-        layout.addWidget(self._group_precision())
         # 其他
         layout.addWidget(self._group_misc())
         # 额外参数
@@ -179,22 +177,6 @@ class SettingsTab(QWidget):
         layout.addWidget(spin_reserve)
         self._widgets["reserve_vram"] = spin_reserve
 
-        layout.addStretch()
-        return g
-
-    def _group_precision(self) -> QGroupBox:
-        g = QGroupBox("精度设置")
-        layout = QHBoxLayout(g)
-        layout.setSpacing(20)
-
-        for key, text in [
-            ("no_half",       "--no-half"),
-            ("no_half_vae",   "--no-half-vae"),
-            ("precision_full","--precision full"),
-        ]:
-            chk = QCheckBox(text)
-            layout.addWidget(chk)
-            self._widgets[key] = chk
         layout.addStretch()
         return g
 
@@ -440,7 +422,7 @@ class SettingsTab(QWidget):
 
         for key in ["listen", "autolaunch", "api", "share", "show_console",
                     "cuda_malloc", "cuda_stream", "pin_shared_memory",
-                    "lowvram", "neveroom", "no_half", "no_half_vae", "precision_full",
+                    "lowvram", "neveroom",
                     "skip_install", "skip_version", "skip_torch", "disable_sage"]:
             if key in self._widgets:
                 self._widgets[key].setChecked(bool(c.get(key, False)))
@@ -496,7 +478,7 @@ class SettingsTab(QWidget):
 
         for key in ["listen", "autolaunch", "api", "share", "show_console",
                     "cuda_malloc", "cuda_stream", "pin_shared_memory",
-                    "lowvram", "neveroom", "no_half", "no_half_vae", "precision_full",
+                    "lowvram", "neveroom",
                     "skip_install", "skip_version", "skip_torch", "disable_sage"]:
             if key in self._widgets:
                 config[key] = self._widgets[key].isChecked()
