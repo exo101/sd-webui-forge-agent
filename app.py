@@ -19,7 +19,7 @@ def main():
         os.environ["TORCH_COMMAND"] = (
             "pip install torch==2.10.0+cu128 "
             "--force-reinstall "
-            "--extra-index-url https://mirrors.aliyun.com/pytorch-wheels/cu128/"
+            "--find-links https://mirrors.aliyun.com/pytorch-wheels/cu128/"
         )
 
     # Inject command-line args for the ModelScope environment
