@@ -294,53 +294,6 @@
     background: rgba(255, 255, 255, 0.1);
 }
 
-/* --- Right Sidebar Collapse Toggle --- */
-#neo-rightbar .neo-rightbar-toggle {
-    width: 78px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 6px;
-    color: rgba(255, 255, 255, 0.4);
-    cursor: pointer;
-    outline: none;
-    font-size: 12px;
-    transition: color 0.12s ease, background 0.12s ease;
-    flex-shrink: 0;
-    margin-top: auto;
-    margin-bottom: 2px;
-}
-#neo-rightbar .neo-rightbar-toggle:hover {
-    color: rgba(255, 255, 255, 0.8);
-    background: rgba(255, 255, 255, 0.06);
-}
-#neo-rightbar:not(.collapsed) .neo-rightbar-toggle {
-    transform: rotate(0deg);
-}
-#neo-rightbar.collapsed {
-    width: 32px !important;
-    padding: 4px 2px;
-    overflow: hidden;
-}
-#neo-rightbar.collapsed .neo-rightbar-tab,
-#neo-rightbar.collapsed .neo-rightbar-actions,
-#neo-rightbar.collapsed .neo-rightbar-action-btn {
-    display: none !important;
-}
-#neo-rightbar.collapsed .neo-rightbar-toggle {
-    width: 28px;
-    height: 28px;
-    margin: 0;
-    border-radius: 6px;
-    transform: rotate(180deg);
-}
-#neo-rightbar.collapsed .neo-rightbar-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
 /* --- Prevent body overflow --- */
 body {
     overflow-x: hidden;
@@ -361,129 +314,9 @@ body.sidebar-collapsed .gradio-container {
     margin-left: 32px !important;
     max-width: calc(100vw - 122px) !important;
 }
-/* When right sidebar is collapsed */
-body.rightbar-collapsed .gradio-container {
-    margin-right: 32px !important;
-    max-width: calc(100vw - 122px) !important;
-}
-/* When both left and right collapsed */
-body.sidebar-collapsed.rightbar-collapsed .gradio-container {
-    max-width: calc(100vw - 64px) !important;
-}
 /* When topbar is collapsed */
 body.topbar-collapsed .gradio-container {
     margin-top: 32px !important;
-}
-
-/* --- Right Sidebar Container (mirrors left sidebar) --- */
-#neo-rightbar {
-    position: fixed;
-    right: 0;
-    top: 64px;
-    bottom: 0;
-    width: 90px;
-    z-index: 9996;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: rgba(18, 18, 22, 0.94);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-left: 1px solid rgba(255, 255, 255, 0.06);
-    padding: 12px 4px;
-    gap: 3px;
-    user-select: none;
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.08) transparent;
-}
-#neo-rightbar::-webkit-scrollbar { width: 3px; }
-#neo-rightbar::-webkit-scrollbar-track { background: transparent; }
-#neo-rightbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
-
-/* --- Right Sidebar Tab Container --- */
-#neo-rightbar .neo-rightbar-tab {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    width: 100%;
-}
-
-/* --- Right Sidebar Action Buttons (mirrors left sidebar) --- */
-#neo-rightbar .neo-rightbar-actions {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    padding: 0;
-    width: 100%;
-}
-#neo-rightbar .neo-rightbar-actions .neo-rightbar-action-btn {
-    width: 78px;
-    height: 72px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    border: 1px solid transparent;
-    border-radius: 12px;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.85);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    font-size: 13px;
-    line-height: 1;
-    position: relative;
-    padding: 4px 2px;
-    margin: 0;
-    outline: none;
-    flex-shrink: 0;
-}
-#neo-rightbar .neo-rightbar-actions .neo-rightbar-action-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.15);
-}
-#neo-rightbar .neo-rightbar-actions .neo-rightbar-action-btn.active {
-    background: rgba(59, 130, 246, 0.15);
-    color: #93c5fd;
-    border-color: rgba(59, 130, 246, 0.5);
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.25), inset 0 0 6px rgba(59, 130, 246, 0.08);
-    border-right: 3px solid rgba(59, 130, 246, 0.6);
-}
-#neo-rightbar .neo-rightbar-actions .neo-rightbar-action-btn .btn-icon {
-    pointer-events: none;
-    font-size: 28px;
-    line-height: 1.1;
-    filter: drop-shadow(0 0 2px rgba(255,255,255,0.12));
-}
-#neo-rightbar .neo-rightbar-actions .neo-rightbar-action-btn.active .btn-icon {
-    filter: drop-shadow(0 0 4px rgba(59,130,246,0.4));
-}
-#neo-rightbar .neo-rightbar-actions .neo-rightbar-action-btn .btn-label {
-    pointer-events: none;
-    display: block;
-    font-size: 9.5px;
-    line-height: 1.2;
-    text-align: center;
-    max-width: 74px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: inherit;
-}
-
-/* --- Responsive: hide rightbar on small screens --- */
-@media (max-width: 1100px) {
-    #neo-rightbar {
-        display: none !important;
-    }
-    .gradio-container {
-        margin-right: 0 !important;
-    }
 }
 
 /* --- Bottom Bar: 生成信息 & 运行日志 (可折叠) --- */
@@ -498,10 +331,6 @@ body.topbar-collapsed .gradio-container {
 /* When left sidebar collapsed, adjust bottombar left */
 body.sidebar-collapsed #neo-bottombar {
     left: 32px;
-}
-/* When right sidebar collapsed, adjust bottombar right */
-body.rightbar-collapsed #neo-bottombar {
-    right: 32px;
 }
 #neo-bottombar {
     display: flex;
@@ -902,8 +731,7 @@ body.rightbar-collapsed #neo-bottombar {
         font-size: 10px;
         max-width: 48px;
     }
-    #neo-sidebar,
-    #neo-rightbar {
+    #neo-sidebar {
         display: none !important;
     }
     .gradio-container {

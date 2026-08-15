@@ -78,7 +78,6 @@
     const STORAGE_KEY_VISIBLE_ITEMS = 'neo_sidebar_visible_items';
     const STORAGE_KEY_SIDEBAR_COLLAPSED = 'neo_sidebar_collapsed';
     const STORAGE_KEY_TOPBAR_COLLAPSED = 'neo_topbar_collapsed';
-    const STORAGE_KEY_RIGHTBAR_COLLAPSED = 'neo_rightbar_collapsed';
 
     // --- Drag & Drop state ---
     let dragSourceId = null;
@@ -1787,7 +1786,6 @@
             if (txt2imgTab && img2imgTab) {
                 const isTxt2img = txt2imgTab.classList.contains('selected') ||
                                   txt2imgTab.getAttribute('aria-selected') === 'true';
-                showRightbarTab(isTxt2img ? 'txt2img' : 'img2img');
                 showBottombarTab(isTxt2img ? 'txt2img' : 'img2img');
             }
         });
@@ -1962,154 +1960,8 @@
     }
 
     // ============================================================
-    // Create right sidebar for output widgets
+    // Right sidebar has been removed; buttons return to original positions
     // ============================================================
-    function createRightbar() {
-        if (document.getElementById('neo-rightbar')) return;
-
-        const rightbar = document.createElement('div');
-        rightbar.id = 'neo-rightbar';
-
-        // Will be populated by moveOutputToRightbar() after the elements exist
-        document.body.appendChild(rightbar);
-
-        // 折叠/展开切换按钮
-        const rightbarToggle = document.createElement('button');
-        rightbarToggle.className = 'neo-rightbar-toggle';
-        rightbarToggle.innerHTML = '▶';
-        rightbarToggle.title = '折叠右侧边栏';
-        rightbarToggle.addEventListener('click', function (e) {
-            e.stopPropagation();
-            toggleRightbar();
-        });
-        rightbar.appendChild(rightbarToggle);
-
-        // 恢复保存的折叠状态
-        loadRightbarCollapsedState();
-
-        // Try to move output elements immediately, and retry if not ready
-        moveOutputToRightbar();
-        setTimeout(moveOutputToRightbar, 1000);
-        setTimeout(moveOutputToRightbar, 3000);
-        setTimeout(moveOutputToRightbar, 5000);
-    }
-
-    // ============================================================
-    // Toggle right sidebar collapse/expand
-    // ============================================================
-    function toggleRightbar() {
-        const rightbar = document.getElementById('neo-rightbar');
-        if (!rightbar) return;
-        const isCollapsed = rightbar.classList.toggle('collapsed');
-        const toggleBtn = rightbar.querySelector('.neo-rightbar-toggle');
-        if (toggleBtn) {
-            toggleBtn.title = isCollapsed ? '展开右侧边栏' : '折叠右侧边栏';
-        }
-        document.body.classList.toggle('rightbar-collapsed', isCollapsed);
-        try {
-            localStorage.setItem(STORAGE_KEY_RIGHTBAR_COLLAPSED, isCollapsed ? '1' : '0');
-        } catch (e) {}
-    }
-
-    function loadRightbarCollapsedState() {
-        const rightbar = document.getElementById('neo-rightbar');
-        if (!rightbar) return;
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY_RIGHTBAR_COLLAPSED);
-            if (saved === '1') {
-                rightbar.classList.add('collapsed');
-                document.body.classList.add('rightbar-collapsed');
-                const toggleBtn = rightbar.querySelector('.neo-rightbar-toggle');
-                if (toggleBtn) toggleBtn.title = '展开右侧边栏';
-            }
-        } catch (e) {}
-    }
-
-    // ============================================================
-    // Move output image buttons to right sidebar
-    // ============================================================
-    function moveOutputToRightbar() {
-        const rightbar = document.getElementById('neo-rightbar');
-        if (!rightbar) return;
-
-        const tabNames = ['txt2img', 'img2img'];
-
-        for (const tab of tabNames) {
-            const buttonsId = `image_buttons_${tab}`;
-            const buttonsRow = document.getElementById(buttonsId);
-
-            // Only process if the container for this tab doesn't exist yet
-            const tabContainerId = `neo-rightbar-${tab}`;
-            if (document.getElementById(tabContainerId)) continue;
-            if (!buttonsRow) continue;
-
-            // Create tab container
-            const tabContainer = document.createElement('div');
-            tabContainer.id = tabContainerId;
-            tabContainer.className = 'neo-rightbar-tab';
-            tabContainer.style.display = tab === 'txt2img' ? 'flex' : 'none';
-
-            const actionsWrap = document.createElement('div');
-            actionsWrap.className = 'neo-rightbar-actions';
-
-            // Action button definitions with icons and names
-            const actionMap = [
-                { id: `${tab}_open_folder`, icon: '📂', name: '打开目录' },
-                { id: `save_${tab}`, icon: '💾', name: '保存' },
-                { id: `save_zip_${tab}`, icon: '🗃️', name: '打包下载' },
-                { id: `${tab}_send_to_img2img`, icon: '🖼️', name: '发送到图生图' },
-                { id: `${tab}_send_to_inpaint`, icon: '🎨', name: '发送到重绘' },
-                { id: `${tab}_send_to_extras`, icon: '📐', name: '发送到后期' },
-            ];
-
-            // Add upscale button for txt2img
-            if (tab === 'txt2img') {
-                actionMap.push({ id: `${tab}_upscale`, icon: '✨', name: '高清放大' });
-            }
-
-            for (const action of actionMap) {
-                const originalBtn = document.getElementById(action.id);
-                if (!originalBtn) continue;
-
-                const wrapper = document.createElement('button');
-                wrapper.className = 'neo-rightbar-action-btn';
-                wrapper.setAttribute('data-original-id', action.id);
-                wrapper.innerHTML = `<span class="btn-icon">${action.icon}</span><span class="btn-label">${action.name}</span>`;
-
-                // Forward click events to the original button
-                wrapper.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const orig = document.getElementById(this.getAttribute('data-original-id'));
-                    if (orig) orig.click();
-                });
-
-                actionsWrap.appendChild(wrapper);
-            }
-
-            tabContainer.appendChild(actionsWrap);
-            rightbar.appendChild(tabContainer);
-
-            // Hide the original buttons row
-            buttonsRow.style.display = 'none';
-        }
-
-        // Show/hide right sidebar tab sections based on active tab
-        const activeTab = document.querySelector('.tab-nav .tab-nav-item.selected');
-        if (activeTab) {
-            const tabId = activeTab.getAttribute('id');
-            if (tabId) {
-                showRightbarTab(tabId.includes('txt2img') ? 'txt2img' : 'img2img');
-            }
-        }
-    }
-
-    function showRightbarTab(tabName) {
-        const txt2imgContainer = document.getElementById('neo-rightbar-txt2img');
-        const img2imgContainer = document.getElementById('neo-rightbar-img2img');
-        if (txt2imgContainer) txt2imgContainer.style.display = tabName === 'txt2img' ? 'flex' : 'none';
-        if (img2imgContainer) img2imgContainer.style.display = tabName === 'img2img' ? 'flex' : 'none';
-    }
 
     // ============================================================
     // Create bottom bar for generation info & run log
@@ -2519,7 +2371,6 @@
 
         createTopbar();
         createSidebar();
-        createRightbar();
         createBottombar();
         hideTabs();
         hideAllPanels();
