@@ -62,30 +62,38 @@ def get_llamacpp_models(llamacpp_host=DEFAULT_LLAMACPP_URL):
 def get_response_lvm_llamacpp_api(input_model_name, input_content, input_image_path,
                                    llamacpp_host=DEFAULT_LLAMACPP_URL, timeout=300):
     try:
-        # 检查图片文件是否存在
-        if not os.path.exists(input_image_path):
-            print(f"❌ 错误：图片文件不存在 '{input_image_path}'")
-            return f"[错误] 图片文件不存在: {input_image_path}"
-        
-        # 获取图片信息
-        file_size = os.path.getsize(input_image_path)
-        print(f"📷 图片路径: {input_image_path}, 大小: {file_size} bytes")
-        
-        # 读取图片并编码为Base64
-        with open(input_image_path, 'rb') as image_file:
-            image_data = image_file.read()
-            base64_image = base64.b64encode(image_data).decode('utf-8')
-        
-        print(f"✅ Base64编码完成，长度: {len(base64_image)}")
-        
-        # 构造消息 - 使用 OpenAI 格式的视觉消息
-        messages = [{
-            'role': 'user',
-            'content': [
-                {'type': 'text', 'text': input_content},
-                {'type': 'image_url', 'image_url': {'url': f'data:image/png;base64,{base64_image}'}}
-            ]
-        }]
+        # Handle text-only mode (no image)
+        if input_image_path is None:
+            print(f"💬 纯文本模式，无图片输入")
+            messages = [{
+                'role': 'user',
+                'content': input_content
+            }]
+        else:
+            # Check if image file exists
+            if not os.path.exists(input_image_path):
+                print(f"❌ 错误：图片文件不存在 '{input_image_path}'")
+                return f"[错误] 图片文件不存在: {input_image_path}"
+
+            # Get image info
+            file_size = os.path.getsize(input_image_path)
+            print(f"📷 图片路径: {input_image_path}, 大小: {file_size} bytes")
+
+            # Read and encode image to Base64
+            with open(input_image_path, 'rb') as image_file:
+                image_data = image_file.read()
+                base64_image = base64.b64encode(image_data).decode('utf-8')
+
+            print(f"✅ Base64编码完成，长度: {len(base64_image)}")
+
+            # Construct vision message using OpenAI format
+            messages = [{
+                'role': 'user',
+                'content': [
+                    {'type': 'text', 'text': input_content},
+                    {'type': 'image_url', 'image_url': {'url': f'data:image/png;base64,{base64_image}'}}
+                ]
+            }]
         
         # llama.cpp /v1/chat/completions API
         api_url = f"{llamacpp_host.rstrip('/')}/v1/chat/completions"
