@@ -1,51 +1,58 @@
 /* ============================================================
-   SD WebUI Forge NEO - Top Toolbar & Sidebar
-   Mobile-app-style launcher with drag-and-drop
+   SD WebUI Forge NEO - Apple-Inspired UI Design
+   Clean, minimal, translucent with macOS-style aesthetics
    ============================================================ */
 
-/* --- Top Toolbar Container --- */
+/* --- Apple System Font Stack --- */
+#neo-topbar, #neo-sidebar, #neo-bottombar,
+#neo-topbar *, #neo-sidebar *, #neo-bottombar *,
+.neo-settings-overlay, .neo-settings-overlay * {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+                 'Helvetica Neue', 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+/* ============================================================
+   TOPBAR - macOS Menu Bar Style
+   ============================================================ */
 #neo-topbar {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    height: 64px;
+    height: 56px;
     z-index: 9998;
     display: flex;
     flex-direction: row;
     align-items: center;
-    background: rgba(18, 18, 22, 0.94);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    padding: 0 10px;
-    gap: 4px;
+    background: rgba(28, 28, 34, 0.78);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 0 12px;
+    gap: 2px;
     user-select: none;
     overflow-x: auto;
     overflow-y: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.08) transparent;
+    scrollbar-width: none;
 }
-#neo-topbar::-webkit-scrollbar { height: 3px; }
-#neo-topbar::-webkit-scrollbar-track { background: transparent; }
-#neo-topbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+#neo-topbar::-webkit-scrollbar { display: none; }
 
-/* --- Top Toolbar Buttons (app icon style) --- */
+/* --- Topbar Buttons: macOS Pill Style --- */
 #neo-topbar .neo-topbar-btn {
-    min-width: 64px;
-    height: 52px;
+    min-width: 56px;
+    height: 40px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    border: 1px solid transparent;
+    gap: 1px;
+    border: none;
     border-radius: 10px;
     background: transparent;
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.65);
     cursor: grab;
-    transition: all 0.15s ease;
-    font-size: 13px;
+    transition: all 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    font-size: 12px;
     line-height: 1;
     position: relative;
     padding: 4px 10px;
@@ -56,157 +63,161 @@
 }
 #neo-topbar .neo-topbar-btn:active {
     cursor: grabbing;
+    transform: scale(0.94);
 }
 #neo-topbar .neo-topbar-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.92);
 }
 #neo-topbar .neo-topbar-btn.active {
-    background: rgba(59, 130, 246, 0.15);
+    background: rgba(59, 130, 246, 0.18);
     color: #93c5fd;
-    border-color: rgba(59, 130, 246, 0.5);
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.25), inset 0 0 6px rgba(59, 130, 246, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 #neo-topbar .neo-topbar-btn .btn-icon {
     pointer-events: none;
-    font-size: 24px;
+    font-size: 20px;
     line-height: 1.2;
-    filter: drop-shadow(0 0 2px rgba(255,255,255,0.12));
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 #neo-topbar .neo-topbar-btn.active .btn-icon {
-    filter: drop-shadow(0 0 4px rgba(59,130,246,0.4));
+    filter: drop-shadow(0 1px 3px rgba(59, 130, 246, 0.3));
 }
 #neo-topbar .neo-topbar-btn .btn-label {
     pointer-events: none;
-    font-size: 11px;
-    line-height: 1.2;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.1;
     text-align: center;
-    max-width: 64px;
+    max-width: 56px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    letter-spacing: 0.02em;
 }
 
-/* --- Top Toolbar Separator --- */
+/* --- Topbar Separator: macOS Style Dot --- */
 #neo-topbar .neo-topbar-sep {
-    width: 1px;
-    height: 32px;
-    background: rgba(255, 255, 255, 0.08);
-    margin: 0 4px;
+    width: 3px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    margin: 0 6px;
     flex-shrink: 0;
     cursor: default;
 }
 
-/* --- Sidebar Container --- */
+/* ============================================================
+   SIDEBAR - macOS Dock/Finder Sidebar Style
+   ============================================================ */
 #neo-sidebar {
     position: fixed;
     left: 0;
-    top: 64px;
+    top: 56px;
     bottom: 0;
-    width: 90px;
+    width: 88px;
     z-index: 9995;
     display: flex;
     flex-direction: column;
     align-items: center;
-    background: rgba(18, 18, 22, 0.94);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
-    padding: 12px 4px;
-    gap: 3px;
+    background: rgba(28, 28, 34, 0.78);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 14px 6px 10px;
+    gap: 2px;
     user-select: none;
     overflow-y: auto;
     overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.08) transparent;
+    scrollbar-width: none;
 }
-#neo-sidebar::-webkit-scrollbar { width: 3px; }
-#neo-sidebar::-webkit-scrollbar-track { background: transparent; }
-#neo-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+#neo-sidebar::-webkit-scrollbar { display: none; }
 
-/* --- Sidebar Buttons (app icon style) --- */
+/* --- Sidebar Buttons: macOS Dock Style --- */
 #neo-sidebar .neo-sidebar-btn {
-    width: 78px;
-    height: 72px;
+    width: 72px;
+    min-height: 64px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    border: 1px solid transparent;
-    border-radius: 12px;
+    gap: 2px;
+    border: none;
+    border-radius: 14px;
     background: transparent;
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.65);
     cursor: grab;
-    transition: all 0.15s ease;
-    font-size: 13px;
+    transition: all 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    font-size: 12px;
     line-height: 1;
     position: relative;
-    padding: 4px 2px;
+    padding: 6px 2px;
     margin: 0;
     outline: none;
     flex-shrink: 0;
 }
 #neo-sidebar .neo-sidebar-btn:active {
     cursor: grabbing;
+    transform: scale(0.92);
 }
 #neo-sidebar .neo-sidebar-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.9);
 }
 #neo-sidebar .neo-sidebar-btn.active {
-    background: rgba(59, 130, 246, 0.15);
+    background: rgba(59, 130, 246, 0.16);
     color: #93c5fd;
-    border-color: rgba(59, 130, 246, 0.5);
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.25), inset 0 0 6px rgba(59, 130, 246, 0.08);
-    border-left: 3px solid rgba(59, 130, 246, 0.6);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 #neo-sidebar .neo-sidebar-btn .btn-icon {
     pointer-events: none;
-    font-size: 32px;
+    font-size: 28px;
     line-height: 1.1;
-    filter: drop-shadow(0 0 2px rgba(255,255,255,0.12));
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.25));
+    margin-bottom: 1px;
 }
 #neo-sidebar .neo-sidebar-btn.active .btn-icon {
-    filter: drop-shadow(0 0 4px rgba(59,130,246,0.4));
+    filter: drop-shadow(0 1px 4px rgba(59, 130, 246, 0.3));
 }
 #neo-sidebar .neo-sidebar-btn .btn-label {
     pointer-events: none;
     display: block;
-    font-size: 11px;
-    line-height: 1.2;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.1;
     text-align: center;
-    max-width: 74px;
+    max-width: 68px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     color: inherit;
+    letter-spacing: 0.02em;
 }
 
-/* --- Sidebar Separator --- */
+/* --- Sidebar Separator: Thin Line --- */
 #neo-sidebar .neo-sidebar-sep {
-    width: 60px;
+    width: 48px;
     height: 1px;
-    background: rgba(255, 255, 255, 0.08);
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
     margin: 4px 0;
     flex-shrink: 0;
     cursor: default;
 }
 
-/* --- Drag state styles --- */
+/* ============================================================
+   DRAG & DROP STATES
+   ============================================================ */
 .neo-dragging {
     opacity: 0.4 !important;
-    transform: scale(0.92);
+    transform: scale(0.88) !important;
 }
 .neo-drag-over {
-    background: rgba(59, 130, 246, 0.15) !important;
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3) !important;
+    background: rgba(59, 130, 246, 0.12) !important;
+    border-radius: 14px !important;
 }
 
 /* ============================================================
-   Collapse/Expand Toggle Buttons
+   COLLAPSE/EXPAND TOGGLE BUTTONS
    ============================================================ */
 
 /* --- Topbar Collapse Toggle --- */
@@ -218,24 +229,24 @@
     align-items: center;
     justify-content: center;
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 6px;
-    color: rgba(255, 255, 255, 0.4);
+    border: none;
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.3);
     cursor: pointer;
     outline: none;
-    font-size: 11px;
-    transition: color 0.12s ease, background 0.12s ease;
+    font-size: 10px;
+    transition: all 0.18s ease;
     flex-shrink: 0;
-    margin-left: 4px;
+    margin-left: auto;
 }
 #neo-topbar .neo-topbar-toggle:hover {
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.7);
     background: rgba(255, 255, 255, 0.06);
 }
 #neo-topbar.collapsed {
     height: 32px !important;
     overflow: hidden;
-    padding: 0 4px;
+    padding: 0 6px;
 }
 #neo-topbar.collapsed .neo-topbar-btn,
 #neo-topbar.collapsed .neo-topbar-sep,
@@ -247,27 +258,27 @@
     transform: rotate(180deg);
 }
 
-/* --- Left Sidebar Collapse Toggle --- */
+/* --- Sidebar Collapse Toggle --- */
 #neo-sidebar .neo-sidebar-toggle {
-    width: 78px;
+    width: 72px;
     height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 6px;
-    color: rgba(255, 255, 255, 0.4);
+    border: none;
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.3);
     cursor: pointer;
     outline: none;
-    font-size: 12px;
-    transition: color 0.12s ease, background 0.12s ease;
+    font-size: 10px;
+    transition: all 0.18s ease;
     flex-shrink: 0;
     margin-top: auto;
     margin-bottom: 2px;
 }
 #neo-sidebar .neo-sidebar-toggle:hover {
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.7);
     background: rgba(255, 255, 255, 0.06);
 }
 #neo-sidebar:not(.collapsed) .neo-sidebar-toggle {
@@ -275,7 +286,7 @@
 }
 #neo-sidebar.collapsed {
     width: 32px !important;
-    padding: 4px 2px;
+    padding: 6px 2px;
     overflow: hidden;
 }
 #neo-sidebar.collapsed .neo-sidebar-btn,
@@ -287,11 +298,11 @@
     width: 28px;
     height: 28px;
     margin: 0;
-    border-radius: 6px;
+    border-radius: 8px;
     transform: rotate(180deg);
 }
 #neo-sidebar.collapsed .neo-sidebar-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 /* --- Prevent body overflow --- */
@@ -299,48 +310,56 @@ body {
     overflow-x: hidden;
 }
 
-/* --- Push main content --- */
+/* ============================================================
+   MAIN CONTENT LAYOUT
+   ============================================================ */
 .gradio-container {
-    margin-left: 90px !important;
-    margin-right: 90px !important;
-    margin-top: 64px !important;
-    max-width: calc(100vw - 180px) !important;
+    margin-left: 88px !important;
+    margin-right: 0 !important;
+    margin-top: 56px !important;
+    max-width: calc(100vw - 88px) !important;
     width: auto !important;
     box-sizing: border-box !important;
-    transition: margin-left 0.2s ease, margin-right 0.2s ease, margin-top 0.2s ease, max-width 0.2s ease;
+    transition: margin-left 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                margin-top 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                max-width 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-/* When left sidebar is collapsed */
+/* When sidebar is collapsed */
 body.sidebar-collapsed .gradio-container {
     margin-left: 32px !important;
-    max-width: calc(100vw - 122px) !important;
+    max-width: calc(100vw - 32px) !important;
 }
 /* When topbar is collapsed */
 body.topbar-collapsed .gradio-container {
     margin-top: 32px !important;
 }
 
-/* --- Bottom Bar: 生成信息 & 运行日志 (可折叠) --- */
+/* ============================================================
+   BOTTOM BAR - macOS Inspector Panel Style
+   ============================================================ */
 #neo-bottombar {
     position: fixed;
-    left: 90px;
-    right: 90px;
+    left: 88px;
+    right: 0;
     bottom: 0;
     z-index: 9995;
-    transition: left 0.2s ease, right 0.2s ease;
+    transition: left 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                right 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-/* When left sidebar collapsed, adjust bottombar left */
+/* When sidebar collapsed, adjust bottombar left */
 body.sidebar-collapsed #neo-bottombar {
     left: 32px;
 }
 #neo-bottombar {
     display: flex;
     flex-direction: column;
-    background: rgba(14, 14, 18, 0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-    font-size: 14px;
-    transition: max-height 0.25s ease, box-shadow 0.25s ease;
+    background: rgba(28, 28, 34, 0.82);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 13px;
+    transition: max-height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                box-shadow 0.3s ease;
     overflow: hidden;
     cursor: default;
 }
@@ -351,10 +370,10 @@ body.sidebar-collapsed #neo-bottombar {
 #neo-bottombar.collapsed .neo-bottombar-body {
     display: none;
 }
-/* --- Expanded: show full content, expand upward to 50% viewport height --- */
+/* --- Expanded: show full content --- */
 #neo-bottombar:not(.collapsed) {
     max-height: 50vh;
-    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.35);
 }
 #neo-bottombar:not(.collapsed) .neo-bottombar-body {
     display: flex;
@@ -365,16 +384,16 @@ body.sidebar-collapsed #neo-bottombar {
 }
 #neo-bottombar::-webkit-scrollbar { height: 4px; }
 #neo-bottombar::-webkit-scrollbar-track { background: transparent; }
-#neo-bottombar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+#neo-bottombar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
 
-/* Bottom bar: header row (tabs + toggle button) */
+/* Bottom bar: header row - macOS Segment Control Style */
 #neo-bottombar .neo-bottombar-header {
     display: flex;
     flex-direction: row;
     align-items: center;
     flex-shrink: 0;
     height: 32px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     padding: 0;
     margin: 0;
 }
@@ -383,48 +402,53 @@ body.sidebar-collapsed #neo-bottombar {
     flex-direction: row;
     gap: 0;
     flex: 1;
+    padding: 2px 6px;
 }
 #neo-bottombar .neo-bottombar-tab-btn {
-    padding: 0 16px;
-    height: 32px;
-    font-size: 13px;
+    padding: 0 14px;
+    height: 26px;
+    font-size: 12px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.45);
     background: transparent;
     border: none;
-    border-bottom: 2px solid transparent;
+    border-radius: 6px;
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition: all 0.15s ease;
     outline: none;
-    line-height: 32px;
+    line-height: 26px;
     white-space: nowrap;
+    letter-spacing: 0.01em;
 }
 #neo-bottombar .neo-bottombar-tab-btn:hover {
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.05);
 }
 #neo-bottombar .neo-bottombar-tab-btn.active {
-    color: #93c5fd;
-    border-bottom-color: #60a5fa;
+    color: #fff;
+    background: rgba(59, 130, 246, 0.2);
 }
 /* Toggle arrow button */
 #neo-bottombar .neo-bottombar-toggle {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: transparent;
     border: none;
-    border-left: 1px solid rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.3);
     cursor: pointer;
     outline: none;
-    font-size: 14px;
-    transition: color 0.12s ease, transform 0.2s ease;
+    font-size: 12px;
+    transition: all 0.18s ease;
     flex-shrink: 0;
+    border-radius: 6px;
+    margin-right: 4px;
 }
 #neo-bottombar .neo-bottombar-toggle:hover {
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.05);
 }
 #neo-bottombar:not(.collapsed) .neo-bottombar-toggle {
     transform: rotate(180deg);
@@ -436,7 +460,7 @@ body.sidebar-collapsed #neo-bottombar {
     overflow-y: auto;
     padding: 8px 14px 10px;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.08) transparent;
+    scrollbar-color: rgba(255,255,255,0.06) transparent;
 }
 #neo-bottombar .neo-bottombar-body > div {
     display: none;
@@ -450,27 +474,27 @@ body.sidebar-collapsed #neo-bottombar {
 #neo-bottombar #html_info_img2img,
 #neo-bottombar #html_log_txt2img,
 #neo-bottombar #html_log_img2img {
-    background: rgba(255,255,255,0.03);
-    border-radius: 4px;
-    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    padding: 8px 12px;
     margin: 0;
-    color: rgba(255, 255, 255, 0.65);
-    font-size: 14px;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 13px;
     line-height: 1.6;
 }
 #neo-bottombar #html_info_txt2img .infotext,
 #neo-bottombar #html_info_img2img .infotext {
-    color: rgba(255, 255, 255, 0.75);
+    color: rgba(255, 255, 255, 0.65);
 }
 
 /* Style the version info footer inside the bottom bar */
 #neo-bottombar #footer {
-    background: rgba(255,255,255,0.03);
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
     padding: 10px 14px;
     margin: 0;
-    color: rgba(255, 255, 255, 0.65);
-    font-size: 13px;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
     line-height: 1.8;
     text-align: center;
 }
@@ -481,14 +505,13 @@ body.sidebar-collapsed #neo-bottombar {
 }
 #neo-bottombar #footer a:hover {
     color: #8bb8ff;
-    text-decoration: underline;
 }
 #neo-bottombar #footer .versions {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 12px;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 11px;
     margin-top: 4px;
 }
-/* Hide the original footer position (empty container after moving) */
+/* Hide the original footer position */
 #footer {
     display: none;
 }
@@ -496,14 +519,14 @@ body.sidebar-collapsed #neo-bottombar {
     display: block;
 }
 
-/* Adjust main content to not overlap with bottom bar */
+/* Adjust main content bottom margin */
 .gradio-container {
     margin-bottom: 32px !important;
     transition: margin-bottom 0.25s ease;
 }
 
 /* ============================================================
-   Generation History Styles
+   GENERATION HISTORY STYLES
    ============================================================ */
 
 /* History tab content inside bottom bar */
@@ -527,8 +550,8 @@ body.sidebar-collapsed #neo-bottombar {
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 14px;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 13px;
     padding: 20px;
 }
 
@@ -540,28 +563,28 @@ body.sidebar-collapsed #neo-bottombar {
     gap: 6px;
     padding: 4px 0;
     flex-shrink: 0;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 13px;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
 }
 .neo-history-filter-btn {
     padding: 2px 10px;
-    font-size: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    border: none;
+    border-radius: 6px;
     background: transparent;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.45);
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition: all 0.15s ease;
     outline: none;
 }
 .neo-history-filter-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.7);
 }
 .neo-history-filter-btn.active {
     background: rgba(59, 130, 246, 0.15);
     color: #93c5fd;
-    border-color: rgba(59, 130, 246, 0.4);
 }
 
 /* Thumbnail grid */
@@ -581,17 +604,17 @@ body.sidebar-collapsed #neo-bottombar {
 .neo-history-thumb {
     position: relative;
     aspect-ratio: 1;
-    border-radius: 6px;
+    border-radius: 10px;
     overflow: hidden;
     cursor: pointer;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    transition: all 0.15s ease;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 .neo-history-thumb:hover {
-    border-color: rgba(59, 130, 246, 0.5);
-    box-shadow: 0 0 8px rgba(59, 130, 246, 0.2);
-    transform: scale(1.03);
+    border-color: rgba(59, 130, 246, 0.4);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+    transform: scale(1.04);
 }
 .neo-history-thumb img {
     width: 100%;
@@ -601,19 +624,22 @@ body.sidebar-collapsed #neo-bottombar {
 }
 .neo-history-thumb-label {
     position: absolute;
-    top: 3px;
-    left: 3px;
-    background: rgba(0, 0, 0, 0.6);
+    top: 4px;
+    left: 4px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     color: #fff;
-    font-size: 10px;
-    padding: 1px 5px;
-    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 4px;
     line-height: 1.4;
     pointer-events: none;
 }
 
 /* ============================================================
-   History Modal (click to enlarge)
+   HISTORY MODAL
    ============================================================ */
 .neo-history-modal-overlay {
     position: fixed;
@@ -622,12 +648,12 @@ body.sidebar-collapsed #neo-bottombar {
     right: 0;
     bottom: 0;
     z-index: 99999;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 .neo-history-modal {
     position: relative;
@@ -639,40 +665,76 @@ body.sidebar-collapsed #neo-bottombar {
 }
 .neo-history-modal-close {
     position: absolute;
-    top: -36px;
+    top: -40px;
     right: 0;
     width: 32px;
     height: 32px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    border-radius: 8px;
     color: #fff;
     font-size: 16px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.12s ease;
+    transition: background 0.15s ease;
     outline: none;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
 .neo-history-modal-close:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
 }
 .neo-history-modal-img {
     max-width: 100%;
     max-height: 90vh;
     object-fit: contain;
-    border-radius: 4px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
 }
 
-/* Responsive: hide bottom bar on small screens */
+/* ============================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================ */
 @media (max-width: 1100px) {
     #neo-bottombar {
         left: 0;
         right: 0;
     }
 }
+
+@media (max-width: 768px) {
+    #neo-topbar {
+        height: 50px;
+    }
+    #neo-topbar .neo-topbar-btn {
+        min-width: 48px;
+        height: 36px;
+    }
+    #neo-topbar .neo-topbar-btn .btn-icon {
+        font-size: 18px;
+    }
+    #neo-topbar .neo-topbar-btn .btn-label {
+        font-size: 9px;
+        max-width: 44px;
+    }
+    #neo-sidebar {
+        display: none !important;
+    }
+    .gradio-container {
+        margin-left: 0 !important;
+        margin-top: 50px !important;
+        max-width: 100vw !important;
+    }
+    #neo-bottombar {
+        left: 0 !important;
+    }
+}
+
+/* ============================================================
+   HIDDEN TABS & PANELS
+   ============================================================ */
 
 /* --- Hide non-essential tabs from the tab bar --- */
 #tabs .tab-nav .neo-sidebar-hidden-tab {
@@ -684,7 +746,7 @@ body.sidebar-collapsed #neo-bottombar {
     display: none !important;
 }
 
-/* --- Hide Textual Inversion (嵌入式) extra networks sub-tabs --- */
+/* --- Hide Textual Inversion sub-tabs --- */
 #tab_txt2img_textual_inversion-button,
 #tab_img2img_textual_inversion-button {
     display: none !important;
@@ -695,65 +757,25 @@ body.sidebar-collapsed #neo-bottombar {
     display: none !important;
 }
 
-/* --- Model bar collapsed state: hide entire quicksettings row --- */
+/* --- Model bar collapsed state --- */
 #quicksettings.neo-model-bar-collapsed {
     display: none !important;
 }
 
-/* --- Responsive adjustments --- */
-@media (max-width: 768px) {
-    #neo-sidebar {
-        width: 72px;
-        padding: 8px 2px;
-    }
-    #neo-sidebar .neo-sidebar-btn {
-        width: 64px;
-        height: 62px;
-    }
-    #neo-sidebar .neo-sidebar-btn .btn-icon {
-        font-size: 26px;
-    }
-    #neo-sidebar .neo-sidebar-btn .btn-label {
-        font-size: 10px;
-        max-width: 60px;
-    }
-    #neo-topbar {
-        height: 56px;
-    }
-    #neo-topbar .neo-topbar-btn {
-        min-width: 52px;
-        height: 46px;
-    }
-    #neo-topbar .neo-topbar-btn .btn-icon {
-        font-size: 20px;
-    }
-    #neo-topbar .neo-topbar-btn .btn-label {
-        font-size: 10px;
-        max-width: 48px;
-    }
-    #neo-sidebar {
-        display: none !important;
-    }
-    .gradio-container {
-        margin-left: 0 !important;
-        margin-top: 56px !important;
-        max-width: 100vw !important;
-    }
-    #neo-bottombar {
-        left: 0 !important;
-    }
-}
-
-/* --- 配置按钮样式 --- */
+/* ============================================================
+   CONFIG BUTTON
+   ============================================================ */
 #neo-sidebar .neo-sidebar-config-btn {
     margin-top: 2px;
-    min-height: 60px;
+    min-height: 54px;
 }
 #neo-sidebar .neo-sidebar-config-btn .btn-icon {
-    font-size: 26px;
+    font-size: 24px;
 }
 
-/* --- 预设配置对话框 --- */
+/* ============================================================
+   SETTINGS DIALOG - macOS Alert Panel Style
+   ============================================================ */
 .neo-settings-overlay {
     position: fixed;
     top: 0;
@@ -761,24 +783,24 @@ body.sidebar-collapsed #neo-bottombar {
     right: 0;
     bottom: 0;
     z-index: 99999;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .neo-settings-dialog {
-    background: rgba(22, 22, 30, 0.98);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 14px;
+    background: rgba(30, 30, 38, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
     width: 480px;
     max-width: 90vw;
     max-height: 80vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
     overflow: hidden;
 }
 
@@ -786,61 +808,63 @@ body.sidebar-collapsed #neo-bottombar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .neo-settings-title {
     color: #f0f0f0;
-    font-size: 16px;
-    font-weight: bold;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
 }
 
 .neo-settings-close {
     background: transparent;
     border: none;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 18px;
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 16px;
     cursor: pointer;
     padding: 4px 8px;
-    border-radius: 4px;
     transition: all 0.12s ease;
 }
 .neo-settings-close:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     color: #fff;
 }
 
 .neo-settings-subtitle {
-    padding: 8px 20px 4px;
-    color: rgba(255, 255, 255, 0.45);
-    font-size: 12px;
+    padding: 8px 22px 4px;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 11px;
     line-height: 1.4;
+    letter-spacing: 0.02em;
 }
 
 .neo-settings-content {
     flex: 1;
     overflow-y: auto;
-    padding: 8px 20px 12px;
+    padding: 8px 22px 12px;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.08) transparent;
+    scrollbar-color: rgba(255,255,255,0.06) transparent;
 }
 .neo-settings-content::-webkit-scrollbar { width: 4px; }
 .neo-settings-content::-webkit-scrollbar-track { background: transparent; }
-.neo-settings-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+.neo-settings-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
 
 .neo-settings-section {
     margin-bottom: 12px;
 }
 
 .neo-settings-section-title {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 8px 0 4px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    letter-spacing: 0.8px;
+    padding: 10px 0 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     margin-bottom: 4px;
 }
 
@@ -848,14 +872,14 @@ body.sidebar-collapsed #neo-bottombar {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 7px 8px;
-    border-radius: 6px;
+    padding: 8px 8px;
+    border-radius: 8px;
     cursor: pointer;
     transition: background 0.1s ease;
     user-select: none;
 }
 .neo-settings-row:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .neo-settings-cb {
@@ -863,13 +887,13 @@ body.sidebar-collapsed #neo-bottombar {
     -webkit-appearance: none;
     width: 18px;
     height: 18px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 5px;
     cursor: pointer;
     flex-shrink: 0;
     background: transparent;
     position: relative;
-    transition: all 0.12s ease;
+    transition: all 0.15s ease;
 }
 .neo-settings-cb:checked {
     background: #3b82f6;
@@ -881,7 +905,7 @@ body.sidebar-collapsed #neo-bottombar {
     top: -1px;
     left: 2px;
     color: #fff;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: bold;
 }
 .neo-settings-cb:focus-visible {
@@ -890,24 +914,25 @@ body.sidebar-collapsed #neo-bottombar {
 }
 
 .neo-settings-item-icon {
-    font-size: 18px;
+    font-size: 16px;
     flex-shrink: 0;
-    width: 24px;
+    width: 22px;
     text-align: center;
 }
 
 .neo-settings-item-label {
     flex: 1;
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.8);
     font-size: 13px;
+    font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .neo-settings-item-hint {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.35);
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.3);
     flex-shrink: 0;
     min-width: 48px;
     text-align: right;
@@ -916,28 +941,29 @@ body.sidebar-collapsed #neo-bottombar {
 .neo-settings-footer {
     display: flex;
     gap: 10px;
-    padding: 12px 20px 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 14px 22px 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .neo-settings-btn {
     flex: 1;
-    height: 38px;
-    border-radius: 8px;
+    height: 36px;
+    border-radius: 10px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     border: none;
-    transition: all 0.12s ease;
+    transition: all 0.15s ease;
+    letter-spacing: 0.01em;
 }
 
 .neo-settings-btn-reset {
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.55);
 }
 .neo-settings-btn-reset:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.75);
 }
 
 .neo-settings-btn-save {
