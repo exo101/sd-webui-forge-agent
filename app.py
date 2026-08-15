@@ -15,7 +15,7 @@ def main():
 
     # Use the existing PyTorch from ModelScope environment, skip reinstall
     if "TORCH_COMMAND" not in os.environ:
-        os.environ["TORCH_COMMAND"] = "echo 'Using existing torch from ModelScope environment'"
+        os.environ["TORCH_COMMAND"] = "pip install torch==2.10.0 torchvision==0.26.0"
 
     # Inject command-line args for the ModelScope environment
     sys.argv = [
