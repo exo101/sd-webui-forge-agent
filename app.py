@@ -14,19 +14,14 @@ def main():
     sys.path.insert(0, WEBUI_DIR)
 
     # The ModelScope environment has CUDA 12.8.1 drivers but PyTorch is CPU-only.
-    # Install CUDA-enabled PyTorch via direct wheel URL from the Aliyun mirror.
-    # The PEP 503 index at the mirror does not properly expose +cu128 versions to pip,
-    # so we bypass index resolution by specifying the exact wheel URL.
-    # torchvision is installed from the main PyPI index (without +cu128 suffix, which
-    # is unavailable for cp312 on the Aliyun mirror).
+    # Use the official PyTorch index to install CUDA-enabled builds.
+    # The Aliyun mirror's PEP 503 index does not properly expose +cu128 versions.
+    if "TORCH_INDEX_URL" not in os.environ:
+        os.environ["TORCH_INDEX_URL"] = "https://download.pytorch.org/whl/cu128"
     if "TORCH_COMMAND" not in os.environ:
-        TORCH_WHEEL = (
-            "https://mirrors.aliyun.com/pytorch-wheels/cu128/"
-            "torch-2.10.0+cu128-cp312-cp312-manylinux_2_28_x86_64.whl"
-        )
         os.environ["TORCH_COMMAND"] = (
-            f"pip install {TORCH_WHEEL} torchvision==0.22.0 "
-            "--force-reinstall"
+            "pip install torch==2.10.0+cu128 torchvision==0.22.0+cu128 "
+            f"--extra-index-url {os.environ['TORCH_INDEX_URL']}"
         )
 
     # Inject command-line args for the ModelScope environment
