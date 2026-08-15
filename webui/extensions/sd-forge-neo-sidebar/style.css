@@ -40,7 +40,7 @@
 /* --- Topbar Buttons: macOS Pill Style --- */
 #neo-topbar .neo-topbar-btn {
     min-width: 56px;
-    height: 40px;
+    height: 44px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -710,7 +710,7 @@ body.sidebar-collapsed #neo-bottombar {
     }
     #neo-topbar .neo-topbar-btn {
         min-width: 48px;
-        height: 36px;
+        height: 40px;
     }
     #neo-topbar .neo-topbar-btn .btn-icon {
         font-size: 18px;
