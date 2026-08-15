@@ -14,11 +14,12 @@ def main():
     sys.path.insert(0, WEBUI_DIR)
 
     # The ModelScope environment has CUDA 12.8.1 drivers but PyTorch is CPU-only.
-    # Force reinstall of CUDA-enabled PyTorch via the cu128 index.
+    # Force reinstall of CUDA-enabled PyTorch via Aliyun mirror (reachable from within ModelScope).
     if "TORCH_COMMAND" not in os.environ:
         os.environ["TORCH_COMMAND"] = (
-            "pip install torch==2.10.0+cu128 torchvision==0.25.0+cu128 "
-            "--extra-index-url https://download.pytorch.org/whl/cu128"
+            "pip install torch==2.10.0+cu128 "
+            "--force-reinstall "
+            "--extra-index-url https://mirrors.aliyun.com/pytorch-wheels/cu128/"
         )
 
     # Inject command-line args for the ModelScope environment
