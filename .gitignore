@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
 # ============================================================
 # SD WebUI Forge Neo - Root .gitignore
 # 排除大文件包和运行时环境，仅保留基础代码
@@ -28,9 +26,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-=======
+
+# ModelScope 部署配置
 ms_deploy.json
->>>>>>> 7aca3ced49e7c0b4941268f3b6e502274fe232b1
-=======
-ms_deploy.json
->>>>>>> modelscope/master
+
+# 创空间重复目录
+sd-webui-forge-neo-v3/
