@@ -113,7 +113,7 @@ class SeeThroughScript(scripts.Script):
                         label="处理分辨率",
                         minimum=512,
                         maximum=1536,
-                        value=1024,
+                        value=832,
                         step=64,
                         info="较低的分辨率可减少显存占用，提高处理速度"
                     )
@@ -121,7 +121,7 @@ class SeeThroughScript(scripts.Script):
                         label="推理步数",
                         minimum=10,
                         maximum=50,
-                        value=30,
+                        value=25,
                         step=5,
                         info="较低的步数可加快速度，但可能降低质量（推荐20-30）"
                     )
@@ -179,21 +179,13 @@ class SeeThroughScript(scripts.Script):
                 
                 with gr.Column():
                     gr.Markdown("### 模型路径与下载")
-                    gr.Markdown("**人物分割模型位置**:")
-                    gr.Markdown("- `模型目录：sd-webui-forge-neo-v3.2\\webui\\models\\diffusers`")
-                    gr.Markdown("  - `NF4量化模型：models--24yearsold--seethroughv0.0.1_marigold_nf4`")
-                    gr.Markdown("  - `NF4量化模型：models--24yearsold--seethroughv0.0.2_layerdiff3d_nf4`")
+                    gr.Markdown("**人物分割模型**: 从网盘下载 `models/diffusers` 目录，放置到：")
+                    gr.Markdown("`webui\\models\\diffusers`")
                     gr.Markdown("")
-                    gr.Markdown("**场景分割模型位置**:")
-                    gr.Markdown("- `模型目录：sd-webui-forge-neo-v3.2\\webui\\models\\sams`")
-                    gr.Markdown("  - `SAM模型：sam_vit_b_01ec64.pth`")
-                    gr.Markdown("  - `SAM模型：sam_vit_h_4b8939.pth`")
-                    gr.Markdown("  - `SAM模型：sam_vitl0b3195.pth`")
+                    gr.Markdown("**场景分割模型**: 从网盘下载 `models/smas` 目录，放置到：")
+                    gr.Markdown("`webui\\models\\sams`")
                     gr.Markdown("")
-                    gr.Markdown("**模型下载说明**:")
-                    gr.Markdown("1. 模型在网盘中models目录中")
-                    gr.Markdown("2. 超过自己电脑配置会合成psd失败，选择更低的尺寸与步数可以避免问题")
-                    gr.Markdown("3. 8g显存只能使用832尺寸，12g可使用1024尺寸，16g可使用1280尺寸，24g可使用1536尺寸")
+                    gr.Markdown("**显存参考**: 8G→832px, 12G→1024px, 16G→1280px, 24G→1536px")
             
             with gr.Row(visible=True) as output_options:
                 with gr.Column():

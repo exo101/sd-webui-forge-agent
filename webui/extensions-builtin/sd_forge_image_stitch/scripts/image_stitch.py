@@ -37,17 +37,11 @@ def closesteight(num):
         return round(num + (8 - rem))
 
 t2i_info = """
-用于 <b>Flux-Kontext</b> / <b>Flux.2-Klein</b> / <b>Qwen-Image-Edit</b> / <b>Krea 2</b><br>
-在 <b>文生图</b> 中使用以实现自定义分辨率的空潜空间效果<br>
-用于 <b>Wan 2.2 I2V</b>：在 <b>文生图</b> 中设置为最后一帧以实现 LastFrameToVideo<br>
-<b>注意:</b> 这实际上并不会拼接图像
+插件仅支持编辑模型：Klein，Qwen-Image-Edit，NanoBanana，gpt-image-2，Krea 2
 """
 
 i2i_info = """
-用于 <b>Flux-Kontext</b> / <b>Flux.2-Klein</b> / <b>Qwen-Image-Edit</b> / <b>Krea 2</b><br>
-在 <b>图生图</b> 中使用以实现多图输入效果<br>
-用于 <b>Wan 2.2 I2V</b>：在 <b>图生图</b> 中设置为最后一帧以实现 FirstLastFrameToVideo<br>
-<b>注意:</b> 这实际上并不会拼接图像
+插件仅支持编辑模型：Klein，Qwen-Image-Edit，NanoBanana，gpt-image-2，Krea 2
 """
 
 
@@ -58,7 +52,7 @@ class ImageStitch(scripts.Script):
         self.cached_parameters: list[int] = None
 
     def title(self):
-        return "多图拼接参考"
+        return "多图参考"
 
     def show(self, is_img2img):
         return scripts.AlwaysVisible
@@ -66,15 +60,30 @@ class ImageStitch(scripts.Script):
     def ui(self, is_img2img):
         with InputAccordion(value=False, label=self.title()) as enable:
             gr.HTML(i2i_info if is_img2img else t2i_info)
-            
-            # 使用 State 存储当前图片列表，支持追加模式
+
+            # 使用 State 存储当前图片列表
             current_images_state = gr.State(value=[])
-            select_index = gr.State(-1)  # 选中的图片索引
-            
+
+            # 图片上传区域
+            with gr.Row():
+                upload_btn = gr.UploadButton("📤 上传图片", file_types=["image"], type="binary", size="sm", scale=1)
+                delete_btn = gr.Button("🗑️ 删除选中", size="sm", variant="stop", scale=1)
+                clear_btn = gr.Button("清空", size="sm", scale=1)
+
+            # 图片选择器
+            image_selector = gr.Dropdown(
+                label="选择要删除的图片",
+                choices=[],
+                value=None,
+                interactive=True,
+                allow_custom_value=False,
+                scale=2
+            )
+
             references = gr.Gallery(
                 value=None,
                 type="pil",
-                interactive=True,
+                interactive=False,
                 show_label=False,
                 container=False,
                 show_download_button=False,
@@ -88,7 +97,20 @@ class ImageStitch(scripts.Script):
                 object_fit="contain",
                 elem_id="image_stitch_ref_latent",
             )
-            
+
+            # 最大边长限制
+            max_dim = gr.Slider(
+                minimum=0,
+                maximum=2048,
+                value=1024,
+                step=256,
+                label="最大边长限制",
+                info="降低编码时的显存占用；设为 0 表示不限制",
+            )
+
+            # 自动设置尺寸
+            auto_size_btn = gr.Button("📏 从首图设置尺寸", size="sm", visible=False)
+
             # Pose 素材库 - 折叠面板
             with gr.Accordion("📚 Pose 素材库", open=False):
                 pose_gallery = gr.Gallery(
@@ -108,7 +130,7 @@ class ImageStitch(scripts.Script):
                     object_fit="cover",
                     elem_id="pose_material_library",
                 )
-                
+
                 with gr.Row():
                     refresh_pose_btn = gr.Button("🔄 刷新素材库", size="sm")
                     pose_count_info = gr.Textbox(
@@ -117,7 +139,7 @@ class ImageStitch(scripts.Script):
                         interactive=False,
                         scale=2
                     )
-            
+
             # 常用编辑提示词 - 折叠面板
             with gr.Accordion("✏️ 常用编辑提示词", open=False):
                 with gr.Row():
@@ -129,8 +151,7 @@ class ImageStitch(scripts.Script):
                         )
                     with gr.Column(scale=1):
                         add_prompt_btn = gr.Button("➕ 添加", variant="primary", size="sm")
-                
-                # 预设提示词列表 - 使用 Dropdown 下拉选择
+
                 preset_prompts_dropdown = gr.Dropdown(
                     label="选择预设提示词",
                     choices=[],
@@ -139,84 +160,36 @@ class ImageStitch(scripts.Script):
                     allow_custom_value=False,
                     info="从下拉列表中选择常用提示词"
                 )
-                
+
                 with gr.Row():
                     delete_preset_btn = gr.Button("🗑️ 删除选中提示词", variant="stop", size="sm")
                     refresh_presets_btn = gr.Button("🔄 刷新列表", size="sm")
-                
+
                 preset_info = gr.Textbox(
                     label="提示词管理说明",
-                    value="💡 使用方法：从下拉列表选择提示词后点击'🗑️ 删除选中提示词'即可删除，或点击'🔄 刷新列表'重新加载",
+                    value="💡 使用方法：从下拉列表选择提示词后点击'🗑️ 删除选中提示词'即可删除",
                     interactive=False
                 )
-            
-            # 添加图片上传区域 - 紧凑布局
-            with gr.Row():
-                add_image_input = gr.Image(
-                    label="拖拽或点击上传图片",
-                    type="pil",
-                    height=150,
-                    show_label=True,
-                    scale=3
-                )
-                with gr.Column(scale=1):
-                    add_btn = gr.Button("➕ 添加", variant="primary", size="sm")
-                    clear_btn = gr.Button("🗑️ 清空", variant="secondary", size="sm")
-            
-            # 交换位置控制
-            with gr.Row():
-                with gr.Column(scale=2):
-                    gr.Markdown("**调整顺序：**")
-                with gr.Column(scale=3):
-                    with gr.Row():
-                        position1 = gr.Number(label="位置1", value=0, minimum=0, step=1)
-                        position2 = gr.Number(label="位置2", value=1, minimum=0, step=1)
-                    swap_btn = gr.Button("🔄 交换", size="sm")
-            
-            # 删除选中图片按钮
-            with gr.Row():
-                delete_selected_btn = gr.Button("🗑️ 删除选中图片", variant="stop", size="sm")
-                selected_info = gr.Textbox(
-                    label="选中状态",
-                    value="未选中任何图片",
-                    interactive=False,
-                    scale=3
-                )
-            
-            # 最大边长限制 - 防止爆显存
-            max_dim = gr.Slider(
-                minimum=0,
-                maximum=2048,
-                value=1024,
-                step=256,
-                label="最大边长限制",
-                info="降低编码时的显存占用；应用于所有参考图片；设为 0 表示不限制",
-            )
-            
-            # 自动设置尺寸控制
-            with gr.Row():
-                auto_size_btn = gr.Button("📏 从首图设置尺寸", size="sm")
-            
+
             # ========== 事件绑定 ==========
-            
+
             # ===== 提示词管理功能 =====
-            
+
             def get_preset_prompts_dir():
-                """获取预设提示词存储目录"""
+                """Get preset prompts storage directory."""
                 plugin_dir = os.path.dirname(os.path.abspath(__file__))
                 presets_dir = os.path.join(plugin_dir, "..", "presets")
                 if not os.path.exists(presets_dir):
                     os.makedirs(presets_dir)
                 return presets_dir
-            
+
             def load_preset_prompts():
-                """加载所有预设提示词"""
+                """Load all preset prompts."""
                 presets_dir = get_preset_prompts_dir()
                 prompts = []
-                
+
                 print(f"[Image Stitch] 开始扫描目录: {presets_dir}")
-                
-                # 读取所有 .txt 文件
+
                 for file in sorted(os.listdir(presets_dir)):
                     if file.endswith('.txt'):
                         filepath = os.path.join(presets_dir, file)
@@ -228,29 +201,26 @@ class ImageStitch(scripts.Script):
                                     prompts.append(prompt_text)
                         except Exception as e:
                             print(f"[Image Stitch] 加载提示词失败 {file}: {e}")
-                
+
                 print(f"[Image Stitch] ✅ 成功加载 {len(prompts)} 个预设提示词: {prompts}")
-                # 返回 gr.update 以正确更新 Dropdown 的 choices
                 return gr.update(choices=prompts, value=(prompts[0] if prompts else None))
-            
+
             def save_preset_prompt(prompt_text):
-                """保存新的预设提示词"""
+                """Save a new preset prompt."""
                 if not prompt_text or not prompt_text.strip():
                     return gr.update(), load_preset_prompts(), "❌ 提示词不能为空"
-                
+
                 presets_dir = get_preset_prompts_dir()
                 prompt_text = prompt_text.strip()
-                
-                # 生成文件名（使用前20个字符）
+
                 filename = prompt_text[:20].replace('/', '_').replace('\\', '_').replace(':', '_')
                 filepath = os.path.join(presets_dir, f"{filename}.txt")
-                
-                # 如果文件已存在，添加序号
+
                 counter = 1
                 while os.path.exists(filepath):
                     filepath = os.path.join(presets_dir, f"{filename}_{counter}.txt")
                     counter += 1
-                
+
                 try:
                     with open(filepath, 'w', encoding='utf-8') as f:
                         f.write(prompt_text)
@@ -259,22 +229,20 @@ class ImageStitch(scripts.Script):
                 except Exception as e:
                     print(f"[Image Stitch] 保存提示词失败: {e}")
                     return gr.update(), load_preset_prompts(), f"❌ 保存失败: {str(e)}"
-            
+
             def delete_selected_preset(selected_prompt):
-                """删除选中的预设提示词"""
+                """Delete the selected preset prompt."""
                 if not selected_prompt:
                     print("[Image Stitch] ❌ 删除失败：未选择提示词")
                     return load_preset_prompts(), "❌ 请先从下拉列表选择要删除的提示词"
-                
+
                 presets_dir = get_preset_prompts_dir()
                 print(f"[Image Stitch] 开始删除提示词: '{selected_prompt}'")
-                
-                # 查找对应的文件
+
                 deleted = False
                 deleted_file = None
                 target_filepath = None
-                
-                # 第一次遍历：找到目标文件路径
+
                 for file in sorted(os.listdir(presets_dir)):
                     if file.endswith('.txt'):
                         filepath = os.path.join(presets_dir, file)
@@ -288,8 +256,7 @@ class ImageStitch(scripts.Script):
                                     break
                         except Exception as e:
                             print(f"[Image Stitch] ⚠️ 读取文件失败 {file}: {e}")
-                
-                # 如果找到目标文件，尝试删除（带重试机制）
+
                 if target_filepath:
                     max_retries = 3
                     for attempt in range(max_retries):
@@ -312,60 +279,52 @@ class ImageStitch(scripts.Script):
                 else:
                     print(f"[Image Stitch] ❌ 未找到匹配的文件")
                     return load_preset_prompts(), f"❌ 未找到提示词: {selected_prompt[:30]}..."
-                
+
                 if deleted:
                     print(f"[Image Stitch] ✅ 删除成功，刷新列表")
                     return load_preset_prompts(), f"✅ 已删除: {deleted_file}"
                 else:
                     return load_preset_prompts(), f"❌ 删除失败: {deleted_file}"
-            
+
             def use_selected_preset(selected_prompt):
-                """使用选中的预设提示词"""
+                """Use the selected preset prompt."""
                 if not selected_prompt:
                     return "", "❌ 请先从下拉列表选择提示词"
-                
                 print(f"[Image Stitch] 使用提示词: {selected_prompt[:50]}...")
                 return selected_prompt, f"✅ 已加载提示词"
-            
+
             # ===== Pose 素材库 =====
-            
-            # 扫描并加载 Pose 素材库
+
             def scan_pose_library():
-                """扫描 pose 目录并返回图片列表"""
-                # 获取插件目录下的 pose 文件夹
+                """Scan pose directory and return image list."""
                 plugin_dir = os.path.dirname(os.path.abspath(__file__))
                 pose_dir = os.path.join(plugin_dir, "..", "pose")
-                
+
                 if not os.path.exists(pose_dir):
                     print(f"[Image Stitch] Pose 目录不存在: {pose_dir}")
                     return [], "❌ 目录不存在"
-                
-                # 支持的图片格式
+
                 supported_extensions = ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.gif", "*.bmp"]
                 image_files = []
-                
+
                 for ext in supported_extensions:
                     pattern = os.path.join(pose_dir, ext)
                     image_files.extend(glob.glob(pattern))
-                
-                # 按文件名排序
+
                 image_files.sort()
-                
+
                 print(f"[Image Stitch] 找到 {len(image_files)} 个 Pose 素材")
                 return image_files, f"✅ 共 {len(image_files)} 个素材"
-            
-            # 初始化默认提示词
+
             def init_default_prompts():
-                """初始化默认提示词（仅在首次运行时执行）"""
+                """Initialize default prompts on first run."""
                 presets_dir = get_preset_prompts_dir()
-                
-                # 检查是否已有提示词
+
                 existing_files = [f for f in os.listdir(presets_dir) if f.endswith('.txt')]
                 if existing_files:
                     print(f"[Image Stitch] 已存在 {len(existing_files)} 个预设提示词，跳过初始化")
                     return
-                
-                # 默认提示词列表
+
                 default_prompts = [
                     "改为3d灰模",
                     "生成三视图，正面，侧面，背面",
@@ -375,124 +334,74 @@ class ImageStitch(scripts.Script):
                     "4k画质",
                     "二次元动漫风格"
                 ]
-                
+
                 for prompt in default_prompts:
                     filename = prompt[:20].replace('/', '_').replace('\\', '_').replace(':', '_')
                     filepath = os.path.join(presets_dir, f"{filename}.txt")
-                    
-                    # 避免覆盖已存在的文件
+
                     counter = 1
                     while os.path.exists(filepath):
                         filepath = os.path.join(presets_dir, f"{filename}_{counter}.txt")
                         counter += 1
-                    
+
                     try:
                         with open(filepath, 'w', encoding='utf-8') as f:
                             f.write(prompt)
                         print(f"[Image Stitch] 创建默认提示词: {prompt}")
                     except Exception as e:
                         print(f"[Image Stitch] 创建默认提示词失败: {e}")
-                
+
                 print(f"[Image Stitch] 默认提示词初始化完成")
-            
+
             # 从素材库添加图片到主列表
             def add_pose_to_gallery(current_images, pose_path):
-                """将选中的 pose 图片添加到主列表"""
+                """Add selected pose image to main list."""
                 if not pose_path or not os.path.exists(pose_path):
                     return current_images
-                
+
                 try:
-                    # 加载图片
                     new_image = Image.open(pose_path)
                     if new_image.mode == 'RGBA':
                         new_image = new_image.convert('RGB')
-                    
-                    # 追加到现有列表
+
                     if not current_images:
                         updated_images = [new_image]
                     else:
                         updated_images = current_images.copy()
                         updated_images.append(new_image)
-                    
+
                     print(f"[Image Stitch] 已添加 Pose: {os.path.basename(pose_path)}")
                     return updated_images
                 except Exception as e:
                     print(f"[Image Stitch] 添加 Pose 失败: {e}")
                     return current_images
-            
-            # 添加图片函数 - 追加模式
-            def add_image_to_gallery(current_images, new_image):
-                """将新图片追加到现有列表中"""
-                if new_image is None:
-                    return current_images, gr.update(value=None)
-                
-                # 如果当前没有图片，直接返回新图片
-                if not current_images:
-                    return [new_image], gr.update(value=None)
-                
-                # 追加到现有列表
-                updated_images = current_images.copy()
-                updated_images.append(new_image)
-                print(f"[Image Stitch] 已添加图片，当前共 {len(updated_images)} 张")
-                
-                return updated_images, gr.update(value=None)
-            
-            # 清空图片函数
-            def clear_gallery():
-                """清空所有图片"""
-                print("[Image Stitch] 已清空图片列表")
-                return [], gr.update(value=None)
-            
-            # 交换位置函数
-            def swap_positions(gallery, pos1, pos2):
-                if not gallery or len(gallery) < 2:
-                    return gallery
-                
-                pos1 = int(pos1)
-                pos2 = int(pos2)
-                
-                if pos1 < 0 or pos1 >= len(gallery) or pos2 < 0 or pos2 >= len(gallery):
-                    return gallery
-                
-                # 创建新的列表并交换元素
-                new_gallery = gallery.copy()
-                new_gallery[pos1], new_gallery[pos2] = new_gallery[pos2], new_gallery[pos1]
-                return new_gallery
-            
+
             # 自动设置尺寸函数
             def auto_set_dimensions(gallery):
                 if not gallery:
                     return gr.skip(), gr.skip()
-                
-                # 获取第一张图像
+
                 first_image = None
                 if isinstance(gallery[0], str):
-                    # 处理base64编码的图像
                     import base64
                     from io import BytesIO
                     if gallery[0].startswith('data:image'):
-                        # 移除data:image前缀
                         base64_str = gallery[0].split(',')[1]
-                        # 解码base64
                         img_data = base64.b64decode(base64_str)
-                        # 转换为PIL图像
                         first_image = Image.open(BytesIO(img_data))
                 elif isinstance(gallery[0], tuple) and len(gallery[0]) > 0:
-                    # 处理元组形式的图像
                     if isinstance(gallery[0][0], Image.Image):
                         first_image = gallery[0][0]
                     elif isinstance(gallery[0][0], str):
-                        # 处理元组中的base64图像
                         import base64
                         from io import BytesIO
                         if gallery[0][0].startswith('data:image'):
                             base64_str = gallery[0][0].split(',')[1]
                             img_data = base64.b64decode(base64_str)
                             first_image = Image.open(BytesIO(img_data))
-                
+
                 if first_image:
                     width, height = first_image.size
-                    # 调整为8的倍数
                     width = closesteight(width)
                     height = closesteight(height)
                     print(f"[Image Stitch] 从上传图像设置尺寸: {width}x{height}")
@@ -501,127 +410,86 @@ class ImageStitch(scripts.Script):
                     print("[Image Stitch] 无法获取图像尺寸")
                     return gr.skip(), gr.skip()
             
-            # Gallery 选择事件 - 记录选中索引
-            def on_select(evt: gr.SelectData) -> int:
-                return evt.index
-            
-            references.select(
-                fn=on_select,
-                outputs=[select_index],
-                queue=False,
-                show_progress=False
-            ).then(
-                fn=lambda idx: f"已选中第 {idx + 1} 张图片" if idx >= 0 else "未选中任何图片",
-                inputs=[select_index],
-                outputs=[selected_info],
+            # ===== 图片上传/删除/清空事件 =====
+
+            def _sync_to_api(images):
+                """Sync the given image list to the global API reference variable."""
+                try:
+                    from modules_forge.api_providers import set_reference_images
+                    pil_images = []
+                    if images:
+                        if isinstance(images[0], str):
+                            from modules.api import api
+                            pil_images = [api.decode_base64_to_image(img) for img in images]
+                        elif isinstance(images[0], tuple):
+                            pil_images = [img for (img, _) in images]
+                        else:
+                            pil_images = images
+                    set_reference_images(pil_images)
+                    print(f"[Image Stitch] Synced {len(pil_images)} reference image(s) to global API variable")
+                except Exception as e:
+                    print(f"[Image Stitch] Sync to global failed: {e}")
+
+            def _add_image(new_img, current_list):
+                """Add one uploaded image to the list."""
+                from io import BytesIO
+                updated = list(current_list) if current_list else []
+                if new_img is not None:
+                    if isinstance(new_img, bytes):
+                        updated.append(Image.open(BytesIO(new_img)))
+                    elif isinstance(new_img, str):
+                        updated.append(Image.open(new_img))
+                    elif isinstance(new_img, tuple) and len(new_img) >= 2 and isinstance(new_img[1], bytes):
+                        updated.append(Image.open(BytesIO(new_img[1])))
+                    elif isinstance(new_img, tuple) and len(new_img) >= 1 and isinstance(new_img[0], str):
+                        updated.append(Image.open(new_img[0]))
+                    else:
+                        # Try to convert directly
+                        try:
+                            updated.append(Image.open(new_img) if isinstance(new_img, (str, bytes)) else Image.open(BytesIO(new_img)))
+                        except Exception:
+                            print(f"[Image Stitch] Unknown upload format: {type(new_img)}")
+                _sync_to_api(updated)
+                choices = [f"图片 {i+1}" for i in range(len(updated))]
+                return updated, updated, gr.update(choices=choices, value=None)
+
+            def _delete_selected(selected_label, current_list):
+                """Delete the selected image from the list."""
+                if selected_label is None or not current_list:
+                    return current_list, current_list, gr.update()
+                try:
+                    idx = int(selected_label.split(" ")[1]) - 1
+                    if 0 <= idx < len(current_list):
+                        updated = [img for i, img in enumerate(current_list) if i != idx]
+                        _sync_to_api(updated)
+                        choices = [f"图片 {i+1}" for i in range(len(updated))]
+                        return updated, updated, gr.update(choices=choices, value=None)
+                except (ValueError, IndexError):
+                    pass
+                return current_list, current_list, gr.update()
+
+            def _clear_all():
+                """Clear all images."""
+                _sync_to_api([])
+                return [], [], gr.update(choices=[], value=None)
+
+            upload_btn.upload(
+                fn=_add_image,
+                inputs=[upload_btn, current_images_state],
+                outputs=[current_images_state, references, image_selector],
                 show_progress=False
             )
-            
-            # 删除选中图片函数
-            def delete_selected_image(current_images, index):
-                """删除选中的图片"""
-                if not current_images or index < 0 or index >= len(current_images):
-                    print("[Image Stitch] 删除失败：未选中有效图片")
-                    return current_images, -1, "❌ 请先点击选择要删除的图片"
-                
-                # 创建新列表并移除指定索引的图片
-                updated_images = current_images.copy()
-                removed_image = updated_images.pop(index)
-                
-                print(f"[Image Stitch] 已删除第 {index + 1} 张图片，剩余 {len(updated_images)} 张")
-                return updated_images, -1, f"✅ 已删除第 {index + 1} 张图片"
-            
-            # 绑定刷新素材库按钮
-            refresh_pose_btn.click(
-                fn=scan_pose_library,
-                inputs=[],
-                outputs=[pose_gallery, pose_count_info],
+
+            delete_btn.click(
+                fn=_delete_selected,
+                inputs=[image_selector, current_images_state],
+                outputs=[current_images_state, references, image_selector],
                 show_progress=False
             )
-            
-            # 绑定 Pose 画廊选择事件 (点击添加)
-            pose_gallery.select(
-                fn=add_pose_to_gallery,
-                inputs=[current_images_state, pose_gallery],
-                outputs=[current_images_state],
-                show_progress=False
-            ).then(
-                fn=lambda x: x,
-                inputs=[current_images_state],
-                outputs=[references],
-                show_progress=False
-            )
-            
-            # 绑定添加图片按钮
-            add_btn.click(
-                fn=add_image_to_gallery,
-                inputs=[current_images_state, add_image_input],
-                outputs=[current_images_state, add_image_input],
-                show_progress=False
-            ).then(
-                fn=lambda x: x,
-                inputs=[current_images_state],
-                outputs=[references],
-                show_progress=False
-            )
-            
-            # 绑定清空按钮
+
             clear_btn.click(
-                fn=clear_gallery,
-                inputs=[],
-                outputs=[current_images_state, add_image_input],
-                show_progress=False
-            ).then(
-                fn=lambda x: x,
-                inputs=[current_images_state],
-                outputs=[references],
-                show_progress=False
-            )
-            
-            # 绑定交换按钮
-            swap_btn.click(
-                fn=swap_positions,
-                inputs=[references, position1, position2],
-                outputs=[references],
-                show_progress=False
-            ).then(
-                fn=lambda x: x,
-                inputs=[references],
-                outputs=[current_images_state],
-                show_progress=False
-            )
-            
-            # 绑定自动设置尺寸按钮
-            # 获取主界面的宽度和高度滑块
-            width_slider = txt2img_w_slider if not is_img2img else img2img_w_slider
-            height_slider = txt2img_h_slider if not is_img2img else img2img_h_slider
-            
-            # 绑定按钮点击事件
-            auto_size_btn.click(
-                fn=auto_set_dimensions,
-                inputs=[references],
-                outputs=[width_slider, height_slider],
-                show_progress=False
-            )
-            
-            # 绑定删除选中图片按钮
-            delete_selected_btn.click(
-                fn=delete_selected_image,
-                inputs=[current_images_state, select_index],
-                outputs=[current_images_state, select_index, selected_info],
-                show_progress=False
-            ).then(
-                fn=lambda x: x,
-                inputs=[current_images_state],
-                outputs=[references],
-                show_progress=False
-            )
-            
-            # Gallery 变化时同步更新 State
-            references.change(
-                fn=lambda x: x,
-                inputs=[references],
-                outputs=[current_images_state],
+                fn=_clear_all,
+                outputs=[current_images_state, references, image_selector],
                 show_progress=False
             )
             
@@ -752,10 +620,15 @@ class ImageStitch(scripts.Script):
         dynamic_args.is_referencing = False
 
     @staticmethod
-    def extract_images(gallery: list[str | tuple[Image.Image, str]]) -> list[Image.Image]:
+    def extract_images(gallery: list[str | tuple[Image.Image, str] | Image.Image]) -> list[Image.Image]:
+        if not gallery:
+            return []
         if isinstance(gallery[0], str):
             return [api.decode_base64_to_image(img) for img in gallery]
-        return [img for (img, _) in gallery]
+        if isinstance(gallery[0], tuple):
+            return [img for (img, _) in gallery]
+        # Already PIL Images
+        return [img for img in gallery]
 
     @staticmethod
     def preprocess(img: Image.Image, limit: int) -> Image.Image:

@@ -9,6 +9,10 @@ def register(options_templates, options_section, OptionInfo):
                 "forge_preset": OptionInfo("sd"),
                 "forge_additional_modules": OptionInfo([]),
                 "forge_unet_storage_dtype": OptionInfo("Automatic"),
+                "forge_model_mode": OptionInfo("local"),
+                "forge_api_provider": OptionInfo("modelscope"),
+                "forge_api_key": OptionInfo(""),
+                "forge_api_model": OptionInfo(""),
             },
         )
     )

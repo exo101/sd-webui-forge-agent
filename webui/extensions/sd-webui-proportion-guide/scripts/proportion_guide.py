@@ -1,4 +1,4 @@
-﻿"""
+"""
 头部比例参考线生成插件 for Stable Diffusion WebUI
 功能：
 - 根据选择的头身比（2-9头身）生成人体轮廓参考图
@@ -28,7 +28,7 @@ class ProportionGuideScript(scripts.Script):
         super().__init__()
 
     def title(self):
-        return "人体头身比风格控制"
+        return "人物场景设计分析"
 
     def show(self, is_img2img):
         return scripts.AlwaysVisible

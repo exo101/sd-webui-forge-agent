@@ -19,6 +19,7 @@ from modules import (
     ui_common,
 )
 from modules_forge.presets import PresetArch, is_video, use_distill, use_shift
+from modules_forge.api_providers import ApiProvider, fetch_models_from_api, set_session_api_key, get_session_api_key
 
 logger = logging.getLogger("ui_models")
 setup_logger(logger)
@@ -26,7 +27,13 @@ setup_logger(logger)
 ui_forge_preset: gr.Radio
 ui_checkpoint: gr.Dropdown
 ui_vae: gr.Dropdown
+ui_refresh_checkpoint: gr.Button
 ui_forge_unet_dtype: gr.Radio
+
+ui_model_mode: gr.Dropdown
+ui_api_provider: gr.Dropdown
+ui_api_key: gr.Textbox
+ui_api_model: gr.Dropdown
 
 forge_unet_storage_dtype_options: dict[str, tuple[torch.dtype, bool]] = {
     "Automatic": (None, False),
@@ -52,7 +59,8 @@ module_list: dict[str, os.PathLike] = {}
 
 
 def make_checkpoint_manager_ui():
-    global ui_forge_preset, ui_checkpoint, ui_vae, ui_forge_unet_dtype
+    global ui_forge_preset, ui_checkpoint, ui_vae, ui_refresh_checkpoint, ui_forge_unet_dtype
+    global ui_model_mode, ui_api_provider, ui_api_key, ui_api_model
 
     if shared.opts.sd_model_checkpoint in [None, "None", "none", ""]:
         if len(sd_models.checkpoints_list) == 0:
@@ -60,25 +68,195 @@ def make_checkpoint_manager_ui():
         if len(sd_models.checkpoints_list) > 0:
             shared.opts.set("sd_model_checkpoint", next(iter(sd_models.checkpoints_list.values())).name)
 
-    ui_forge_preset = gr.Dropdown(label="UI Preset", value=lambda: shared.opts.forge_preset, choices=PresetArch.choices(), elem_id="forge_ui_preset")
+    # --- Mode toggle ---
+    ui_model_mode = gr.Dropdown(
+        label="模型模式",
+        choices=["开源模型", "API模型"],
+        value=lambda: "API模型" if shared.opts.forge_model_mode == "api" else "开源模型",
+        elem_id="forge_model_mode",
+    )
 
-    ui_checkpoint = gr.Dropdown(label="Checkpoint", value=None, choices=None, elem_id="setting_sd_model_checkpoint", elem_classes=["model_selection"])
+    # --- Local (open source) model section ---
+    ui_forge_preset = gr.Dropdown(
+        label="UI Preset",
+        value=lambda: shared.opts.forge_preset,
+        choices=PresetArch.choices(),
+        elem_id="forge_ui_preset",
+    )
 
-    ui_vae = gr.Dropdown(label="VAE / Text Encoder", value=None, choices=None, multiselect=True, elem_id="setting_sd_modules", elem_classes=["model_selection"])
+    ui_checkpoint = gr.Dropdown(
+        label="Checkpoint",
+        value=None, choices=None,
+        elem_id="setting_sd_model_checkpoint",
+        elem_classes=["model_selection"],
+    )
+
+    ui_vae = gr.Dropdown(
+        label="VAE / Text Encoder",
+        value=None, choices=None,
+        multiselect=True,
+        elem_id="setting_sd_modules",
+        elem_classes=["model_selection"],
+    )
 
     def refresh_model_list():
         ckpt_list, vae_list = refresh_models()
         return [gr.update(choices=ckpt_list), gr.update(choices=vae_list)]
 
     refresh_button = ui_common.ToolButton(value=ui_common.refresh_symbol, elem_id="forge_refresh_checkpoint", tooltip="Refresh")
+    ui_refresh_checkpoint = refresh_button
     refresh_button.click(fn=refresh_model_list, outputs=[ui_checkpoint, ui_vae], queue=False)
     Context.root_block.load(fn=refresh_model_list, outputs=[ui_checkpoint, ui_vae], queue=False)
 
-    ui_forge_unet_dtype = gr.Dropdown(label="Diffusion in Low Bits", value=lambda: shared.opts.forge_unet_storage_dtype, choices=list(forge_unet_storage_dtype_options.keys()), elem_id="forge_ui_dtype")
+    ui_forge_unet_dtype = gr.Dropdown(
+        label="Diffusion in Low Bits",
+        value=lambda: shared.opts.forge_unet_storage_dtype,
+        choices=list(forge_unet_storage_dtype_options.keys()),
+        elem_id="forge_ui_dtype",
+    )
 
     ui_checkpoint.input(checkpoint_change, inputs=[ui_checkpoint, ui_forge_preset], queue=False, show_progress=False)
     ui_vae.input(modules_change, inputs=[ui_vae, ui_forge_preset], queue=False, show_progress=False)
     ui_forge_unet_dtype.input(dtype_change, inputs=[ui_forge_unet_dtype, ui_forge_preset], queue=False, show_progress=False)
+
+    # --- API model section ---
+    ui_api_provider = gr.Dropdown(
+        label="API Provider",
+        choices=ApiProvider.choices(),
+        value=lambda: shared.opts.forge_api_provider or "modelscope",
+        elem_id="forge_api_provider",
+    )
+
+    ui_api_key = gr.Textbox(
+        label="API Key",
+        value="",
+        placeholder="输入你的 API Key 或 Token",
+        type="password",
+        elem_id="forge_api_key",
+    )
+
+    ui_api_model = gr.Dropdown(
+        label="API Model",
+        choices=[],
+        value=None,
+        elem_id="forge_api_model",
+    )
+
+    ui_api_model_refresh = ui_common.ToolButton(
+        value=ui_common.refresh_symbol,
+        elem_id="forge_api_model_refresh",
+        tooltip="从 API 刷新模型列表",
+    )
+
+    # Apply initial visibility based on saved mode
+    is_api_mode = (shared.opts.forge_model_mode == "api")
+    ui_forge_preset.visible = not is_api_mode
+    ui_checkpoint.visible = not is_api_mode
+    ui_vae.visible = not is_api_mode
+    ui_refresh_checkpoint.visible = not is_api_mode
+    ui_forge_unet_dtype.visible = not is_api_mode
+    ui_api_provider.visible = is_api_mode
+    ui_api_key.visible = is_api_mode
+    ui_api_model.visible = is_api_mode
+    ui_api_model_refresh.visible = is_api_mode
+
+    # --- Wire mode toggle ---
+    def on_mode_change(mode: str):
+        is_local = (mode == "开源模型")
+        shared.opts.set("forge_model_mode", "local" if is_local else "api")
+        return [
+            gr.update(visible=is_local),                                    # ui_forge_preset
+            gr.update(visible=is_local),                                    # ui_checkpoint
+            gr.update(visible=is_local),                                    # ui_vae
+            gr.update(visible=is_local),                                    # ui_refresh_checkpoint
+            gr.update(visible=is_local),                                    # ui_forge_unet_dtype
+            gr.update(visible=not is_local),                                # ui_api_provider
+            gr.update(visible=not is_local),                                # ui_api_key
+            gr.update(visible=not is_local),                                # ui_api_model
+            gr.update(visible=not is_local),                                # ui_api_model_refresh
+        ]
+
+    ui_model_mode.change(
+        fn=on_mode_change,
+        inputs=[ui_model_mode],
+        outputs=[ui_forge_preset, ui_checkpoint, ui_vae, ui_refresh_checkpoint, ui_forge_unet_dtype,
+                 ui_api_provider, ui_api_key, ui_api_model, ui_api_model_refresh],
+        queue=False,
+        show_progress=False,
+    )
+
+    # --- Wire API provider change ---
+    def on_api_provider_change(provider: str):
+        if provider is None:
+            provider = "modelscope"
+        shared.opts.set("forge_api_provider", provider)
+        api_key = get_session_api_key() or ""
+        return [
+            gr.update(choices=[], value=None),
+            gr.update(value=api_key),
+        ]
+
+    ui_api_provider.change(
+        fn=on_api_provider_change,
+        inputs=[ui_api_provider],
+        outputs=[ui_api_model, ui_api_key],
+        queue=False,
+        show_progress=False,
+    )
+
+    def on_api_model_change(model: str):
+        if model:
+            shared.opts.set("forge_api_model", model)
+
+    ui_api_model.change(
+        fn=on_api_model_change,
+        inputs=[ui_api_model],
+        queue=False,
+        show_progress=False,
+    )
+
+    # --- Save API key on change (in-memory only) ---
+    def on_api_key_save(key: str):
+        set_session_api_key(key)
+
+    ui_api_key.change(
+        fn=on_api_key_save,
+        inputs=[ui_api_key],
+        queue=False,
+        show_progress=False,
+    )
+
+    # --- Refresh API model list from remote ---
+    def on_api_model_refresh(api_key_value: str):
+        provider = shared.opts.forge_api_provider or "modelscope"
+        api_key = api_key_value or ""
+        if not api_key:
+            gr.Info("请先输入 API Key")
+            return gr.update(choices=[], value=None)
+        models, from_api = fetch_models_from_api(provider, api_key)
+        # Store API key in memory (not persisted to disk)
+        set_session_api_key(api_key)
+        current_model = shared.opts.forge_api_model or ""
+        if current_model in models:
+            value = current_model
+        else:
+            value = models[0] if models else ""
+        if models:
+            if from_api:
+                gr.Info(f"已从 API 获取 {len(models)} 个模型")
+            else:
+                gr.Info(f"已加载预设模型列表（{len(models)} 个）")
+        else:
+            gr.Info("未获取到模型，请检查 API Key 和网络连接，查看运行日志获取详细信息")
+        return gr.update(choices=models, value=value)
+
+    ui_api_model_refresh.click(
+        fn=on_api_model_refresh,
+        inputs=[ui_api_key],
+        outputs=[ui_api_model],
+        queue=False,
+        show_progress=True,
+    )
 
 
 def find_files_with_extensions(base_path: os.PathLike, extensions: list[str]) -> dict[str, os.PathLike]:

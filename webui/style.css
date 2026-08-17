@@ -1832,3 +1832,16 @@ div.xyz_entries button.secondary {
 #swap_axes button {
     border-radius: 8px;
 }
+
+/* ============================================================
+   sd-webui-prompt-all-in-one-neo icon size fallback
+   Prevents SVG icons from expanding to fill container when the
+   runtime class (.physton-gradio-container) is not yet applied.
+   Uses .physton-prompt (Vue component root) instead, which is
+   guaranteed to exist when the SVG icons are rendered.
+   ============================================================ */
+.physton-prompt .icon-svg svg,
+.physton-gradio-container .icon-svg svg {
+    max-width: 24px !important;
+    max-height: 24px !important;
+}

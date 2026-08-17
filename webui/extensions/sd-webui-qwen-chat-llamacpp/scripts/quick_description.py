@@ -31,12 +31,12 @@ def create_quick_description(chat_message):
     
     # 创建按钮网格布局
     buttons = []
-    with gr.Column():
+    with gr.Accordion("快捷描述", open=False):
         for button_row in all_button_rows:
             with gr.Row():
                 for label, caption_type in button_row:
                     if label and caption_type:  # 只创建非空按钮
-                        btn = gr.Button(label)
+                        btn = gr.Button(label, size="sm")
                         btn.click(
                             fn=lambda ct=caption_type: get_caption_prompt(ct),
                             inputs=None,
