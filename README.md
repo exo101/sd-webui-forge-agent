@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Stable Diffusion WebUI Forge - Neo (中文改良版)
 
 <div align="center">
@@ -372,6 +373,8 @@ Made with ❤️ by exo101
 
 </div>
 =======
+=======
+>>>>>>> modelscope/master
 ---
 license: Apache License 2.0
 domain: multi-modal
@@ -390,5 +393,9 @@ SD WebUI Forge Neo v3 with extensions - 基于 Stable Diffusion WebUI Forge 的�
 ## 使用说明
 
 1. 等待环境初始化完成
+<<<<<<< HEAD
 2. 打开 Gradio 界面即可使用
 >>>>>>> 7aca3ced49e7c0b4941268f3b6e502274fe232b1
+=======
+2. 打开 Gradio 界面即可使用
+>>>>>>> modelscope/master
