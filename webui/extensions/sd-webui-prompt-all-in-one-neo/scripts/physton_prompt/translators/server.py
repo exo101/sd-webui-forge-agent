@@ -2560,7 +2560,7 @@ class IflytekV1(Tse):
         self.host_url = 'https://saas.xfyun.cn/translate?tabKey=text'
         self.api_url = 'https://saas.xfyun.cn/ai-application/trans/its'
         self.language_old_url = 'https://saas.xfyun.cn/_next/static/4bzLSGCWUNl67Xal-AfIl/pages/translate.js'
-        self.language_url_pattern = '/_next/static/(\w+([-]?\w+))/pages/translate.js'
+        self.language_url_pattern = r'/_next/static/(\w+([-]?\w+))/pages/translate.js'
         self.language_url = None
         self.cookies_url = 'https://sso.xfyun.cn//SSOService/login/getcookies'
         self.info_url = 'https://saas.xfyun.cn/ai-application/user/info'
