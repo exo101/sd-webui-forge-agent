@@ -10,7 +10,7 @@ import signal
 import stat
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LLAMA_DIR = os.path.join(BASE_DIR, 'sd-webui-forge-neo-v3', 'llama.cpp')
+LLAMA_DIR = os.path.join(BASE_DIR, 'llama.cpp')
 MODELS_DIR = os.path.join(LLAMA_DIR, 'models')
 LLAMA_SERVER_PORT = 8080
 LLAMA_SERVER_BIN = os.path.join(LLAMA_DIR, 'llama-server')
@@ -20,7 +20,7 @@ LLAMA_SERVER_URL = (
 )
 MODEL_NAME = "Qwen3.5-2B-Q6_K.gguf"
 MMPROJ_NAME = "Qwen3.5-2B-mmproj-BF16.gguf"
-WEBUI_DIR = os.path.join(BASE_DIR, 'sd-webui-forge-neo-v3', 'webui')
+WEBUI_DIR = os.path.join(BASE_DIR, 'webui')
 
 llama_proc = None
 
