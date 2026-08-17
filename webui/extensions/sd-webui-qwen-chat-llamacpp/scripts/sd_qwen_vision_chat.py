@@ -1,9 +1,9 @@
 import gradio as gr
 import numpy as np
-import shutil
-from modules import script_callbacks
+from modules import scripts
 from pathlib import Path
 import sys
+import os
 from modules.llama_port import get_llama_url
 
 _LLAMA_URL = get_llama_url()
@@ -20,12 +20,6 @@ if str(extension_dir) not in sys.path:
 
 # Import function modules
 try:
-    from prompt_templates import create_prompt_template_ui
-except ImportError:
-    create_prompt_template_ui = None
-    print("Warning: Could not import prompt_templates")
-
-try:
     from quick_description import create_quick_description
 except ImportError:
     create_quick_description = None
@@ -37,20 +31,32 @@ except ImportError:
     create_tag_management_module = None
     print("Warning: Could not import tag_management")
 
-try:
-    from image_management import create_image_management_module
-except ImportError:
-    create_image_management_module = None
-    print("Warning: Could not import image_management")
 
+class VisionChatScript(scripts.Script):
 
-def vision_chat_tab():
-    """Create image recognition and chat tab"""
-    with gr.Blocks(analytics_enabled=False) as ui:
-        # Image recognition and keyword assistant tab
-        with gr.TabItem("1 图像识别与关键词辅助"):
+    def __init__(self):
+        super().__init__()
+        self._injected = False
+
+    def title(self):
+        return "图像识别"
+
+    def show(self, is_img2img):
+        return scripts.AlwaysVisible
+
+    def ui(self, is_img2img):
+        return []
+
+    def after_component(self, component, **kwargs):
+        elem_id = getattr(component, "elem_id", None)
+        if elem_id == "txt2img_results_panel" and not self._injected:
+            self._injected = True
+            self._create_vision_chat_ui()
+
+    def _create_vision_chat_ui(self):
+        with gr.Accordion("图像识别", open=False):
             with gr.Row():
-                # Left area: tag management, image management, model selection
+                # Left area: tag management, model selection, image upload
                 with gr.Column(scale=1):
                     # Tag management module
                     try:
@@ -67,23 +73,6 @@ def vision_chat_tab():
                     except Exception as e:
                         print(f"Tag management module load failed: {e}")
 
-                    # Image management module
-                    try:
-                        if create_image_management_module is not None:
-                            image_management_ui = create_image_management_module()
-                            if image_management_ui:
-                                with gr.Box():
-                                    if "dir_input" in image_management_ui:
-                                        image_management_ui["dir_input"]
-                                    if "load_dir_btn" in image_management_ui:
-                                        image_management_ui["load_dir_btn"]
-                                    if "gallery" in image_management_ui:
-                                        image_management_ui["gallery"]
-                        else:
-                            gr.Markdown("图像管理模块当前不可用。")
-                    except Exception as e:
-                        print(f"Image management module load failed: {e}")
-
                     # Vision model selection
                     with gr.Group():
                         gr.Markdown("### 视觉模型")
@@ -92,15 +81,9 @@ def vision_chat_tab():
                         vision_model = gr.Dropdown(
                             label="视觉模型",
                             choices=[
-                                # llama.cpp vision models
-                                "qwen3-vl-2b", "qwen3-vl-4b", "qwen3-vl-8b",
-                                "qwen2.5-vl-3b", "qwen2.5-vl-7b", "qwen2.5-vl-32b",
-                                "llava-v1.6-vicuna-7b", "llava-v1.6-vicuna-13b",
-                                "llava-yi-v1.6-6b", "llava-yi-v1.6-9b",
-                                "deepseek-vl-7b", "deepseek-vl-16b",
-                                "cogvlm2-19b", "cogvlm2-7b"
+                                "Qwen3.5-2B-Q6_K.gguf",
                             ],
-                            value=None,
+                            value="Qwen3.5-2B-Q6_K.gguf",
                             interactive=True,
                             info="选择视觉模型（支持图片识别+文字对话）",
                             scale=2,
@@ -121,18 +104,7 @@ def vision_chat_tab():
                         gr.Markdown("### 📤 图片上传")
                         gr.Markdown("📌 **使用说明**: 视觉模型支持上传图片并附带文字对话")
 
-                        upload_method = gr.Radio(
-                            [("单张图片", "single"), ("批量图片", "batch")],
-                            value="single",
-                            label="上传方式",
-                            interactive=True,
-                            scale=2,
-                            elem_classes="larger-text",
-                            container=True
-                        )
-
                         with gr.Box(visible=True) as image_container:
-                            # Use ForgeCanvas to avoid Windows permission issues
                             from modules_forge.forge_canvas.canvas import ForgeCanvas
 
                             qwen_canvas = ForgeCanvas(
@@ -142,38 +114,10 @@ def vision_chat_tab():
                                 elem_id="qwen_vision_image"
                             )
 
-                            # Use hidden State to store Canvas background value
                             image_input = qwen_canvas.background
 
-                            # Batch upload uses Files
-                            multi_images_input = gr.Files(
-                                type="filepath",
-                                label="多图输入",
-                                visible=False,
-                                height=300,
-                                scale=1,
-                                min_width=300,
-                                file_count="multiple",
-                                file_types=["image"]
-                            )
-
-                # Right area: keyword assistant templates and chat area
+                # Right area: chat area
                 with gr.Column(scale=1):
-                    # Keyword assistant template area
-                    with gr.Accordion("关键词辅助模板", open=False):
-                        if create_prompt_template_ui is not None:
-                            template_ui = create_prompt_template_ui()
-                            with gr.Row():
-                                with gr.Column():
-                                    template_ui["expression_template"]
-                                with gr.Column():
-                                    template_ui["story_template"]
-                                with gr.Column():
-                                    template_ui["shot_template"]
-                        else:
-                            gr.Markdown("关键词辅助模板模块当前不可用。")
-
-                    # Chat area
                     chat_history = gr.Chatbot(
                         elem_id="chatbot",
                         label="聊天历史",
@@ -181,7 +125,6 @@ def vision_chat_tab():
                         render=True
                     )
 
-                    # Hidden state: store last used image path
                     last_image_path_state = gr.State(value=None)
 
                     chat_message = gr.Textbox(
@@ -231,18 +174,38 @@ def vision_chat_tab():
 
                     # Batch recognition tag generation area
                     with gr.Accordion("批量识别与标签生成", open=False):
-                        gr.Markdown("### 批量处理图片并生成标签文件")
+                        # Add ollama directory to Python path
+                        ext_dir = Path(__file__).parent.parent
+                        ollama_dir = ext_dir / "ollama"
+                        ollama_dir_str = str(ollama_dir)
+                        sys.path = [p for p in sys.path if 'ollama' not in p.lower()]
+                        sys.path.insert(0, ollama_dir_str)
 
-                        import os
-                        from pathlib import Path
-                        extension_dir = Path(__file__).parent.parent
-                        default_image_dir = str(extension_dir / "images")
+                        # Import llama.cpp API
+                        LLAMACPP_AVAILABLE = False
+                        get_llamacpp_models = None
 
-                        os.makedirs(default_image_dir, exist_ok=True)
+                        try:
+                            if 'llamacpp_api' in sys.modules:
+                                del sys.modules['llamacpp_api']
 
+                            from llamacpp_api import get_response_lvm_llamacpp_api, get_llamacpp_models
+                            LLAMACPP_AVAILABLE = True
+                            print(f"✅ llama.cpp API imported successfully")
+                        except ImportError as e:
+                            print(f"❌ Warning: Could not import llama.cpp API module: {e}")
+                            import traceback
+                            traceback.print_exc()
+
+                        # Default vision model list
+                        default_llamacpp_vision_models = [
+                            "Qwen3.5-2B-Q6_K.gguf",
+                        ]
+
+                        # Batch processing UI
                         batch_image_dir = gr.Textbox(
                             label="图片目录路径",
-                            value=default_image_dir,
+                            value=str(ext_dir / "images"),
                             placeholder="输入包含图片的文件夹路径",
                             container=True
                         )
@@ -268,327 +231,190 @@ def vision_chat_tab():
                             container=True
                         )
 
-                # Add llama.cpp API function imports
-                import sys
-                import os
-                from pathlib import Path
+                        # Refresh model list function
+                        def refresh_models():
+                            print(f"🔍 [llama.cpp] Refreshing model list...")
+                            if LLAMACPP_AVAILABLE and get_llamacpp_models:
+                                try:
+                                    models = get_llamacpp_models(_LLAMA_URL)
+                                    print(f"   Retrieved models: {models}")
+                                    if models:
+                                        return gr.update(choices=models, value=models[0])
+                                except Exception as e:
+                                    print(f"❌ Failed to get model list: {e}")
+                                    import traceback
+                                    traceback.print_exc()
+                            return gr.update(choices=default_llamacpp_vision_models, value=default_llamacpp_vision_models[0])
 
-                # Add ollama directory to Python path
-                extension_dir = Path(__file__).parent.parent
-                ollama_dir = extension_dir / "ollama"
-                ollama_dir_str = str(ollama_dir)
-                sys.path = [p for p in sys.path if 'ollama' not in p.lower()]
-                sys.path.insert(0, ollama_dir_str)
+                        def base64_to_image_file(base64_str, output_path):
+                            import base64
+                            if base64_str.startswith("data:image/png;base64,"):
+                                base64_str = base64_str.replace("data:image/png;base64,", "")
+                            image_data = base64.b64decode(base64_str)
+                            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                            with open(output_path, 'wb') as f:
+                                f.write(image_data)
+                            return output_path
 
-                # Import llama.cpp API
-                LLAMACPP_AVAILABLE = False
-                get_llamacpp_models = None
+                        def on_chat(message, chat_history, vision_model, image_input):
+                            print(f"\n=== Debug Info ===")
+                            print(f"message: {message}")
+                            print(f"vision_model: {vision_model}")
 
-                try:
-                    if 'llamacpp_api' in sys.modules:
-                        del sys.modules['llamacpp_api']
+                            if not message and image_input is None:
+                                return "", chat_history
 
-                    from llamacpp_api import get_response_lvm_llamacpp_api, get_llamacpp_models
-                    LLAMACPP_AVAILABLE = True
-                    print(f"✅ llama.cpp API imported successfully")
-                except ImportError as e:
-                    print(f"❌ Warning: Could not import llama.cpp API module: {e}")
-                    import traceback
-                    traceback.print_exc()
-
-                # Default vision model list (fallback when detection fails)
-                default_llamacpp_vision_models = [
-                    "qwen3-vl-2b", "qwen3-vl-4b", "qwen3-vl-8b",
-                    "qwen2.5-vl-3b", "qwen2.5-vl-7b", "qwen2.5-vl-32b",
-                    "llava-v1.6-vicuna-7b", "llava-v1.6-vicuna-13b",
-                    "llava-yi-v1.6-6b", "llava-yi-v1.6-9b",
-                    "deepseek-vl-7b", "deepseek-vl-16b",
-                    "cogvlm2-19b", "cogvlm2-7b"
-                ]
-
-                # Refresh model list function
-                def refresh_models():
-                    """Refresh model list from llama.cpp"""
-                    print(f"🔍 [llama.cpp] Refreshing model list...")
-                    if LLAMACPP_AVAILABLE and get_llamacpp_models:
-                        try:
-                            models = get_llamacpp_models(_LLAMA_URL)
-                            print(f"   Retrieved models: {models}")
-                            if models:
-                                return gr.update(choices=models, value=models[0])
-                        except Exception as e:
-                            print(f"❌ Failed to get model list: {e}")
-                            import traceback
-                            traceback.print_exc()
-                    return gr.update(choices=default_llamacpp_vision_models, value=default_llamacpp_vision_models[0])
-
-                def base64_to_image_file(base64_str, output_path):
-                    """Save base64 string to image file"""
-                    import base64
-                    if base64_str.startswith("data:image/png;base64,"):
-                        base64_str = base64_str.replace("data:image/png;base64,", "")
-
-                    image_data = base64.b64decode(base64_str)
-
-                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
-                    with open(output_path, 'wb') as f:
-                        f.write(image_data)
-
-                    return output_path
-
-                # Chat handler function (llama.cpp only, vision model always)
-                def on_chat(message, chat_history, vision_model,
-                           upload_method, image_input, multi_images_input):
-                    """Chat handler function (llama.cpp vision model only)"""
-                    from pathlib import Path
-                    import os
-                    extension_dir = Path(__file__).parent.parent
-
-                    print(f"\n=== Debug Info ===")
-                    print(f"message: {message}")
-                    print(f"upload_method: {upload_method}")
-                    print(f"vision_model: {vision_model}")
-
-                    # Check if there is input
-                    has_input = False
-                    if message:
-                        has_input = True
-                    if image_input is not None:
-                        if isinstance(image_input, np.ndarray):
-                            if image_input.size > 0:
-                                has_input = True
-                        else:
-                            has_input = True
-                    if multi_images_input and len(multi_images_input) > 0:
-                        has_input = True
-
-                    if not has_input:
-                        return "", chat_history
-
-                    # Check if there is an image
-                    has_image = False
-                    image_count = 0
-                    temp_image_paths = []
-
-                    # Process ForgeCanvas image
-                    if upload_method == "single" and image_input:
-                        has_image = True
-                        image_count = 1
-
-                        try:
-                            temp_dir = os.path.join(extension_dir, "tmp", "qwen_uploads")
-                            os.makedirs(temp_dir, exist_ok=True)
-                            temp_path = os.path.join(temp_dir, f"temp_{os.urandom(4).hex()}.png")
-
-                            if hasattr(image_input, 'save'):
-                                if image_input.mode == 'RGBA':
-                                    image_input = image_input.convert('RGB')
-                                image_input.save(temp_path)
-                                temp_image_paths.append(temp_path)
-                                print(f"✓ Saved PIL image: {temp_path}")
-                            elif isinstance(image_input, str) and image_input.startswith("data:image"):
-                                base64_to_image_file(image_input, temp_path)
-                                temp_image_paths.append(temp_path)
-                                print(f"✓ Saved Base64 image: {temp_path}")
-                            else:
-                                print(f"⚠ image_input format incorrect: {type(image_input)}")
-                                has_image = False
-                        except Exception as e:
-                            print(f"❌ Failed to save image: {e}")
                             has_image = False
+                            temp_image_paths = []
 
-                    # Process batch upload
-                    elif upload_method == "batch" and multi_images_input:
-                        has_image = True
-                        if isinstance(multi_images_input, list):
-                            image_count = len(multi_images_input)
-                            temp_image_paths.extend([f for f in multi_images_input if isinstance(f, str)])
-                        else:
-                            image_count = 1
-                            if isinstance(multi_images_input, str):
-                                temp_image_paths.append(multi_images_input)
+                            if image_input is not None:
+                                has_image = True
+                                try:
+                                    temp_dir = os.path.join(ext_dir, "tmp", "qwen_uploads")
+                                    os.makedirs(temp_dir, exist_ok=True)
+                                    temp_path = os.path.join(temp_dir, f"temp_{os.urandom(4).hex()}.png")
+                                    if hasattr(image_input, 'save'):
+                                        if image_input.mode == 'RGBA':
+                                            image_input = image_input.convert('RGB')
+                                        image_input.save(temp_path)
+                                        temp_image_paths.append(temp_path)
+                                        print(f"✓ Saved PIL image: {temp_path}")
+                                    elif isinstance(image_input, str) and image_input.startswith("data:image"):
+                                        base64_to_image_file(image_input, temp_path)
+                                        temp_image_paths.append(temp_path)
+                                        print(f"✓ Saved Base64 image: {temp_path}")
+                                    else:
+                                        print(f"⚠ image_input format incorrect: {type(image_input)}")
+                                        has_image = False
+                                except Exception as e:
+                                    print(f"❌ Failed to save image: {e}")
+                                    has_image = False
 
-                    print(f"has_image: {has_image}, image_count: {image_count}, temp_paths: {len(temp_image_paths)}")
+                            print(f"has_image: {has_image}, temp_paths: {len(temp_image_paths)}")
 
-                    # Build user message
-                    user_message = message
-                    if has_image:
-                        if image_count == 1:
-                            user_message = f"[Image] {message}" if message else "[Image]"
-                        else:
-                            user_message = f"[{image_count} images] {message}" if message else f"[{image_count} images]"
+                            user_message = message
+                            if has_image:
+                                user_message = f"[Image] {message}" if message else "[Image]"
 
-                    # Add to chat history
-                    if user_message:
-                        chat_history.append((user_message, ""))
+                            if user_message:
+                                chat_history.append((user_message, ""))
 
-                    # Call API
-                    ai_response = ""
+                            ai_response = ""
 
-                    if LLAMACPP_AVAILABLE:
-                        try:
-                            model_name = vision_model
-
-                            if has_image and temp_image_paths:
-                                print(f"📷 [llama.cpp] Calling vision model: {model_name}, image: {temp_image_paths[0]}")
-                                ai_response = get_response_lvm_llamacpp_api(
-                                    input_model_name=model_name,
-                                    input_content=message or "请描述这张图片",
-                                    input_image_path=temp_image_paths[0],
-                                    llamacpp_host=_LLAMA_URL,
-                                    timeout=300
-                                )
+                            if LLAMACPP_AVAILABLE:
+                                try:
+                                    model_name = vision_model
+                                    if has_image and temp_image_paths:
+                                        print(f"📷 [llama.cpp] Calling vision model: {model_name}, image: {temp_image_paths[0]}")
+                                        ai_response = get_response_lvm_llamacpp_api(
+                                            input_model_name=model_name,
+                                            input_content=message or "请描述这张图片",
+                                            input_image_path=temp_image_paths[0],
+                                            llamacpp_host=_LLAMA_URL,
+                                            timeout=300
+                                        )
+                                    else:
+                                        print(f"💬 [llama.cpp] Calling vision model (text): {model_name}")
+                                        ai_response = get_response_lvm_llamacpp_api(
+                                            input_model_name=model_name,
+                                            input_content=message or "你好！请问有什么可以帮你的？",
+                                            input_image_path=None,
+                                            llamacpp_host=_LLAMA_URL,
+                                            timeout=300
+                                        )
+                                    if not ai_response:
+                                        ai_response = "[错误] llama.cpp API 返回空结果"
+                                except Exception as e:
+                                    ai_response = f"[错误] {str(e)}"
+                                    print(f"❌ llama.cpp API call failed: {e}")
+                                    import traceback
+                                    traceback.print_exc()
                             else:
-                                print(f"💬 [llama.cpp] Calling vision model (text): {model_name}")
-                                ai_response = get_response_lvm_llamacpp_api(
-                                    input_model_name=model_name,
-                                    input_content=message or "你好！请问有什么可以帮你的？",
-                                    input_image_path=None,
-                                    llamacpp_host=_LLAMA_URL,
-                                    timeout=300
-                                )
+                                ai_response = "[未安装] llama.cpp API 模块不可用"
 
-                            if not ai_response:
-                                ai_response = "[错误] llama.cpp API 返回空结果"
+                            print(f"✅ AI reply: {ai_response[:100]}...")
+                            print("=================\n")
 
-                        except Exception as e:
-                            ai_response = f"[错误] {str(e)}"
-                            print(f"❌ llama.cpp API call failed: {e}")
-                            import traceback
-                            traceback.print_exc()
-                    else:
-                        ai_response = "[未安装] llama.cpp API 模块不可用"
+                            if chat_history and chat_history[-1][0] == user_message:
+                                chat_history[-1] = (user_message, ai_response)
 
-                    print(f"✅ AI reply: {ai_response[:100]}...")
-                    print("=================\n")
+                            for temp_path in temp_image_paths:
+                                try:
+                                    if os.path.exists(temp_path):
+                                        os.remove(temp_path)
+                                except:
+                                    pass
 
-                    # Update chat history
-                    if chat_history and chat_history[-1][0] == user_message:
-                        chat_history[-1] = (user_message, ai_response)
+                            return "", chat_history
 
-                    # Generate tag files for batch uploads
-                    if upload_method == "batch" and multi_images_input:
-                        extension_dir = Path(__file__).parent.parent
-                        images_dir = os.path.join(extension_dir, "images")
-                        os.makedirs(images_dir, exist_ok=True)
+                        def batch_process_images(image_dir, tag_prompt, vision_model):
+                            if not image_dir or not os.path.isdir(image_dir):
+                                return "错误：请提供有效的图片目录路径"
+                            if not LLAMACPP_AVAILABLE:
+                                return "错误：llama.cpp API 模块不可用，请检查安装"
 
-                        for image_path in temp_image_paths:
-                            try:
-                                original_filename = os.path.basename(image_path)
-                                dest_image_path = os.path.join(images_dir, original_filename)
-                                shutil.copy2(image_path, dest_image_path)
+                            supported_extensions = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"]
+                            image_files = []
+                            for file_name in os.listdir(image_dir):
+                                file_path = os.path.join(image_dir, file_name)
+                                if os.path.isfile(file_path):
+                                    ext = os.path.splitext(file_name)[1].lower()
+                                    if ext in supported_extensions:
+                                        image_files.append(file_path)
 
-                                txt_file_path = os.path.splitext(dest_image_path)[0] + ".txt"
+                            if not image_files:
+                                return "错误：指定目录中未找到支持的图片文件"
 
-                                os.makedirs(os.path.dirname(txt_file_path), exist_ok=True)
-                                with open(txt_file_path, 'w', encoding='utf-8') as f:
-                                    f.write(ai_response)
-                                print(f"✅ Generated tag file: {txt_file_path}")
-                                print(f"✅ Saved image: {dest_image_path}")
-                            except Exception as e:
-                                print(f"❌ Failed to generate tag file: {str(e)}")
+                            results = []
+                            success_count = 0
+                            failed_count = 0
 
-                    # Clean up temp files
-                    for temp_path in temp_image_paths:
-                        try:
-                            if os.path.exists(temp_path):
-                                os.remove(temp_path)
-                        except:
-                            pass
+                            for image_path in image_files:
+                                try:
+                                    txt_file_path = os.path.splitext(image_path)[0] + ".txt"
+                                    print(f"正在处理: {os.path.basename(image_path)}")
+                                    tags = get_response_lvm_llamacpp_api(
+                                        input_model_name=vision_model,
+                                        input_content=tag_prompt,
+                                        input_image_path=image_path,
+                                        llamacpp_host=_LLAMA_URL,
+                                        timeout=300
+                                    )
+                                    if tags:
+                                        os.makedirs(os.path.dirname(txt_file_path), exist_ok=True)
+                                        with open(txt_file_path, 'w', encoding='utf-8') as f:
+                                            f.write(tags)
+                                        results.append(f"✅ 成功: {os.path.basename(image_path)} -> {os.path.basename(txt_file_path)}")
+                                        success_count += 1
+                                    else:
+                                        results.append(f"❌ 失败: {os.path.basename(image_path)} - 模型返回空结果")
+                                        failed_count += 1
+                                except Exception as e:
+                                    results.append(f"❌ 错误: {os.path.basename(image_path)} - {str(e)}")
+                                    failed_count += 1
 
-                    return "", chat_history
+                            summary = f"批量处理完成：{success_count} 个成功，{failed_count} 个失败\n"
+                            return summary + "\n".join(results)
 
-                def batch_process_images(image_dir, tag_prompt, vision_model):
-                    """Batch process images and generate tag files"""
-                    if not image_dir or not os.path.isdir(image_dir):
-                        return "错误：请提供有效的图片目录路径"
+                        # Chat event bindings
+                        chat_inputs = [chat_message, chat_history, vision_model, image_input]
+                        chat_outputs = [chat_message, chat_history]
 
-                    if not LLAMACPP_AVAILABLE:
-                        return "错误：llama.cpp API 模块不可用，请检查安装"
+                        chat_message.submit(on_chat, inputs=chat_inputs, outputs=chat_outputs)
+                        submit_button.click(on_chat, inputs=chat_inputs, outputs=chat_outputs)
+                        clear_button.click(lambda: [], outputs=[chat_history])
 
-                    supported_extensions = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"]
+                        # Batch processing event bindings
+                        batch_inputs = [batch_image_dir, batch_tag_prompt, vision_model]
+                        batch_outputs = [batch_result]
+                        batch_start_btn.click(batch_process_images, inputs=batch_inputs, outputs=batch_outputs)
 
-                    image_files = []
-                    for file_name in os.listdir(image_dir):
-                        file_path = os.path.join(image_dir, file_name)
-                        if os.path.isfile(file_path):
-                            ext = os.path.splitext(file_name)[1].lower()
-                            if ext in supported_extensions:
-                                image_files.append(file_path)
-
-                    if not image_files:
-                        return "错误：指定目录中未找到支持的图片文件"
-
-                    results = []
-                    success_count = 0
-                    failed_count = 0
-
-                    for image_path in image_files:
-                        try:
-                            txt_file_path = os.path.splitext(image_path)[0] + ".txt"
-
-                            print(f"正在处理: {os.path.basename(image_path)}")
-
-                            tags = get_response_lvm_llamacpp_api(
-                                input_model_name=vision_model,
-                                input_content=tag_prompt,
-                                input_image_path=image_path,
-                                llamacpp_host=_LLAMA_URL,
-                                timeout=300
-                            )
-
-                            if tags:
-                                os.makedirs(os.path.dirname(txt_file_path), exist_ok=True)
-                                with open(txt_file_path, 'w', encoding='utf-8') as f:
-                                    f.write(tags)
-                                results.append(f"✅ 成功: {os.path.basename(image_path)} -> {os.path.basename(txt_file_path)}")
-                                success_count += 1
-                            else:
-                                results.append(f"❌ 失败: {os.path.basename(image_path)} - 模型返回空结果")
-                                failed_count += 1
-
-                        except Exception as e:
-                            results.append(f"❌ 错误: {os.path.basename(image_path)} - {str(e)}")
-                            failed_count += 1
-
-                    summary = f"批量处理完成：{success_count} 个成功，{failed_count} 个失败\n"
-                    return summary + "\n".join(results)
-
-                # Chat event bindings
-                chat_inputs = [chat_message, chat_history, vision_model,
-                              upload_method, image_input, multi_images_input]
-                chat_outputs = [chat_message, chat_history]
-
-                chat_message.submit(on_chat, inputs=chat_inputs, outputs=chat_outputs)
-                submit_button.click(on_chat, inputs=chat_inputs, outputs=chat_outputs)
-                clear_button.click(lambda: [], outputs=[chat_history])
-
-                # Batch processing event bindings
-                batch_inputs = [batch_image_dir, batch_tag_prompt, vision_model]
-                batch_outputs = [batch_result]
-                batch_start_btn.click(batch_process_images, inputs=batch_inputs, outputs=batch_outputs)
-
-                # Refresh model button event
-                refresh_models_btn.click(
-                    fn=refresh_models,
-                    inputs=[],
-                    outputs=[vision_model]
-                )
-
-                # Upload method switch event
-                def switch_upload(method):
-                    """Switch upload method"""
-                    if method == "single":
-                        return gr.update(visible=True), gr.update(visible=False)
-                    else:
-                        return gr.update(visible=False), gr.update(visible=True)
-
-                upload_method.change(
-                    fn=switch_upload,
-                    inputs=[upload_method],
-                    outputs=[image_input, multi_images_input]
-                )
+                        # Refresh model button event
+                        refresh_models_btn.click(
+                            fn=refresh_models,
+                            inputs=[],
+                            outputs=[vision_model]
+                        )
 
                 # Copy functionality using JavaScript
                 copy_button.click(
@@ -616,9 +442,3 @@ def vision_chat_tab():
                     }
                     """
                 )
-
-    return [(ui, "图像识别与语言交互", "Vision_Chat_Tab")]
-
-
-# Register tab
-script_callbacks.on_ui_tabs(vision_chat_tab)

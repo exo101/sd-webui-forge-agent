@@ -793,8 +793,91 @@ def manage_model_and_prompt_cache(p: StableDiffusionProcessing):
 _overridden_modules: Optional[list[str]] = None
 
 
+def _process_images_via_api(p: StableDiffusionProcessing) -> Processed:
+    """Generate images via remote API instead of local model."""
+    from modules_forge.api_providers import generate_with_api, get_session_api_key, get_reference_images
+
+    provider = getattr(opts, "forge_api_provider", "modelscope")
+    api_key = get_session_api_key()
+    api_model = getattr(opts, "forge_api_model", "")
+
+    prompt = p.prompt if isinstance(p.prompt, str) else (p.prompt[0] if p.prompt else "")
+    negative_prompt = p.negative_prompt if isinstance(p.negative_prompt, str) else (p.negative_prompt[0] if p.negative_prompt else "")
+    width = p.width or 1024
+    height = p.height or 1024
+    n_iter = p.n_iter or 1
+    batch_size = p.batch_size or 1
+
+    # Read reference images from the shared global variable (set by image_stitch plugin)
+    reference_images = get_reference_images()
+    if reference_images:
+        logger.info(f"[API] Using {len(reference_images)} reference image(s) from image_stitch")
+
+    logger.info(f"[API] Generating via {provider}/{api_model}: {prompt[:100]}...")
+
+    if not api_key:
+        raise RuntimeError("API Key is not configured. Please set it in the Quicksettings.")
+
+    if not api_model:
+        raise RuntimeError("API Model is not configured. Please select a model.")
+
+    images = generate_with_api(
+        provider=provider,
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        api_key=api_key,
+        model=api_model,
+        width=width,
+        height=height,
+        n_iter=n_iter,
+        batch_size=batch_size,
+        reference_images=reference_images,
+    )
+
+    total = n_iter * batch_size
+    filled = images + [images[-1]] * (total - len(images)) if images else []
+
+    # Save generated images to the output directory
+    import modules.images as img_saver
+    seed = -1
+    info = f"{provider}: {api_model}, {width}x{height}, API generated"
+    for i, img in enumerate(filled):
+        img_saver.save_image(
+            img,
+            p.outpath_samples,
+            "",
+            seed,
+            prompt,
+            opts.samples_format,
+            info=info,
+            p=p,
+        )
+
+    infotexts = [info] * len(filled)
+
+    return Processed(
+        p=p,
+        images_list=filled,
+        seed=seed,
+        info=info,
+        subseed=-1,
+        all_prompts=[prompt] * len(filled),
+        all_negative_prompts=[negative_prompt] * len(filled),
+        all_seeds=[seed] * len(filled),
+        all_subseeds=[-1] * len(filled),
+        index_of_first_image=0,
+        infotexts=infotexts,
+        comments="Generated via API",
+    )
+
+
 def process_images(p: StableDiffusionProcessing) -> Processed:
     """applies settings overrides (if any) before processing images, then restores settings as applicable."""
+
+    # --- API mode hook: bypass local model and call remote API ---
+    if getattr(opts, "forge_model_mode", "local") == "api":
+        return _process_images_via_api(p)
+
     if p.scripts is not None:
         p.scripts.before_process(p)
 

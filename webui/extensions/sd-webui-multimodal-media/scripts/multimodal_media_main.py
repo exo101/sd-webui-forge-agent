@@ -130,19 +130,8 @@ def multimodal_media_tab():
                     import traceback
                     traceback.print_exc()
 
-            # Qwen Video 万相视频生成标签页
-            with gr.TabItem("3. Qwen Video 万相视频生成"):
-                try:
-                    from scripts.qwen_video.main_ui import create_qwen_video_gen_ui
-                    # 创建 wan 系列视频生成 UI 组件
-                    qwen_video_gen_ui = create_qwen_video_gen_ui()
-                except Exception as e:
-                    gr.Markdown(f"❌ Qwen Video 模块初始化错误：{e}")
-                    import traceback
-                    traceback.print_exc()
-
             # Kling 可灵视频生成标签页
-            with gr.TabItem("4. Kling 可灵视频生成"):
+            with gr.TabItem("3. Kling 可灵视频生成"):
                 try:
                     from scripts.kling_video.main_ui import create_kling_video_gen_ui
                     # 创建 Kling 可灵视频生成 UI 组件

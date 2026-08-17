@@ -45,8 +45,8 @@ def IOComponent_init(self, *args, **kwargs):
     return res
 
 
-def Block_get_config(self):
-    config = original_Block_get_config(self)
+def Block_get_config(self, *args, **kwargs):
+    config = original_Block_get_config(self, *args, **kwargs)
 
     webui_tooltip = getattr(self, "webui_tooltip", None)
     if webui_tooltip:

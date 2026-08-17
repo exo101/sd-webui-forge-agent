@@ -886,7 +886,14 @@ def create_ui():
     for _interface, label, _ifid in interfaces:
         shared.tab_names.append(label)
 
-    with gr.Blocks(theme=shared.gradio_theme, analytics_enabled=False, title="Stable Diffusion", head=canvas_head) as demo:
+    with gr.Blocks(theme=shared.gradio_theme, analytics_enabled=False, title="Stable Diffusion", head=canvas_head + """
+<script>
+if (!sessionStorage.getItem('physton_icon_refreshed')) {
+    sessionStorage.setItem('physton_icon_refreshed', '1');
+    setTimeout(function() { location.reload(); }, 2000);
+}
+</script>
+""") as demo:
         settings.add_quicksettings()
 
         parameters_copypaste.connect_paste_params_buttons()
