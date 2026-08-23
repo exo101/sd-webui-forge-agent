@@ -20,6 +20,7 @@ launcher/主题壁纸.png
 launcher/*.spec
 launcher/dist/
 launcher/build/
+launcher/build_tmp/
 
 # Python 缓存
 __pycache__/
