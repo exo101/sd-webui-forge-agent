@@ -142,6 +142,7 @@ def get_layerdiff_pipeline(args):
         possible_nf4_paths = [
             # WebUI models 目录
             osp.join(_webui_root, "models", "diffusers", "models--24yearsold--seethroughv0.0.2_layerdiff3d_nf4"),
+            osp.join(_webui_root, "models", "diffusers", "models--ljsabc--seethroughv0.0.2_layerdiff3d_nf4"),
         ]
         
         for path in possible_nf4_paths:
@@ -300,6 +301,7 @@ def find_layerdiff_model():
         # WebUI models 目录
         osp.join(_webui_root, "models", "diffusers", "models--24yearsold--seethroughv0.0.2_layerdiff3d"),
         osp.join(_webui_root, "models", "diffusers", "models--layerdifforg--seethroughv0.0.2_layerdiff3d"),
+        osp.join(_webui_root, "models", "diffusers", "models--ljsabc--seethroughv0.0.2_layerdiff3d"),
     ]
     
     print(f"[Model Search] WebUI root: {_webui_root}")
