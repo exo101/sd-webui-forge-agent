@@ -248,8 +248,9 @@ def get_marigold_pipeline(args):
         possible_nf4_paths = [
             # WebUI models 目录
             osp.join(_webui_root, "models", "diffusers", "models--24yearsold--seethroughv0.0.1_marigold_nf4"),
+            osp.join(_webui_root, "models", "diffusers", "models--ljsabc--seethroughv0.0.1_marigold_nf4"),
         ]
-        
+
         for path in possible_nf4_paths:
             print(f'[NF4 Marigold] Checking: {path}')
             if osp.exists(path):
@@ -343,6 +344,8 @@ def find_marigold_model():
         # WebUI models 目录
         osp.join(_webui_root, "models", "diffusers", "models--24yearsold--seethroughv0.0.1_marigold"),
         osp.join(_webui_root, "models", "diffusers", "models--24yearsold--seethroughv0.0.1_marigold_nf4"),
+        osp.join(_webui_root, "models", "diffusers", "models--ljsabc--seethroughv0.0.1_marigold"),
+        osp.join(_webui_root, "models", "diffusers", "models--ljsabc--seethroughv0.0.1_marigold_nf4"),
     ]
     
     print(f"[Model Search] WebUI root: {_webui_root}")
