@@ -48,6 +48,7 @@ class AspectRatioStepScript(scripts.Script):
         with gr.Group(), gr.Accordion(
                 _constants.EXTENSION_NAME,
                 open=start_expanded,
+                elem_id="aspect-ratio-helper-accordion",
         ):
             for component in components:
                 # we deliberately DON'T check component.should_show() here.

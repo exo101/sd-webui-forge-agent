@@ -1845,3 +1845,411 @@ div.xyz_entries button.secondary {
     max-width: 24px !important;
     max-height: 24px !important;
 }
+
+/* ============================================================
+   Apple-style Sidebar Navigation
+   ============================================================ */
+
+/* --- Sidebar Container --- */
+.sd-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 220px;
+    height: 100vh;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    background: rgba(245, 245, 247, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+    user-select: none;
+}
+
+.dark .sd-sidebar {
+    background: rgba(30, 30, 32, 0.85);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* --- Collapsed Sidebar --- */
+.sd-sidebar-collapsed .sd-sidebar {
+    transform: translateX(-190px);
+}
+
+.sd-sidebar-collapsed .sd-sidebar:hover {
+    transform: translateX(0);
+}
+
+/* --- Brand --- */
+.sd-sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dark .sd-sidebar-brand {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sd-sidebar-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #0071e3, #00a0ff);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.sd-sidebar-title h1 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.dark .sd-sidebar-title h1 {
+    color: #f5f5f7;
+}
+
+.sd-sidebar-title p {
+    font-size: 10px;
+    color: #86868b;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.dark .sd-sidebar-title p {
+    color: #6e6e73;
+}
+
+/* --- Navigation --- */
+.sd-sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px 0;
+}
+
+.sd-sidebar-nav::-webkit-scrollbar {
+    width: 3px;
+}
+
+.sd-sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+}
+
+.dark .sd-sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* --- Section --- */
+.sd-sidebar-section {
+    margin: 0 6px;
+}
+
+.sd-sidebar-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.2s;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6e6e73;
+}
+
+.dark .sd-sidebar-section-header {
+    color: #98989d;
+}
+
+.sd-sidebar-section-header:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.dark .sd-sidebar-section-header:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.sd-sidebar-section-icon {
+    font-size: 14px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.sd-sidebar-section-label {
+    flex: 1;
+}
+
+.sd-sidebar-chevron {
+    font-size: 10px;
+    transition: transform 0.2s;
+    opacity: 0.5;
+}
+
+.sd-sidebar-section.expanded .sd-sidebar-chevron {
+    transform: rotate(0deg);
+}
+
+.sd-sidebar-section:not(.expanded) .sd-sidebar-chevron {
+    transform: rotate(-90deg);
+}
+
+.sd-sidebar-section-body {
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+}
+
+.sd-sidebar-section.expanded .sd-sidebar-section-body {
+    max-height: 500px;
+}
+
+.sd-sidebar-section:not(.expanded) .sd-sidebar-section-body {
+    max-height: 0;
+}
+
+/* --- Item --- */
+.sd-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px 6px 38px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.15s;
+    font-size: 12px;
+    color: #1d1d1f;
+    margin: 1px 0;
+}
+
+.dark .sd-sidebar-item {
+    color: #e5e5e7;
+}
+
+.sd-sidebar-item:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.dark .sd-sidebar-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.sd-sidebar-item.active {
+    background: rgba(0, 113, 227, 0.1);
+    color: #0071e3;
+    font-weight: 500;
+}
+
+.dark .sd-sidebar-item.active {
+    background: rgba(0, 113, 227, 0.15);
+    color: #409cff;
+}
+
+.sd-sidebar-item-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+/* Eye icon for hide/show item */
+.sd-sidebar-item-eye {
+    font-size: 10px;
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity 0.15s;
+    padding: 2px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    line-height: 1;
+    user-select: none;
+}
+
+.sd-sidebar-item:hover .sd-sidebar-item-eye {
+    opacity: 0.7;
+}
+
+.sd-sidebar-item-eye:hover {
+    opacity: 1 !important;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.dark .sd-sidebar-item-eye:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Hidden item state - completely hidden */
+.sd-sidebar-item.sd-item-hidden {
+    display: none !important;
+}
+
+/* Restore mode - show hidden items with a special style */
+.sd-sidebar.sd-restore-mode .sd-sidebar-item.sd-item-hidden {
+    display: flex !important;
+    opacity: 0.5;
+    border: 1px dashed rgba(0, 113, 227, 0.3);
+}
+
+.sd-sidebar.sd-restore-mode .sd-sidebar-item.sd-item-hidden:hover {
+    opacity: 0.8;
+    border-color: rgba(0, 113, 227, 0.6);
+}
+
+/* Hide "Others" section if empty */
+.sd-sidebar-section[data-empty="true"] {
+    display: none !important;
+}
+
+/* --- Footer --- */
+.sd-sidebar-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 8px 6px;
+}
+
+.dark .sd-sidebar-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sd-sidebar-footer-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.2s;
+    font-size: 12px;
+    color: #6e6e73;
+}
+
+.dark .sd-sidebar-footer-item {
+    color: #98989d;
+}
+
+.sd-sidebar-footer-item:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.dark .sd-sidebar-footer-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.sd-sidebar-footer-icon {
+    font-size: 14px;
+    width: 20px;
+    text-align: center;
+}
+
+/* --- Sidebar Toggle Button --- */
+.sd-sidebar-toggle {
+    position: fixed;
+    top: 8px;
+    left: 228px;
+    z-index: 1000;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: rgba(245, 245, 247, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #1d1d1f;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.dark .sd-sidebar-toggle {
+    background: rgba(30, 30, 32, 0.8);
+    color: #f5f5f7;
+}
+
+.sd-sidebar-toggle:hover {
+    background: rgba(245, 245, 247, 0.95);
+}
+
+.dark .sd-sidebar-toggle:hover {
+    background: rgba(50, 50, 52, 0.95);
+}
+
+.sd-sidebar-collapsed .sd-sidebar-toggle {
+    left: 10px;
+}
+
+/* --- Main Content Shift --- */
+body.sd-sidebar-active .gradio-container {
+    margin-left: 220px !important;
+    max-width: calc(100% - 220px) !important;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.sd-sidebar-active.sd-sidebar-collapsed .gradio-container {
+    margin-left: 30px !important;
+    max-width: calc(100% - 30px) !important;
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+    .sd-sidebar {
+        width: 200px;
+        transform: translateX(-170px);
+    }
+
+    .sd-sidebar-toggle {
+        left: 10px;
+    }
+
+    body.sd-sidebar-active .gradio-container {
+        margin-left: 30px !important;
+        max-width: calc(100% - 30px) !important;
+    }
+
+    .sd-sidebar:hover {
+        transform: translateX(0);
+    }
+}
+
+/* ============================================================
+   Sidebar-Controlled Tab Panel Visibility
+   ============================================================ */
+
+/* Hide the Gradio main tab navigation bar (the row of tab buttons) */
+#tabs > div.tab-nav,
+#tabs > div[role="tablist"],
+#tabs > .tab-nav {
+    display: none !important;
+}
+
+/* Hide all tab panels by default */
+[id^="tab_"] {
+    display: none !important;
+}
+
+/* Show the active panel */
+[id^="tab_"].sd-panel-active {
+    display: block !important;
+}
+
+/* Keep settings internal tab navigation visible */
+#settings > div.tab-nav {
+    display: block !important;
+}

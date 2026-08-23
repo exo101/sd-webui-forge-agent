@@ -482,10 +482,36 @@ function setupArhShapeButtons() {
         btn.addEventListener('click', function() {
             const ar = this.getAttribute('data-ar');
             if (!ar) return;
-            const btnId = 'arh_hidden_btn_' + ar.replace(':', '_');
-            const hiddenBtn = document.getElementById(btnId);
-            if (hiddenBtn) {
-                hiddenBtn.click();
+
+            // Determine which tab (txt2img / img2img) is currently active
+            const tabs = gradioApp().querySelector('#tabs');
+            let controller = null;
+            if (tabs) {
+                const selectedTab = tabs.querySelector('button.selected');
+                if (selectedTab) {
+                    const tabId = selectedTab.id || '';
+                    if (tabId.includes('txt2img')) {
+                        controller = window.__txt2imgAspectRatioController;
+                    } else if (tabId.includes('img2img')) {
+                        controller = window.__img2imgAspectRatioController;
+                    }
+                }
+            }
+            // Fallback: try any available controller
+            if (!controller) {
+                controller = window.__txt2imgAspectRatioController || window.__img2imgAspectRatioController;
+            }
+
+            if (controller) {
+                // Use the frontend controller directly - no backend round-trip needed
+                controller.setAspectRatio(ar);
+            } else {
+                // Fallback to hidden Gradio button if controller is not available
+                const btnId = 'arh_hidden_btn_' + ar.replace(':', '_');
+                const hiddenBtn = document.getElementById(btnId);
+                if (hiddenBtn) {
+                    hiddenBtn.click();
+                }
             }
         });
     });

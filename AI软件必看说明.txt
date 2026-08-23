@@ -1,0 +1,34 @@
+1.不支持AMD显卡，如果启动器出现闪退，就是因为驱动版本太低，安装英伟达NVIDIA驱动 596.49
+
+2.在sd-webui-forge-neo-v3.5\system\vcredist目录，安装VC_redist.x64.exe修复环境库
+ 
+3：模型目录位置：sd-webui-forge-neo-v3/  webui  /  models
+         
+变分解码器                                              vae
+图生3d模型目录                                      trellis2   
+文本编码模型目录                                   text_encoder
+生图主模型目录                                       Stable-diffusion
+场景分割模型目录                                   sams
+图层拆分插件模型目录                           diffusers
+语音合成模型目录                                   qwen3-tts   
+语音识别模型目录                                   whisper-tiny
+唇形同步模型目录                                   LatentSync
+普通放大算法模型目录                           ESRGAN
+高精度放大算法模型目录                       SEEDVR2
+生图主模型目录                                     diffusion_models
+控制模型与预处理器模型目录               ControINet
+图像清理插件模型目录                          cleaner
+混元翻译模型                                          Hy-MT2-1.8B
+智能抠图模型目录                                  BiRefNet
+修脸插件模型目录                                  adetailer
+微调训练模型目录                                  lora
+音乐生成模型                                         ace-step
+
+4：llama视觉分析模型目录位置：sd-webui-forge-neo-v3/  llama.cpp  /  models
+
+
+
+   
+
+ 
+
