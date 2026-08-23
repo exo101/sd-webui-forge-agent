@@ -266,7 +266,6 @@ def create_layer_separation_ui():
                 logger.info(f"上传图像已保存: {temp_path}")
 
                 logger.info(f"输入图像: {input_image}")
-                logger.info(f"输出目录: {output_dir}")
                 logger.info(f"处理分辨率: {resolution}")
                 logger.info(f"推理步数: {num_inference_steps}")
                 logger.info(f"随机种子: {seed}")
@@ -298,6 +297,7 @@ def create_layer_separation_ui():
                         timestamp = int(time.time() * 1000)
                         output_dir = os.path.join(webui_dir, "output", "See-Through", "scene_output", f"scene_{timestamp}")
                         os.makedirs(output_dir, exist_ok=True)
+                        logger.info(f"输出目录: {output_dir}")
 
                         segmenter = SceneSegmenter(model_type=scene_model_type)
 
