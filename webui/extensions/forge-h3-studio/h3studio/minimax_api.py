@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
@@ -121,22 +122,56 @@ def _build_content(request: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _resolve_media_url(file_path: str) -> str:
-    """将本地文件路径解析为 MiniMax API 可用的 URL"""
+    """将本地文件路径解析为 MiniMax API 可用的 URL（base64 或 http/https）"""
     # 如果已经是 URL，直接返回
     if file_path.startswith(("http://", "https://", "data:")):
         return file_path
 
-    # 如果是本地文件，尝试上传到公网可访问的地址
-    # 对于 ComfyUI 场景，文件路径是 ComfyUI 的 output 路径
-    # 返回一个可访问的 URL 或直接使用文件路径
-    # MiniMax 支持公网 URL，不支持本地文件路径
-    # 这里返回文件路径，由调用方确保可访问性
-    if os.path.isfile(file_path):
-        # 如果文件存在，用户需要自己确保文件可公网访问
-        # 或者使用 MiniMax 的 upload 机制
-        return file_path
+    # 尝试将本地文件转为 base64 data URL
+    resolved_path = None
 
-    # 对于 ComfyUI output 路径格式，保留原样
+    # 1. 直接尝试绝对路径
+    if os.path.isfile(file_path):
+        resolved_path = file_path
+    else:
+        # 2. 尝试 EXTENSION_ROOT/data/assets/ 路径（API 模式上传的素材）
+        try:
+            from .config import EXTENSION_ROOT
+            candidates = [
+                os.path.join(str(EXTENSION_ROOT), "data", "assets", os.path.basename(file_path)),
+                os.path.join(str(EXTENSION_ROOT), "data", "assets", file_path),
+            ]
+            for c in candidates:
+                if os.path.isfile(c):
+                    resolved_path = c
+                    break
+        except Exception:
+            pass
+
+    if resolved_path is not None:
+        try:
+            with open(resolved_path, "rb") as f:
+                img_data = f.read()
+            ext = os.path.splitext(resolved_path)[1].lower()
+            mime = {
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".png": "image/png",
+                ".webp": "image/webp",
+                ".gif": "image/gif",
+                ".bmp": "image/bmp",
+            }.get(ext, "application/octet-stream")
+            b64 = base64.b64encode(img_data).decode("utf-8")
+            size_mb = len(img_data) / (1024 * 1024)
+            if size_mb > 10:
+                _log(f"警告: 图片较大 ({size_mb:.1f}MB)，base64 后约 {len(b64) / (1024*1024):.1f}MB，可能超出 API 限制", "warning")
+            _log(f"本地文件已转为 base64 URL: {os.path.basename(resolved_path)} ({size_mb:.1f}MB)")
+            return f"data:{mime};base64,{b64}"
+        except Exception as e:
+            _log(f"本地文件转 base64 失败: {e}", "warning")
+
+    # 兜底：返回原始路径（调用方确保可访问）
+    _log(f"文件找不到，使用原始路径: {file_path}", "warning")
     return file_path
 
 
