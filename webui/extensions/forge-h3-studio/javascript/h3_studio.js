@@ -788,7 +788,7 @@
     const output = preferredOutput(job);
     if (preview) return `<img src="${esc(preview)}" alt="实时预览">`;
     if (outputKind(output) === "image") return `<img src="${esc(output.url)}" alt="输出预览">`;
-    if (outputKind(output) === "video") return `<video src="${esc(output.url)}#t=0.1" muted playsinline preload="auto"></video><i>▶</i>`;
+    if (outputKind(output) === "video") return `<video src="${esc(output.url)}#t=0.1" muted playsinline preload="metadata"></video><i>▶</i>`;
     return `<span>${job.state === "running" ? "⚡" : job.state === "queued" ? "◷" : "H3"}</span>`;
   }
 
@@ -856,7 +856,7 @@
     let media = '<div class="h3s-result-empty">任务已结束，但没有发现可预览输出</div>';
     if (item) {
       const ext = item.filename.split(".").pop().toLowerCase();
-      if (["mp4", "webm", "mkv", "mov"].includes(ext)) media = `<video src="${esc(item.url)}" controls autoplay loop></video>`;
+      if (["mp4", "webm", "mkv", "mov"].includes(ext)) media = `<video src="${esc(item.url)}" controls autoplay loop playsinline preload="metadata" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain"></video>`;
       else if (["png", "jpg", "jpeg", "webp", "gif"].includes(ext)) media = `<img src="${esc(item.url)}" alt="H3 output">`;
       else if (["wav", "mp3", "flac", "m4a", "ogg"].includes(ext)) media = `<audio src="${esc(item.url)}" controls autoplay></audio>`;
     }
@@ -1399,7 +1399,7 @@
     const title = item.name || item.filename || "H3 生成结果";
     const detail = summary || item.summary || {};
     let media = `<div class="h3s-result-empty">无法预览该输出</div>`;
-    if (kind === "video") media = `<video src="${esc(item.url)}" controls autoplay loop></video>`;
+    if (kind === "video") media = `<video src="${esc(item.url)}" controls autoplay loop playsinline preload="metadata" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain"></video>`;
     else if (kind === "image") media = `<img src="${esc(item.url)}" alt="${esc(title)}">`;
     else if (kind === "audio") media = `<div class="h3s-viewer-audio"><span>♫</span><audio src="${esc(item.url)}" controls autoplay></audio></div>`;
     const layer = $("[data-role='modal-layer']", root());
