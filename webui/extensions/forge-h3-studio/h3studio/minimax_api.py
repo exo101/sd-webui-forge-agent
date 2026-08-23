@@ -10,6 +10,24 @@ import requests
 
 logger = logging.getLogger("forge_h3_studio.minimax_api")
 
+# 尝试挂载到 WebUI 的日志系统
+try:
+    from backend.logging import setup_logger
+    setup_logger(logger)
+except Exception:
+    # 如果不在 WebUI 环境中，使用标准输出
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(asctime)s [%(name)s] %(levelname)s: %(message)s"))
+        logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
+# 同时输出到控制台（确保 WebUI 可见）
+def _log(msg: str, level: str = "info"):
+    """日志辅助函数，同时输出到 logger 和 print"""
+    getattr(logger, level, logger.info)(msg)
+    print(f"[H3 MiniMax API] {msg}")
+
 MINIMAX_API_BASE = "https://api.minimaxi.com"
 MINIMAX_VIDEO_ENDPOINT = f"{MINIMAX_API_BASE}/v2/video_generation"
 MINIMAX_QUERY_ENDPOINT = f"{MINIMAX_API_BASE}/v2/video_generation/query"
@@ -180,7 +198,7 @@ def submit_h3_task(
         "ratio": ratio,
     }
 
-    logger.info(f"MiniMax API: 提交 H3 任务, resolution={resolution}, duration={duration}s, ratio={ratio}")
+    _log(f"提交 H3 任务, resolution={resolution}, duration={duration}s, ratio={ratio}")
 
     # 提交任务
     try:
@@ -195,7 +213,7 @@ def submit_h3_task(
         task_id = result.get("task_id")
         if not task_id:
             raise RuntimeError(f"MiniMax API 未返回 task_id: {result}")
-        logger.info(f"MiniMax API: 任务已提交, task_id={task_id}")
+        _log(f"任务已提交, task_id={task_id}")
     except requests.exceptions.RequestException as e:
         error_detail = ""
         if hasattr(e, "response") and e.response is not None:
@@ -222,12 +240,12 @@ def submit_h3_task(
 
             status = task.get("status", "unknown")
             if status != last_status:
-                logger.info(f"MiniMax API: 任务 {task_id} 状态={status}")
+                _log(f"任务 {task_id} 状态={status}")
                 last_status = status
 
             if status == "succeeded":
                 video_url = task.get("content", {}).get("url", "")
-                logger.info(f"MiniMax API: 任务完成, video_url={video_url}")
+                _log(f"任务完成, video_url={video_url}")
                 return {
                     "task_id": task_id,
                     "status": "completed",
@@ -240,7 +258,7 @@ def submit_h3_task(
 
             if status == "failed":
                 error_msg = task.get("error", {}).get("message", "MiniMax API 任务失败")
-                logger.error(f"MiniMax API: 任务失败, error={error_msg}")
+                _log(f"任务失败, error={error_msg}", "error")
                 return {
                     "task_id": task_id,
                     "status": "failed",
@@ -248,7 +266,7 @@ def submit_h3_task(
                 }
 
             if status == "cancelled":
-                logger.warning(f"MiniMax API: 任务已取消, task_id={task_id}")
+                _log(f"任务已取消, task_id={task_id}", "warning")
                 return {
                     "task_id": task_id,
                     "status": "cancelled",
@@ -256,11 +274,11 @@ def submit_h3_task(
                 }
 
         except requests.exceptions.RequestException as e:
-            logger.warning(f"MiniMax API: 查询任务状态失败: {e}")
+            _log(f"查询任务状态失败: {e}", "warning")
 
         time.sleep(poll_interval)
 
-    logger.error(f"MiniMax API: 任务超时, task_id={task_id}")
+    _log(f"任务超时, task_id={task_id}", "error")
     return {
         "task_id": task_id,
         "status": "failed",

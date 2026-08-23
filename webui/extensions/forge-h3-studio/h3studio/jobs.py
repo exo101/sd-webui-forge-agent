@@ -8,6 +8,18 @@ from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+import logging
+logger = logging.getLogger("forge_h3_studio.jobs")
+try:
+    from backend.logging import setup_logger
+    setup_logger(logger)
+except Exception:
+    pass
+
+def _log(msg: str, level: str = "info"):
+    getattr(logger, level, logger.info)(msg)
+    print(f"[H3 Jobs] {msg}")
+
 from .comfy_client import ComfyClient
 from .config import load_config
 from .errors import H3StudioError
@@ -323,28 +335,37 @@ class JobStore:
             self._jobs[job.id] = job
             self._trim()
 
+        _log(f"提交 API 任务 job_id={job.id}, mode={request.get('mode', 't2v')}, prompt={request.get('prompt', '')[:50]}")
+
         # 在新线程中提交并监控
         threading.Thread(target=self._monitor_via_api, args=(job.id, api_key, request), daemon=True).start()
         return job.public()
 
     def _monitor_via_api(self, job_id: str, api_key: str, request: dict[str, Any]) -> None:
         """监控 MiniMax API 任务"""
+        _log(f"开始监控 API 任务 job_id={job_id}")
         try:
             # 更新状态为 running
             with self._lock:
                 job = self._jobs.get(job_id)
                 if job is None:
+                    _log(f"任务 {job_id} 不存在，跳过", "warning")
                     return
                 job.state = "running"
                 job.progress["nodeTitle"] = "MiniMax H3 API 处理中"
                 job.updated_at = time.time()
 
+            _log(f"调用 MiniMax API, mode={request.get('mode', 't2v')}, duration={request.get('duration', 5)}s")
+
             # 调用 MiniMax API
             result = submit_h3_task(request, api_key)
+
+            _log(f"MiniMax API 返回结果: status={result.get('status')}, video_url={result.get('video_url', '')[:80] if result.get('video_url') else '无'}")
 
             with self._lock:
                 job = self._jobs.get(job_id)
                 if job is None:
+                    _log(f"任务 {job_id} 在提交后不存在", "warning")
                     return
 
                 if result["status"] == "completed":
@@ -354,15 +375,18 @@ class JobStore:
                     job.progress["nodeTitle"] = "生成完成"
                     job.progress["overallPercent"] = 100.0
                     job.api_task_id = result.get("task_id", "")
+                    _log(f"任务完成, video_url={video_url}")
                 else:
                     job.state = "failed"
                     job.error = result.get("error", "MiniMax API 返回失败")
                     job.progress["nodeTitle"] = "MiniMax API 失败"
+                    _log(f"任务失败, error={job.error}", "error")
 
                 job.completed_at = time.time()
                 job.updated_at = time.time()
 
         except Exception as e:
+            _log(f"API 任务异常: {e}", "error")
             with self._lock:
                 job = self._jobs.get(job_id)
                 if job is not None:
