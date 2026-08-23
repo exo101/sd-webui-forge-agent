@@ -1,0 +1,73 @@
+# Unified see_through_dev environment — Python 3.12
+# Pinned 2026-03-24. Replaces per-subdir requirements files.
+#
+# Setup:
+#   conda create -n see_through_dev python=3.12 -y
+#   conda activate see_through_dev
+#   pip install torch==2.8.0+cu128 torchvision==0.23.0+cu128 torchaudio==2.8.0+cu128 \
+#     --index-url https://download.pytorch.org/whl/cu128
+#   pip install -r requirements.txt
+#
+# Optional tiers (install separately as needed):
+#   pip install -r requirements-training-deepspeed.txt
+#   pip install -r requirements-inference-annotators.txt
+#   pip install -r requirements-inference-mmdet.txt
+
+-e ./common
+-e ./annotators
+
+# --- Core scientific ---
+numpy==2.2.6
+opencv-python==4.13.0.92
+pillow==12.1.1
+pillow-jxl-plugin==1.3.7
+matplotlib==3.9.4
+pandas==2.3.3
+scikit-learn==1.7.2
+scipy==1.15.3
+scikit-image==0.25.2
+einops==0.8.2
+
+# --- HuggingFace stack ---
+transformers==5.0.0
+diffusers==0.37.0
+huggingface-hub==1.7.2
+tokenizers==0.22.2
+accelerate==1.13.0
+safetensors==0.7.0
+timm @ git+https://github.com/huggingface/pytorch-image-models@6e3fdda39508db30766f9d9e6ec32380ebee8b8c
+simple-parsing==0.1.8
+
+# --- ML utilities ---
+kornia==0.8.2
+omegaconf==2.3.0
+pycocotools==2.0.11
+grad-cam==1.5.5
+
+# --- Qt UI ---
+PyQt6==6.9.1
+PyQt6-Qt6==6.9.1
+qtpy==2.4.3
+
+# --- UI-specific ---
+natsort==8.4.0
+py7zr==1.1.0
+termcolor==3.3.0
+colorama==0.4.6
+pyyaml==6.0.3
+
+# --- Data & IO ---
+click==8.3.1
+psd-tools[composite]==1.14.2
+tqdm==4.67.3
+
+# --- VAE training (lpips + convnext) ---
+# In base per decision: lightweight packages, avoids separate tier friction.
+lpips==0.1.4
+convnext_perceptual_loss @ git+https://github.com/sypsyp97/convnext_perceptual_loss.git@967cd172dfcc6407f6b8e5ea489cfd2f4fba51ba
+
+# --- Dev tools ---
+ipykernel==7.2.0
+Cython==3.2.4
+wheel==0.45.1
+pytest==8.4.1

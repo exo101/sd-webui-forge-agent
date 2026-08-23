@@ -32,3 +32,19 @@ ms_deploy.json
 
 # 创空间重复目录
 sd-webui-forge-neo-v3/
+
+# 临时文件
+_launch_tmp_*.bat
+软件必看说明.txt
+
+# 生成输出
+webui/output/
+webui/outputs/
+webui/tmp/
+
+# 模型文件（大文件）
+webui/models/
+
+# 环境变量
+.env
+*.env.local
