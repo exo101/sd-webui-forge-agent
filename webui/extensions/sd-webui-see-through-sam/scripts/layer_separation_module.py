@@ -277,6 +277,16 @@ def create_layer_separation_ui():
                     torch.cuda.empty_cache()
                     logger.info(f"GPU显存已清理，当前显存使用: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
 
+                # 在所有分支前定义 output_dir
+                import time
+                timestamp = int(time.time() * 1000)
+                if segmentation_mode == "场景分割 (SAM)":
+                    output_dir = os.path.join(webui_dir, "output", "See-Through", "scene_output", f"scene_{timestamp}")
+                else:
+                    output_dir = os.path.join(webui_dir, "output", "See-Through", "layerdiff_output", f"layer_{timestamp}")
+                os.makedirs(output_dir, exist_ok=True)
+                logger.info(f"输出目录: {output_dir}")
+
                 try:
                     if segmentation_mode == "场景分割 (SAM)":
                         logger.info("[Scene Segmentation] 开始场景分割")
@@ -292,12 +302,6 @@ def create_layer_separation_ui():
                         spec.loader.exec_module(scene_module)
 
                         SceneSegmenter = scene_module.SceneSegmenter
-
-                        import time
-                        timestamp = int(time.time() * 1000)
-                        output_dir = os.path.join(webui_dir, "output", "See-Through", "scene_output", f"scene_{timestamp}")
-                        os.makedirs(output_dir, exist_ok=True)
-                        logger.info(f"输出目录: {output_dir}")
 
                         segmenter = SceneSegmenter(model_type=scene_model_type)
 
