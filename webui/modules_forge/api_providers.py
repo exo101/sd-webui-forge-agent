@@ -9,8 +9,12 @@ from enum import Enum
 import requests
 from PIL import Image
 from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+from backend.logging import setup_logger
 
 logger = logging.getLogger("api_providers")
+setup_logger(logger)
 
 # Create a custom SSLContext that ignores unexpected EOF errors
 _ssl_context = ssl.create_default_context()
@@ -37,8 +41,16 @@ def _make_session() -> requests.Session:
     """Create a requests Session that bypasses proxy and uses custom SSL context."""
     sess = requests.Session()
     sess.trust_env = False
-    sess.mount("https://", _SSLAdapter())
-    sess.mount("http://", _SSLAdapter())
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["POST"],
+    )
+    adapter = _SSLAdapter()
+    adapter.max_retries = retry_strategy
+    sess.mount("https://", adapter)
+    sess.mount("http://", adapter)
     return sess
 
 # In-memory session API key (not persisted to disk)
@@ -490,6 +502,88 @@ def _pixels_to_aspect_ratio(width: int, height: int) -> str:
     return closest
 
 
+def _upload_image_to_hosting(img: Image.Image) -> str:
+    """Upload a PIL Image to a temporary hosting service and return the public URL.
+
+    Tries multiple hosting services in order, falls back to data URL if all fail.
+    """
+    import tempfile
+    tmp_path = None
+    try:
+        # Save to temp file
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        img.save(tmp, format="JPEG", quality=85)
+        tmp_path = tmp.name
+        tmp.close()
+
+        sess = _make_session()
+
+        # Try multiple hosting services in order
+        upload_services = [
+            {
+                "name": "catbox.moe",
+                "url": "https://catbox.moe/user/api.php",
+                "method": "post",
+                "data": {"reqtype": "fileupload"},
+                "files": "fileToUpload",
+                "parse": lambda r: r.text.strip(),
+            },
+            {
+                "name": "litterbox.catbox.moe",
+                "url": "https://litterbox.catbox.moe/resources/internals/api.php",
+                "method": "post",
+                "data": {"reqtype": "fileupload", "time": "1h"},
+                "files": "fileToUpload",
+                "parse": lambda r: r.text.strip(),
+            },
+            {
+                "name": "0x0.st",
+                "url": "https://0x0.st",
+                "method": "post",
+                "data": {},
+                "files": "file",
+                "parse": lambda r: r.text.strip(),
+            },
+        ]
+
+        for service in upload_services:
+            try:
+                with open(tmp_path, "rb") as f:
+                    files = {service["files"]: f}
+                    if service["method"] == "post":
+                        resp = sess.post(
+                            service["url"],
+                            data=service["data"],
+                            files=files,
+                            timeout=30,
+                        )
+                    else:
+                        continue
+                if resp.ok:
+                    url = service["parse"](resp)
+                    if url and url.startswith("http"):
+                        logger.info(f"Uploaded reference image via {service['name']}: {url[:60]}...")
+                        return url
+                logger.debug(f"{service['name']} upload failed ({resp.status_code})")
+            except Exception as e:
+                logger.debug(f"{service['name']} upload error: {e}")
+                continue
+
+        logger.warning("All hosting services failed, falling back to data URL")
+    except Exception as e:
+        logger.warning(f"Hosting upload error: {e}, falling back to data URL")
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+    # Fallback: use data URL
+    return _pil_to_data_url(img)
+
+
 def call_api_pixapi(prompt: str, negative_prompt: str, api_key: str, model: str, width: int, height: int, n_iter: int, batch_size: int, reference_images: list[Image.Image] = None) -> list[Image.Image]:
     config = API_PROVIDER_CONFIGS["pixapi"]
     headers = {
@@ -508,9 +602,18 @@ def call_api_pixapi(prompt: str, negative_prompt: str, api_key: str, model: str,
         payload["negative_prompt"] = negative_prompt
 
     if reference_images:
-        image_urls = [_pil_to_data_url(img) for img in reference_images]
-        payload["image_url"] = image_urls
-        logger.info(f"Added {len(reference_images)} reference image(s) to Pixapi payload")
+        # Use the edits endpoint when reference images are provided.
+        # Pixapi supports both /v1/images/generations (text-to-image) and
+        # /v1/images/edits (image-to-image). The edits endpoint accepts
+        # an "image" parameter (single image URL) instead of "image_url" (list).
+        # Also remove negative_prompt as Gemini models don't support it on edits endpoint.
+        # Upload image to hosting service first (smaller payload than data URL)
+        image_url = _upload_image_to_hosting(reference_images[0])
+        payload["image"] = image_url
+        payload.pop("image_url", None)
+        payload.pop("negative_prompt", None)
+        logger.info(f"Added {len(reference_images)} reference image(s) to Pixapi payload, using edits endpoint")
+        return _call_openai_images_api(config["api_root"] + "/v1/images/edits", headers, payload, n_iter * batch_size)
 
     return _call_openai_images_api(config["base_url"], headers, payload, n_iter * batch_size)
 
