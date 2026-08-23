@@ -125,7 +125,16 @@ class BackendManager:
 
     def start(self) -> dict[str, Any]:
         config = load_config()
-        if config.get("backend_mode") == "external":
+        backend_mode = config.get("backend_mode", "managed")
+
+        # API 模式：无需启动本地后端
+        if backend_mode == "api":
+            api_key = str(config.get("minimax_api_key") or "").strip()
+            if not api_key:
+                raise H3StudioError("MiniMax API Key 未配置，请先在设置中填写")
+            return self.status()
+
+        if backend_mode == "external":
             health = ComfyClient().health()
             if not health["ok"]:
                 raise H3StudioError("外接 ComfyUI 当前不可用，请先启动它或检查地址")
@@ -160,6 +169,8 @@ class BackendManager:
 
     def stop(self) -> dict[str, Any]:
         config = load_config()
+        if config.get("backend_mode") == "api":
+            return self.status()
         if config.get("backend_mode") == "external":
             raise H3StudioError("外接模式不会由 Forge 停止后端")
         with self._lock:
@@ -194,6 +205,26 @@ class BackendManager:
 
     def status(self, *, skip_health: bool = False) -> dict[str, Any]:
         config = load_config()
+        backend_mode = config.get("backend_mode", "managed")
+
+        # API 模式：始终可用
+        if backend_mode == "api":
+            api_key = str(config.get("minimax_api_key") or "").strip()
+            return {
+                "state": "ready" if api_key else "stopped",
+                "ready": bool(api_key),
+                "mode": "api",
+                "url": "https://api.minimaxi.com",
+                "process_running": False,
+                "pid": None,
+                "exit_code": None,
+                "started_at": None,
+                "command": [],
+                "health": {"ok": bool(api_key), "base_url": "https://api.minimaxi.com", "mode": "api"},
+                "auto_start_on_tab": False,
+                "discovered_paths": [],
+            }
+
         with self._lock:
             process_running = self._process is not None and self._process.poll() is None
             exit_code = None if self._process is None or process_running else self._process.poll()

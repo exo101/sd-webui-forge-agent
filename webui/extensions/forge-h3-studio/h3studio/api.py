@@ -61,7 +61,7 @@ def _validate_settings(payload: dict[str, Any]) -> dict[str, Any]:
         raise H3StudioError("设置格式无效")
     cleaned: dict[str, Any] = {}
     if "backend_mode" in payload:
-        if payload["backend_mode"] not in {"managed", "external"}:
+        if payload["backend_mode"] not in {"managed", "external", "api"}:
             raise H3StudioError("后端模式无效")
         cleaned["backend_mode"] = payload["backend_mode"]
     for key in ("comfy_path", "python_executable", "extra_args", "output_prefix"):
@@ -80,6 +80,8 @@ def _validate_settings(payload: dict[str, Any]) -> dict[str, Any]:
         cleaned["request_timeout"] = max(3, min(int(payload["request_timeout"]), 600))
     if "auto_start_on_tab" in payload:
         cleaned["auto_start_on_tab"] = bool(payload["auto_start_on_tab"])
+    if "minimax_api_key" in payload:
+        cleaned["minimax_api_key"] = str(payload["minimax_api_key"] or "").strip()
     mode = cleaned.get("backend_mode", load_config().get("backend_mode"))
     port = cleaned.get("port", load_config().get("port", 8189))
     if mode == "managed":
