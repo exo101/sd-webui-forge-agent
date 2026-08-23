@@ -30,7 +30,10 @@ def _log(msg: str, level: str = "info"):
 
 MINIMAX_API_BASE = "https://api.minimaxi.com"
 MINIMAX_VIDEO_ENDPOINT = f"{MINIMAX_API_BASE}/v2/video_generation"
-MINIMAX_QUERY_ENDPOINT = f"{MINIMAX_API_BASE}/v2/video_generation/query"
+
+# 查询端点：GET /v2/query/video_generation/{task_id}
+def _query_url(task_id: str) -> str:
+    return f"{MINIMAX_API_BASE}/v2/query/video_generation/{task_id}"
 
 # 支持的参数映射
 RESOLUTION_MAP = {
@@ -229,9 +232,8 @@ def submit_h3_task(
     while time.time() - start_time < max_poll_time:
         try:
             query_resp = requests.get(
-                MINIMAX_QUERY_ENDPOINT,
+                _query_url(task_id),
                 headers=_headers(api_key),
-                params={"task_id": task_id},
                 timeout=10,
             )
             query_resp.raise_for_status()
@@ -293,9 +295,8 @@ def query_h3_task(task_id: str, api_key: str) -> dict[str, Any]:
 
     try:
         resp = requests.get(
-            MINIMAX_QUERY_ENDPOINT,
+            _query_url(task_id),
             headers=_headers(api_key),
-            params={"task_id": task_id},
             timeout=10,
         )
         resp.raise_for_status()
