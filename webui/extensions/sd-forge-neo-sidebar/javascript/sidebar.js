@@ -52,7 +52,7 @@
         { id: 'adetailer',     icon: '😊',  label: '修脸',                type: 'accordion', match: 'ADetailer' },
         { id: 'regional',      icon: '⊞',  label: '区域控制',            type: 'accordion', match: 'Region' },
         { id: 'see_through',   icon: '✂️',  label: '图层分离',            type: 'accordion', match: 'See-Through 图层分离为PSD文件' },
-        { id: 'image_stitch',  icon: '🖼️',  label: '多图拼接',            type: 'accordion', match: '多图拼接参考' },
+        { id: 'image_stitch',  icon: '🖼️',  label: '多图拼接参考',            type: 'accordion', match: '多图参考' },
     ];
 
     // All tab IDs to hide from the main tab bar
@@ -723,22 +723,16 @@
                 c.classList.remove('neo-sidebar-hidden-panel');
                 c.style.display = '';
 
-                let content = c.querySelector('.block-content');
-                if (!content) {
-                    const labelWrap = c.querySelector('.label-wrap');
-                    if (labelWrap) {
-                        labelWrap.dispatchEvent(new MouseEvent('click', {
-                            bubbles: true,
-                            cancelable: true,
-                            view: window
-                        }));
-                    }
-                } else {
-                    content.style.display = '';
-                    const labelWrap = c.querySelector('.label-wrap');
-                    if (labelWrap) {
-                        labelWrap.setAttribute('aria-expanded', 'true');
-                    }
+                // Always click the label-wrap to expand the accordion
+                // This ensures InputAccordion (used by 多图参考, soft-inpainting, etc.)
+                // properly opens its content via the mutation observer
+                const labelWrap = c.querySelector('.label-wrap');
+                if (labelWrap) {
+                    labelWrap.dispatchEvent(new MouseEvent('click', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window
+                    }));
                 }
             }
             setActiveButton(item.id);
