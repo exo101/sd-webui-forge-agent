@@ -186,6 +186,14 @@ def create_layer_separation_ui():
                     interactive=False
                 )
                 open_dir_btn = gr.Button("打开输出目录", variant="secondary")
+                download_psd_btn = gr.Button("下载PSD", variant="secondary")
+
+        psd_state = gr.State(value=None)
+        psd_download = gr.File(
+            label="生成的PSD文件",
+            visible=False,
+            interactive=False
+        )
 
         def toggle_options(enabled):
             return gr.update(visible=enabled), gr.update(visible=enabled)
@@ -235,6 +243,31 @@ def create_layer_separation_ui():
             outputs=[output_info]
         )
 
+        def download_psd(psd_path):
+            """返回最近一次生成的 PSD 文件供浏览器下载，并给出明确的状态反馈。"""
+            if not psd_path:
+                return (
+                    "⚠️ 暂无 PSD 文件可下载。\n请先点击「开始处理」成功处理一张图像，并确保已勾选「保存为PSD文件」。",
+                    gr.update(value=None, visible=False),
+                )
+            psd_path = os.path.abspath(psd_path)
+            if not os.path.exists(psd_path):
+                return (
+                    f"⚠️ PSD 文件不存在或已被删除：\n{psd_path}\n请重新处理图像以生成新的 PSD 文件。",
+                    gr.update(value=None, visible=False),
+                )
+            file_size_mb = os.path.getsize(psd_path) / (1024 * 1024)
+            return (
+                f"✅ PSD 文件已就绪，请点击下方链接下载（{file_size_mb:.2f} MB）：\n{os.path.basename(psd_path)}",
+                gr.update(value=psd_path, visible=True),
+            )
+
+        download_psd_btn.click(
+            download_psd,
+            inputs=[psd_state],
+            outputs=[output_info, psd_download]
+        )
+
         def process_image(uploaded_image, save_psd, resolution, num_inference_steps, seed,
                           use_layerdiff, use_marigold_depth, use_sam_seg,
                           enable_lr_split,
@@ -249,7 +282,7 @@ def create_layer_separation_ui():
 
                 if not uploaded_image:
                     logger.error("错误：请上传图像")
-                    return "错误：请上传图像", None
+                    return "错误：请上传图像", None, None
 
                 see_through_path = os.path.join(os.path.dirname(__file__), "..", "see-through")
                 webui_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -278,8 +311,9 @@ def create_layer_separation_ui():
                     logger.info(f"GPU显存已清理，当前显存使用: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
 
                 # 在所有分支前定义 output_dir
-                import time
-                timestamp = int(time.time() * 1000)
+                # 复用上面保存上传图像时的 timestamp，确保 output_dir 目录名
+                # 与 uploaded_image_{timestamp}.psd 文件名使用同一个时间戳，
+                # 避免后续查找 PSD 文件时因时间戳不一致而失败
                 if segmentation_mode == "场景分割 (SAM)":
                     output_dir = os.path.join(webui_dir, "output", "See-Through", "scene_output", f"scene_{timestamp}")
                 else:
@@ -334,7 +368,7 @@ def create_layer_separation_ui():
                                 logger.warning("PSD 文件生成失败（可能缺少 psd-tools）")
                         except Exception as e:
                             logger.error(f"生成 PSD 文件失败: {e}")
-                            return f"场景分割成功，但生成 PSD 文件失败: {e}", output_paths if output_paths else None
+                            return f"场景分割成功，但生成 PSD 文件失败: {e}", output_paths if output_paths else None, None
 
                         logger.info("=" * 50)
                         logger.info("See-Through: 场景分割完成!")
@@ -345,7 +379,7 @@ def create_layer_separation_ui():
                         logger.info(f"PSD 文件: {os.path.basename(psd_path)}")
                         logger.info("=" * 50)
                         # 返回所有图层作为预览
-                        return f"场景分割成功！\n输出文件保存在: {output_dir}\nPSD 文件: {psd_path}", output_paths if output_paths else None
+                        return f"场景分割成功！\n输出文件保存在: {output_dir}\nPSD 文件: {psd_path}", output_paths if output_paths else None, psd_path
                     else:
                         if use_nf4_quantization:
                             script_name = "inference_psd_optimized.py"
@@ -435,7 +469,7 @@ def create_layer_separation_ui():
                             while process.poll() is None:
                                 if time.time() - start_time > timeout_seconds:
                                     process.kill()
-                                    return f"处理超时（超过{timeout_seconds//60}分钟），请检查模型加载情况", None
+                                    return f"处理超时（超过{timeout_seconds//60}分钟），请检查模型加载情况", None, None
 
                                 line = process.stdout.readline()
                                 if line:
@@ -447,7 +481,7 @@ def create_layer_separation_ui():
                         except Exception as e:
                             process.kill()
                             logger.error(f"处理过程中发生异常: {e}")
-                            return f"处理过程中发生异常: {e}", None
+                            return f"处理过程中发生异常: {e}", None, None
                         finally:
                             if process.poll() is None:
                                 process.kill()
@@ -472,20 +506,25 @@ def create_layer_separation_ui():
                                 preview_images = [f for f in png_files if 'src_img' not in os.path.basename(f) and 'depth' not in os.path.basename(f).lower()]
                                 if not preview_images:
                                     preview_images = png_files
-                            return f"处理成功！输出文件保存在: {output_dir}", preview_images
+                            psd_path = None
+                            if save_psd:
+                                candidate_psd = os.path.join(output_dir, f"uploaded_image_{timestamp}.psd")
+                                if os.path.exists(candidate_psd):
+                                    psd_path = candidate_psd
+                            return f"处理成功！输出文件保存在: {output_dir}", preview_images, psd_path
                         else:
                             logger.error("=" * 50)
                             logger.error("See-Through: 处理失败!")
                             logger.error(f"错误输出: {output_text}")
                             logger.error("=" * 50)
-                            return f"处理失败：{output_text}", None
+                            return f"处理失败：{output_text}", None, None
                 except Exception as e:
                     logger.error("=" * 50)
                     logger.error(f"See-Through: 处理失败! 错误: {str(e)}")
                     logger.error("=" * 50)
                     import traceback
                     logger.error(traceback.format_exc())
-                    return f"处理失败: {str(e)}", None
+                    return f"处理失败: {str(e)}", None, None
 
             except Exception as e:
                 logger.error("=" * 50)
@@ -493,7 +532,7 @@ def create_layer_separation_ui():
                 logger.error("=" * 50)
                 import traceback
                 logger.error(traceback.format_exc())
-                return f"错误：{str(e)}", None
+                return f"错误：{str(e)}", None, None
 
         # ---------- 批量处理 ----------
         def process_images_batch(batch_files, save_psd, resolution, num_inference_steps, seed,
@@ -502,10 +541,10 @@ def create_layer_separation_ui():
                                  use_nf4_quantization, cache_tag_embeds,
                                  segmentation_mode, scene_min_area, scene_model_type):
             if not batch_files:
-                return "请上传至少一张图像", None
+                return "请上传至少一张图像", None, None
 
             if not isinstance(batch_files, list):
-                return "请使用批量上传组件上传多张图像", None
+                return "请使用批量上传组件上传多张图像", None, None
 
             see_through_path = os.path.join(os.path.dirname(__file__), "..", "see-through")
             temp_dir = os.path.join(see_through_path, "workspace", "temp")
@@ -519,6 +558,7 @@ def create_layer_separation_ui():
             results = []
             total = len(batch_files)
             last_preview = None
+            last_psd_path = None
             success_count = 0
             fail_count = 0
 
@@ -624,6 +664,11 @@ def create_layer_separation_ui():
                             )
                             layer_pngs = [f for f in png_files if 'src_img' not in os.path.basename(f) and 'depth' not in os.path.basename(f).lower()]
                             last_preview = layer_pngs if layer_pngs else png_files
+
+                        if save_psd:
+                            candidate_psd = os.path.join(output_dir, f"batch_{basename}_{timestamp}.psd")
+                            if os.path.exists(candidate_psd):
+                                last_psd_path = candidate_psd
                     else:
                         fail_count += 1
                         results.append(f"  [{i+1}/{total}] {basename}: 失败 ✗")
@@ -634,7 +679,7 @@ def create_layer_separation_ui():
             summary = f"批量处理完成！共 {total} 张，成功 {success_count} 张，失败 {fail_count} 张\n"
             summary += "\n".join(results)
             logger.info(summary)
-            return summary, last_preview
+            return summary, last_preview, last_psd_path
 
         with gr.Row():
             process_btn = gr.Button("开始处理（单张）", variant="primary")
@@ -647,7 +692,7 @@ def create_layer_separation_ui():
                    enable_lr_split,
                    use_nf4_quantization, cache_tag_embeds,
                    segmentation_mode, scene_min_area, scene_model_type],
-            outputs=[output_info, preview_result]
+            outputs=[output_info, preview_result, psd_state]
         )
 
         batch_process_btn.click(
@@ -657,7 +702,7 @@ def create_layer_separation_ui():
                    enable_lr_split,
                    use_nf4_quantization, cache_tag_embeds,
                    segmentation_mode, scene_min_area, scene_model_type],
-            outputs=[output_info, preview_result]
+            outputs=[output_info, preview_result, psd_state]
         )
 
 
