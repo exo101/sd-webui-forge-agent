@@ -8,12 +8,12 @@ import requests
 import gradio as gr
 from typing import List, Dict
 
-os.environ['SSL_CERT_FILE'] = ''
-os.environ['REQUESTS_CA_BUNDLE'] = ''
-os.environ['HF_HUB_DISABLE_VERIFICATION'] = '1'
+# ============================================================
+# 修复: 不再全局污染 SSL (魔搭创空间容器需要完整证书链才能让
+# ModelScope SDK 内部 requests 握手成功). 仅在具体请求的 session
+# 上单独关闭验证, 不影响其它模块.
+# ============================================================
 os.environ['HF_HUB_DISABLE_SYMLINKS_WARNING'] = '1'
-
-ssl._create_default_https_context = ssl._create_unverified_context
 
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
@@ -35,6 +35,41 @@ except ImportError as e:
     model_file_download = None
     HubApi = None
     print(f"[ModelDownloader] ModelScope SDK 导入失败: {e}")
+
+
+def _get_modelscope_token() -> str:
+    """
+    多渠道获取 ModelScope token:
+      1. 环境变量 MODELSCOPE_API_TOKEN (魔搭创空间通常会自动注入)
+      2. 环境变量 MODELSCOPE_TOKEN (兼容)
+      3. ModelScope SDK 默认 ~/.modelscope/token 缓存
+      4. 本插件 cache 目录手动保存的 token
+    返回空字符串表示未配置 (匿名访问 modelscope.cn 上的公开模型仍可用)
+    """
+    tok = (
+        os.environ.get('MODELSCOPE_API_TOKEN')
+        or os.environ.get('MODELSCOPE_TOKEN')
+        or ''
+    )
+    if tok:
+        return tok
+    # 兜底: 读 SDK 默认缓存
+    try:
+        from modelscope.utils.constant import MODELSCOPE_TOKEN_PATH
+        if os.path.exists(MODELSCOPE_TOKEN_PATH):
+            with open(MODELSCOPE_TOKEN_PATH, 'r', encoding='utf-8') as f:
+                return f.read().strip()
+    except Exception:
+        pass
+    # 兜底: 本插件缓存
+    local_tok = os.path.join(CACHE_DIR, "ms_token.txt")
+    if os.path.exists(local_tok):
+        try:
+            with open(local_tok, 'r', encoding='utf-8') as f:
+                return f.read().strip()
+        except Exception:
+            pass
+    return ''
 
 from modules import script_callbacks
 from modules.shared import opts, cmd_opts
@@ -68,32 +103,97 @@ class ModelDownloader:
             pass
 
     def list_model_files(self, model_name: str, source: str) -> List[str]:
-        try:
-            if source == "huggingface":
-                session = requests.Session()
-                session.verify = False
-                session.headers.update(build_hf_headers())
-                url = f"https://huggingface.co/api/models/{model_name}/tree/main?recursive=True&expand=False"
-                response = session.get(url)
+        """
+        返回模型仓库内的文件列表. 失败时抛异常给调用方,
+        让前端能看到真实错误 (而不是静默返回空列表).
+        """
+        model_name = (model_name or '').strip()
+        if not model_name:
+            raise ValueError("模型名称不能为空")
+
+        if source == "huggingface":
+            # HuggingFace 分支: 在魔搭创空间容器内 huggingface.co 通常不可达,
+            # 给 12 秒超时 + 友好报错, 让用户知道该改用 ModelScope 源.
+            session = requests.Session()
+            session.verify = False  # 仅本 session 不验证, 不影响其它请求
+            session.headers.update(build_hf_headers())
+            url = f"https://huggingface.co/api/models/{model_name}/tree/main?recursive=True&expand=False"
+            try:
+                response = session.get(url, timeout=12)
                 hf_raise_for_status(response)
                 data = response.json()
-                files = []
+                files: List[str] = []
                 self._extract_files(data, files)
                 return files
-            else:
-                if HubApi:
-                    api = HubApi()
-                    info = api.model_info(model_name)
-                    files = []
-                    if hasattr(info, 'siblings') and info.siblings:
-                        for item in info.siblings:
-                            if hasattr(item, 'rfilename'):
-                                files.append(item.rfilename)
-                    return files
-                return []
+            except requests.exceptions.ConnectTimeout:
+                raise RuntimeError(
+                    "无法连接 HuggingFace (huggingface.co). "
+                    "魔搭创空间容器可能禁止外网访问, 请改用源 = ModelScope."
+                )
+            except requests.exceptions.SSLError as e:
+                raise RuntimeError(f"SSL 握手失败: {e}. 请检查容器证书链.")
+            except requests.exceptions.HTTPError as e:
+                code = e.response.status_code if e.response is not None else "?"
+                if code == 401 or code == 403:
+                    raise RuntimeError(
+                        f"HuggingFace 返回 {code}: 未授权. 请先 `huggingface-cli login` "
+                        f"或在魔搭创空间配置 HF_TOKEN 环境变量."
+                    )
+                if code == 404:
+                    raise RuntimeError(f"模型仓库不存在: {model_name}")
+                raise RuntimeError(f"HuggingFace HTTP {code}: {e}")
+            except Exception as e:
+                raise RuntimeError(f"HuggingFace 获取失败: {e}")
+
+        # ============ ModelScope 分支 ============
+        if HubApi is None:
+            raise RuntimeError(
+                "ModelScope SDK 未安装. 请在魔搭创空间终端运行: "
+                "pip install modelscope"
+            )
+
+        # 带上 token (魔搭创空间的环境变量 / SDK 缓存 / 本插件缓存)
+        token = _get_modelscope_token()
+        try:
+            # 关键: 显式传 token, 让私有模型/受限模型也能列文件
+            api = HubApi()
+            if token:
+                try:
+                    api.login_with_token(token)
+                except Exception:
+                    # 某些 SDK 版本没有 login_with_token, 用 set_token 兜底
+                    try:
+                        os.environ['MODELSCOPE_API_TOKEN'] = token
+                    except Exception:
+                        pass
+            info = api.model_info(model_name)
+            files = []
+            if hasattr(info, 'siblings') and info.siblings:
+                for item in info.siblings:
+                    if hasattr(item, 'rfilename'):
+                        files.append(item.rfilename)
+            if not files:
+                # 兜底: 有些 SDK 版本字段名不一样, 用 dict 探测
+                if isinstance(info, dict):
+                    for item in info.get('Data', {}).get('Files', []) or []:
+                        if isinstance(item, dict) and 'Name' in item:
+                            files.append(item['Name'])
+            return files
         except Exception as e:
-            print(f"[ModelDownloader] 获取文件列表失败: {e}")
-            return []
+            err_str = str(e)
+            # 给用户明确的失败原因 (而不是静默返回空)
+            if '401' in err_str or '403' in err_str or 'Unauthorized' in err_str:
+                raise RuntimeError(
+                    f"ModelScope 未授权 ({err_str[:120]}). "
+                    f"魔搭创空间请在环境变量里配置 MODELSCOPE_API_TOKEN."
+                )
+            if '404' in err_str or 'not exist' in err_str.lower():
+                raise RuntimeError(f"ModelScope 模型仓库不存在: {model_name}")
+            if 'timeout' in err_str.lower() or 'timed out' in err_str.lower():
+                raise RuntimeError(
+                    "ModelScope API 超时. 魔搭创空间可能需要配置内网代理."
+                )
+            raise RuntimeError(f"ModelScope 获取失败: {err_str[:200]}")
     
     def _extract_files(self, data, files):
         if isinstance(data, list):
@@ -226,13 +326,30 @@ def create_ui():
 
                 def fetch_files(model_name, src):
                     if not model_name:
-                        return gr.update(choices=[], value=None), "请输入模型名称"
+                        return gr.update(choices=[], value=None), "❌ 请输入模型名称"
                     if len(model_name.split('/')) < 2:
-                        return gr.update(choices=[], value=None), "模型 ID 格式错误，正确格式: 用户名/模型名"
-                    files = model_downloader.list_model_files(model_name, src)
+                        return gr.update(choices=[], value=None), "❌ 模型 ID 格式错误，正确格式: 用户名/模型名"
+                    try:
+                        files = model_downloader.list_model_files(model_name, src)
+                    except Exception as e:
+                        # 修复: 不再吞异常, 把真实错误返回前端
+                        return gr.update(choices=[], value=None), f"❌ 获取失败: {e}"
                     if not files:
-                        return gr.update(choices=[], value=None), f"未能获取 {model_name} 的文件列表"
-                    return gr.update(choices=files, value=None), f"获取到 {len(files)} 个文件"
+                        return gr.update(choices=[], value=None), (
+                            f"⚠️ 仓库 {model_name} 返回空文件列表.\n"
+                            f"可能原因:\n"
+                            f"  - 模型 ID 拼写错误\n"
+                            f"  - 该仓库是 LFS 仓库, 文件需用完整下载\n"
+                            f"  - 源选择错误 (魔搭创空间内 HuggingFace 不可达, 请切到 ModelScope)\n"
+                            f"  - 未配置 MODELSCOPE_API_TOKEN 环境变量"
+                        )
+                    # 显示前 5 个文件名作为预览
+                    preview = "\n".join(files[:5])
+                    if len(files) > 5:
+                        preview += f"\n... 等共 {len(files)} 个文件"
+                    return gr.update(choices=files, value=None), (
+                        f"✅ 获取到 {len(files)} 个文件:\n{preview}"
+                    )
 
                 def download_full(model_name, src, path):
                     if not model_name: return "请输入模型名称"

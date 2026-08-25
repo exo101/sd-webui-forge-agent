@@ -14,7 +14,16 @@
 
     // Map: custom label -> Gradio tab ID
     // 经过实际检查各扩展注册的 tab ID
+    // 注意: tabId 为 'txt2img' 的项是 webui 内置页面, 始终存在
+    //       其他 tabId 对应扩展插件, 插件未安装时标签页不存在, 侧边栏应自动隐藏
     var sidebarModules = [
+        {
+            name: '海报设计',
+            icon: '🎨',
+            items: [
+                { label: '海报设计工作台', tabId: 'poster_design_tab' },
+            ]
+        },
         {
             name: '图层处理',
             icon: '◈',
@@ -92,6 +101,31 @@
             ]
         }
     ];
+
+    // ============================================================
+    //  动态检测: 检查标签页是否存在 (插件是否已安装)
+    // ============================================================
+
+    // 内置标签页始终存在, 不需要检测
+    var builtinTabs = {
+        'txt2img': true,
+        'img2img': true,
+        'extras': true,
+        'settings': true,
+        'extensions': true,
+        'checkpoint': true,
+    };
+
+    function tabExists(tabId) {
+        // 内置标签页直接返回 true
+        if (builtinTabs[tabId]) return true;
+        // 检查标签页面板是否存在
+        var panel = document.getElementById('tab_' + tabId);
+        if (panel) return true;
+        // 检查标签按钮是否存在
+        var btn = document.querySelector('button[aria-controls="tab_' + tabId + '"]');
+        return !!btn;
+    }
 
     // ============================================================
     //  Collect all Gradio tabs dynamically
@@ -406,8 +440,15 @@ function injectSidebar() {
     html += '</div>';
     html += '<nav class="sd-sidebar-nav">';
 
-    // Custom modules
+    // Custom modules - 动态过滤: 只渲染已安装插件的标签页
     sidebarModules.forEach(function(mod, mi) {
+        // 过滤掉 tabId 不存在 (插件未安装) 的项
+        var visibleItems = mod.items.filter(function(item) {
+            return tabExists(item.tabId);
+        });
+        // 如果整组都没有安装, 跳过整个分区
+        if (visibleItems.length === 0) return;
+
         var expanded = '';
         html += '<div class="sd-sidebar-section' + expanded + '">';
         html += '  <div class="sd-sidebar-section-header" data-section="' + mi + '">';
@@ -416,7 +457,7 @@ function injectSidebar() {
         html += '    <span class="sd-sidebar-chevron">▾</span>';
         html += '  </div>';
         html += '  <div class="sd-sidebar-section-body">';
-        mod.items.forEach(function(item) {
+        visibleItems.forEach(function(item) {
             var hideKey = getHideKey(mod.name, item.label);
             var isHidden = hiddenItems[hideKey] === true;
             html += '    <div class="sd-sidebar-item' + (isHidden ? ' sd-item-hidden' : '') + '" data-tab="' + item.tabId + '" data-accordion="' + (item.accordionId || '') + '" data-subtab="' + (item.subTabLabel || '') + '" data-containers="' + (item.containerIds ? item.containerIds.join(',') : '') + '" data-hide-key="' + hideKey + '">';
@@ -605,6 +646,52 @@ function injectSidebar() {
     //  Initialize
     // ============================================================
 
+    // 重新构建侧边栏: 当 Gradio 稍晚渲染扩展标签页时, 补上之前隐藏的入口
+    function rebuildSidebarIfNeeded() {
+        var sidebar = document.getElementById('sd-sidebar');
+        if (!sidebar) return;
+
+        // 检查是否有之前不存在但现在已加载的标签页
+        var needsRebuild = false;
+        sidebarModules.forEach(function(mod) {
+            mod.items.forEach(function(item) {
+                if (tabExists(item.tabId)) {
+                    // 该标签页已存在, 检查侧边栏中是否已有对应项
+                    var subtab = item.subTabLabel || '';
+                    var existing = sidebar.querySelector(
+                        '.sd-sidebar-item[data-tab="' + item.tabId + '"]' +
+                        '[data-subtab="' + subtab + '"]'
+                    );
+                    if (!existing) {
+                        needsRebuild = true;
+                    }
+                }
+            });
+        });
+
+        if (!needsRebuild) return;
+
+        // 移除旧侧边栏并重新注入
+        sidebar.remove();
+        var oldToggle = document.getElementById('sd-sidebar-toggle');
+        if (oldToggle) oldToggle.remove();
+        document.body.classList.remove('sd-sidebar-active');
+
+        if (document.querySelector('#tabs')) {
+            injectSidebar();
+            setupSidebarEvents();
+            observeTabChanges();
+            collectTabs();
+            hideEmbeddedAccordions();
+            hideAllParameterContainers();
+            var newSidebar = document.getElementById('sd-sidebar');
+            if (newSidebar) {
+                var homeBtn = newSidebar.querySelector('.sd-sidebar-footer-item[data-tab="txt2img"]');
+                if (homeBtn) homeBtn.classList.add('active');
+            }
+        }
+    }
+
     function tryInit() {
         if (document.getElementById('sd-sidebar')) return true;
         if (document.querySelector('#tabs')) {
@@ -622,6 +709,9 @@ function injectSidebar() {
                 var homeBtn = sidebar.querySelector('.sd-sidebar-footer-item[data-tab="txt2img"]');
                 if (homeBtn) homeBtn.classList.add('active');
             }
+            // 延迟重新检查: Gradio 可能稍晚渲染扩展标签页 (如异步加载的扩展)
+            setTimeout(rebuildSidebarIfNeeded, 2000);
+            setTimeout(rebuildSidebarIfNeeded, 5000);
             return true;
         }
         return false;
