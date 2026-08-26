@@ -24,12 +24,12 @@ inference_path = os.path.join(see_through_path, "inference")
 inference_path = os.path.abspath(inference_path)
 if inference_path not in sys.path:
     sys.path.insert(0, inference_path)
-    logger.info(f"[Path] Added to sys.path: {inference_path}")
+    logger.debug(f"[Path] Added to sys.path: {inference_path}")
 
 if not os.path.exists(inference_path):
     logger.error(f"[Path Error] Inference path does not exist: {inference_path}")
 else:
-    logger.info(f"[Path OK] Inference path exists: {inference_path}")
+    logger.debug(f"[Path OK] Inference path exists: {inference_path}")
 
 
 def install_dependencies():
@@ -46,13 +46,13 @@ def install_dependencies():
         for module_name, package_name in dependencies.items():
             try:
                 importlib.import_module(module_name)
-                logger.info(f"{package_name} 已安装")
+                logger.debug(f"{package_name} 已安装")
             except ImportError:
                 logger.warning(f"{package_name} 未安装，正在安装...")
                 missing_deps.append(package_name)
 
         if missing_deps:
-            logger.info("正在安装缺失的依赖...")
+            logger.info("See-Through: 正在安装缺失的依赖...")
             for package in missing_deps:
                 try:
                     subprocess.check_call(
@@ -69,7 +69,7 @@ def install_dependencies():
 
 def on_app_started(demo, app):
     """WebUI启动时自动安装依赖"""
-    logger.info("See-Through: 检查依赖...")
+    logger.debug("See-Through: 检查依赖...")
     install_dependencies()
 
 
