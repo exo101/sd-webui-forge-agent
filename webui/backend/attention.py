@@ -333,33 +333,33 @@ def attention_flash(q, k, v, heads, mask=None, attn_precision=None, skip_reshape
 if memory_management.sage_enabled():
     attention_function = attention_sage
     if IS_SAGE_1:
-        logger.info("Using SageAttention")
+        logger.debug("Using SageAttention")
     elif IS_SAGE_3:
-        logger.info("Using SageAttention 3")
+        logger.debug("Using SageAttention 3")
     else:
         match args.sage_function:
             case SageAttentionFuncs.auto:
-                logger.info("Using SageAttention 2")
+                logger.debug("Using SageAttention 2")
             case SageAttentionFuncs.fp16_triton:
-                logger.info("Using SageAttention 2 (fp16 Triton)")
+                logger.debug("Using SageAttention 2 (fp16 Triton)")
             case SageAttentionFuncs.fp16_cuda:
-                logger.info("Using SageAttention 2 (fp16 CUDA)")
+                logger.debug("Using SageAttention 2 (fp16 CUDA)")
             case SageAttentionFuncs.fp8_cuda:
-                logger.info("Using SageAttention 2 (fp8 CUDA)")
+                logger.debug("Using SageAttention 2 (fp8 CUDA)")
             case SageAttentionFuncs.fp8_cuda_pp:
-                logger.info("Using SageAttention 2 (fp8 CUDA ++)")
+                logger.debug("Using SageAttention 2 (fp8 CUDA ++)")
 
 elif memory_management.flash_enabled():
-    logger.info("Using FlashAttention")
+    logger.debug("Using FlashAttention")
     attention_function = attention_flash
 elif memory_management.xformers_enabled():
-    logger.info("Using xformers Cross Attention")
+    logger.debug("Using xformers Cross Attention")
     attention_function = attention_xformers
 elif memory_management.pytorch_attention_enabled():
-    logger.info("Using PyTorch Cross Attention")
+    logger.debug("Using PyTorch Cross Attention")
     attention_function = attention_pytorch
 else:
-    logger.info("Using Basic Cross Attention")
+    logger.debug("Using Basic Cross Attention")
     attention_function = attention_basic
 
 
@@ -471,11 +471,11 @@ def pytorch_attention_vae(q, k, v):
 
 
 if memory_management.xformers_enabled_vae():
-    logger.info("Using xformers Attention for VAE")
+    logger.debug("Using xformers Attention for VAE")
     attention_function_vae = xformers_attention_vae
 elif memory_management.pytorch_attention_enabled():
-    logger.info("Using PyTorch Attention for VAE")
+    logger.debug("Using PyTorch Attention for VAE")
     attention_function_vae = pytorch_attention_vae
 else:
-    logger.info("Using Slice Attention for VAE")
+    logger.debug("Using Slice Attention for VAE")
     attention_function_vae = normal_attention_vae
