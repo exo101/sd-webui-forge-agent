@@ -75,6 +75,7 @@
                 { label: 'ControlNet', tabId: 'txt2img', accordionId: 'controlnet' },
                 { label: '多图参考', tabId: 'txt2img', accordionId: 'label:多图参考' },
                 { label: '纵横比助手', tabId: 'txt2img', accordionId: 'aspect-ratio-helper-accordion' },
+                { label: '通配符', tabId: 'sddp-wildcard-manager' },
                 { label: '脚本', tabId: 'txt2img' },
             ]
         },
