@@ -18,6 +18,14 @@
     //       其他 tabId 对应扩展插件, 插件未安装时标签页不存在, 侧边栏应自动隐藏
     var sidebarModules = [
         {
+            name: '主页面',
+            icon: '🏠',
+            items: [
+                { label: '文生图', tabId: 'txt2img' },
+                { label: '图生图', tabId: 'img2img' },
+            ]
+        },
+        {
             name: '海报设计',
             icon: '🎨',
             items: [
@@ -474,13 +482,9 @@ function injectSidebar() {
 
     // Footer
         html += '<div class="sd-sidebar-footer">';
-        html += '  <div class="sd-sidebar-footer-item" data-tab="txt2img">';
+        html += '  <div class="sd-sidebar-footer-item" data-tab="txt2img" title="返回主页">';
         html += '    <span class="sd-sidebar-footer-icon">🏠</span>';
         html += '    <span>主页</span>';
-        html += '  </div>';
-        html += '  <div class="sd-sidebar-footer-item" data-tab="img2img">';
-        html += '    <span class="sd-sidebar-footer-icon">🖼</span>';
-        html += '    <span>图生图</span>';
         html += '  </div>';
         html += '  <div class="sd-sidebar-footer-item" id="sd-restore-btn" title="恢复隐藏的模块">';
         html += '    <span class="sd-sidebar-footer-icon">👁</span>';
