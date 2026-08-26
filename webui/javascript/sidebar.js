@@ -478,6 +478,10 @@ function injectSidebar() {
         html += '    <span class="sd-sidebar-footer-icon">🏠</span>';
         html += '    <span>主页</span>';
         html += '  </div>';
+        html += '  <div class="sd-sidebar-footer-item" data-tab="img2img">';
+        html += '    <span class="sd-sidebar-footer-icon">🖼</span>';
+        html += '    <span>图生图</span>';
+        html += '  </div>';
         html += '  <div class="sd-sidebar-footer-item" id="sd-restore-btn" title="恢复隐藏的模块">';
         html += '    <span class="sd-sidebar-footer-icon">👁</span>';
         html += '    <span>恢复隐藏项</span>';
