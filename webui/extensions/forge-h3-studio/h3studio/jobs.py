@@ -8,23 +8,9 @@ from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-import logging
-logger = logging.getLogger("forge_h3_studio.jobs")
-try:
-    from backend.logging import setup_logger
-    setup_logger(logger)
-except Exception:
-    pass
-
-def _log(msg: str, level: str = "info"):
-    getattr(logger, level, logger.info)(msg)
-    print(f"[H3 Jobs] {msg}")
-
 from .comfy_client import ComfyClient
-from .config import load_config
 from .errors import H3StudioError
-from .minimax_api import submit_h3_task
-from .workflow import MODE_NAMES, build_h3_workflow
+from .workflow import build_h3_workflow
 
 
 @dataclass
@@ -44,7 +30,7 @@ class StudioJob:
     workflow: dict[str, Any] | None = None
     progress: dict[str, Any] = field(default_factory=lambda: {
         "nodeId": None,
-        "nodeTitle": "等待 MiniMax API 开始",
+        "nodeTitle": "等待 ComfyUI 开始",
         "nodePercent": 0.0,
         "overallPercent": 0.0,
         "step": 0,
@@ -55,7 +41,6 @@ class StudioJob:
     })
     preview_bytes: bytes | None = field(default=None, repr=False)
     preview_mime: str = field(default="image/jpeg", repr=False)
-    api_task_id: str = ""  # MiniMax API task ID
 
     def public(self, include_workflow: bool = False) -> dict[str, Any]:
         data = asdict(self)
@@ -231,14 +216,6 @@ class JobStore:
             job.updated_at = now
 
     def submit(self, request: dict[str, Any]) -> dict[str, Any]:
-        config = load_config()
-        backend_mode = config.get("backend_mode", "managed")
-
-        # API 模式：使用 MiniMax API
-        if backend_mode == "api":
-            return self._submit_via_api(request)
-
-        # ComfyUI 模式
         client = ComfyClient()
         health = client.health()
         if not health.get("ok"):
@@ -292,109 +269,6 @@ class JobStore:
             job.updated_at = time.time()
         threading.Thread(target=self._monitor, args=(job.id,), daemon=True).start()
         return job.public()
-
-    def _submit_via_api(self, request: dict[str, Any]) -> dict[str, Any]:
-        """通过 MiniMax API 提交 H3 视频生成任务"""
-        config = load_config()
-        api_key = str(config.get("minimax_api_key") or "").strip()
-        if not api_key:
-            raise H3StudioError("MiniMax API Key 未配置，请在设置中填写")
-
-        # 构建摘要信息
-        summary = {
-            "mode": request.get("mode", "t2v"),
-            "mode_name": MODE_NAMES.get(request.get("mode", "t2v"), "视频生成"),
-            "frames": request.get("duration", 5) * 24,
-            "requested_frames": request.get("duration", 5) * 24,
-            "duration_seconds": request.get("duration", 5),
-            "resolution": f"{request.get('width', 1344)}x{request.get('height', 768)}",
-            "width": request.get("width", 1344),
-            "height": request.get("height", 768),
-            "aspect_ratio": request.get("aspect_ratio", "16:9"),
-            "steps": 30,
-            "seed": request.get("seed", 0),
-            "model": "MiniMax-H3",
-            "prompt": request.get("prompt", ""),
-            "node_count": 1,
-            "node_titles": {"1": "MiniMax H3 API"},
-            "reproducible": request,
-            "warnings": [],
-        }
-
-        now = time.time()
-        job = StudioJob(
-            id=str(uuid.uuid4()),
-            prompt_id="",
-            client_id="",
-            state="queued",
-            created_at=now,
-            updated_at=now,
-            summary=summary,
-        )
-        with self._lock:
-            self._jobs[job.id] = job
-            self._trim()
-
-        _log(f"提交 API 任务 job_id={job.id}, mode={request.get('mode', 't2v')}, prompt={request.get('prompt', '')[:50]}")
-
-        # 在新线程中提交并监控
-        threading.Thread(target=self._monitor_via_api, args=(job.id, api_key, request), daemon=True).start()
-        return job.public()
-
-    def _monitor_via_api(self, job_id: str, api_key: str, request: dict[str, Any]) -> None:
-        """监控 MiniMax API 任务"""
-        _log(f"开始监控 API 任务 job_id={job_id}")
-        try:
-            # 更新状态为 running
-            with self._lock:
-                job = self._jobs.get(job_id)
-                if job is None:
-                    _log(f"任务 {job_id} 不存在，跳过", "warning")
-                    return
-                job.state = "running"
-                job.progress["nodeTitle"] = "MiniMax H3 API 处理中"
-                job.updated_at = time.time()
-
-            _log(f"调用 MiniMax API, mode={request.get('mode', 't2v')}, duration={request.get('duration', 5)}s")
-
-            # 调用 MiniMax API
-            result = submit_h3_task(request, api_key)
-
-            _log(f"MiniMax API 返回结果: status={result.get('status')}, video_url={result.get('video_url', '')[:80] if result.get('video_url') else '无'}")
-
-            with self._lock:
-                job = self._jobs.get(job_id)
-                if job is None:
-                    _log(f"任务 {job_id} 在提交后不存在", "warning")
-                    return
-
-                if result["status"] == "completed":
-                    video_url = result.get("video_url", "")
-                    job.state = "completed"
-                    job.outputs = [{"url": video_url, "filename": f"h3_api_{job_id}.mp4", "type": "output"}]
-                    job.progress["nodeTitle"] = "生成完成"
-                    job.progress["overallPercent"] = 100.0
-                    job.api_task_id = result.get("task_id", "")
-                    _log(f"任务完成, video_url={video_url}")
-                else:
-                    job.state = "failed"
-                    job.error = result.get("error", "MiniMax API 返回失败")
-                    job.progress["nodeTitle"] = "MiniMax API 失败"
-                    _log(f"任务失败, error={job.error}", "error")
-
-                job.completed_at = time.time()
-                job.updated_at = time.time()
-
-        except Exception as e:
-            _log(f"API 任务异常: {e}", "error")
-            with self._lock:
-                job = self._jobs.get(job_id)
-                if job is not None:
-                    job.state = "failed"
-                    job.error = str(e)
-                    job.progress["nodeTitle"] = "MiniMax API 异常"
-                    job.completed_at = time.time()
-                    job.updated_at = time.time()
 
     def _monitor(self, job_id: str) -> None:
         client = ComfyClient()

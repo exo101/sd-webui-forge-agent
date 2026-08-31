@@ -1,2 +1,0 @@
-# 海报设计插件依赖
-# PIL/Pillow 已随 webui 安装

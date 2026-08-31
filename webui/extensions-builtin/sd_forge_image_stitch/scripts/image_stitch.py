@@ -1041,12 +1041,11 @@ class ImageStitch(scripts.Script):
                 show_progress=False,
             )
 
-            # 定时刷新任务状态（每 5 秒）
+            # 定时刷新任务状态
             batch_refresh_btn.click(
                 fn=_refresh_batch,
                 inputs=[],
                 outputs=[batch_stats, batch_task_list, batch_gallery],
-                every=5,
                 show_progress=False,
             )
 

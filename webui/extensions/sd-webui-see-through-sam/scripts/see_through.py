@@ -13,11 +13,6 @@ import torch
 import numpy as np
 from PIL import Image
 
-# Ensure the scripts directory is importable so sibling modules resolve.
-_scripts_dir = os.path.dirname(os.path.abspath(__file__))
-if _scripts_dir not in sys.path:
-    sys.path.insert(0, _scripts_dir)
-
 from layer_separation_module import create_layer_separation_ui, on_ui_settings, on_app_started, install_dependencies
 
 logger = logging.getLogger("See-Through")

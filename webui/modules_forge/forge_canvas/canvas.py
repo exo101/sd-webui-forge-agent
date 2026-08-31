@@ -48,13 +48,13 @@ canvas_js_root_path = os.path.dirname(__file__)
 
 
 def web_js(file_name):
-    full_path = os.path.join(canvas_js_root_path, file_name)
-    return f'<script src="file={full_path}?{os.path.getmtime(full_path)}"></script>\n'
+    full_path = os.path.join(canvas_js_root_path, file_name).replace("\\", "/")
+    return f'<script src="/gradio_api/file={full_path}?{os.path.getmtime(full_path)}"></script>\n'
 
 
 def web_css(file_name):
-    full_path = os.path.join(canvas_js_root_path, file_name)
-    return f'<link rel="stylesheet" href="file={full_path}?{os.path.getmtime(full_path)}">\n'
+    full_path = os.path.join(canvas_js_root_path, file_name).replace("\\", "/")
+    return f'<link rel="stylesheet" href="/gradio_api/file={full_path}?{os.path.getmtime(full_path)}">\n'
 
 
 canvas_html = open(os.path.join(canvas_js_root_path, "canvas.html"), encoding="utf-8").read()

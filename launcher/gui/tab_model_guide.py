@@ -57,6 +57,10 @@ class ModelGuideTab(QWidget):
         overview_section = self._create_overview_section()
         content_layout.addWidget(overview_section)
 
+        # API 供应商指南
+        api_providers_section = self._create_api_providers_section()
+        content_layout.addWidget(api_providers_section)
+
         # Ollama / llama.cpp 模型下载说明
         ollama_llamacpp_section = self._create_ollama_llamacpp_section()
         content_layout.addWidget(ollama_llamacpp_section)
@@ -263,6 +267,91 @@ huggingface-cli download Qwen/Qwen3-VL-4B-GGUF --local-dir models/llamacpp --inc
         return container
 
     
+    def _create_api_providers_section(self) -> QWidget:
+        """创建 API 供应商指南部分"""
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+
+        layout.addWidget(self._create_section_title("🔌 API 供应商指南"))
+
+        layout.addWidget(self._create_description(
+            "WebUI Forge Neo v2 支持通过云端 API 生成图像与视频，无需本地高端显卡即可使用顶级模型。"
+            "以下列出各 API 供应商的官网与控制台地址，方便您注册账号、申请 API Key。"
+        ))
+
+        # 供应商列表表格
+        providers_html = """
+        <div style="line-height:1.8;color:#D1D5DB;">
+        <table style="width:100%;border-collapse:collapse;margin:12px 0;">
+            <tr style="background:#1F2937;">
+                <th style="padding:10px;text-align:left;border:1px solid #374151;color:#60A5FA;">供应商</th>
+                <th style="padding:10px;text-align:left;border:1px solid #374151;color:#60A5FA;">用途</th>
+                <th style="padding:10px;text-align:left;border:1px solid #374151;color:#60A5FA;">官网 / 控制台</th>
+            </tr>
+            <tr>
+                <td style="padding:8px;border:1px solid #374151;"><b>ModelScope</b><br>魔搭社区</td>
+                <td style="padding:8px;border:1px solid #374151;">云端图像生成 / 编辑<br>Qwen-Image、Krea-2 等</td>
+                <td style="padding:8px;border:1px solid #374151;">
+                    官网：<a href='https://www.modelscope.cn/' style='color:#60A5FA;'>https://www.modelscope.cn/</a><br>
+                    API 文档：<a href='https://www.modelscope.cn/docs/API-Inference/Overview' style='color:#60A5FA;'>API-Inference 文档</a><br>
+                    申请 Key：登录后进入「账号设置 → API-Inference」
+                </td>
+            </tr>
+            <tr style="background:#111827;">
+                <td style="padding:8px;border:1px solid #374151;"><b>DashScope</b><br>阿里通义</td>
+                <td style="padding:8px;border:1px solid #374151;">Qwen-Image 文生图 / 编辑</td>
+                <td style="padding:8px;border:1px solid #374151;">
+                    官网：<a href='https://dashscope.aliyun.com/' style='color:#60A5FA;'>https://dashscope.aliyun.com/</a><br>
+                    API 文档：<a href='https://help.aliyun.com/zh/model-studio/qwen-image-generation-and-editing-api-reference' style='color:#60A5FA;'>Qwen-Image API 文档</a><br>
+                    申请 Key：<a href='https://dashscope.console.aliyun.com/apiKey' style='color:#60A5FA;'>DashScope 控制台 → API-KEY</a>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding:8px;border:1px solid #374151;"><b>Pixapi</b></td>
+                <td style="padding:8px;border:1px solid #374151;">GPT-Image、Gemini 图像生成<br>多模型聚合代理</td>
+                <td style="padding:8px;border:1px solid #374151;">
+                    官网：<a href='https://pixapi.ai/' style='color:#60A5FA;'>https://pixapi.ai/</a><br>
+                    API 文档：<a href='https://pixapi.ai/docs' style='color:#60A5FA;'>Pixapi 文档</a><br>
+                    申请 Key：注册后在控制台获取 API Key
+                </td>
+            </tr>
+            <tr style="background:#111827;">
+                <td style="padding:8px;border:1px solid #374151;"><b>MiniMax H3</b></td>
+                <td style="padding:8px;border:1px solid #374151;">H3 视频生成<br>图生视频 / 首尾帧生成视频</td>
+                <td style="padding:8px;border:1px solid #374151;">
+                    官网：<a href='https://www.minimaxi.com/' style='color:#60A5FA;'>https://www.minimaxi.com/</a><br>
+                    控制台：<a href='https://platform.minimaxi.com/' style='color:#60A5FA;'>platform.minimaxi.com</a><br>
+                    申请 Key：<a href='https://platform.minimaxi.com/user-center/basic-information/interface-key' style='color:#60A5FA;'>用户中心 → 接口密钥</a>
+                </td>
+            </tr>
+        </table>
+        </div>
+        """
+        providers_label = QLabel(providers_html)
+        providers_label.setOpenExternalLinks(True)
+        providers_label.setWordWrap(True)
+        providers_label.setStyleSheet("QLabel { background:transparent; }")
+        layout.addWidget(providers_label)
+
+        layout.addWidget(self._create_subsection_title("使用方式"))
+        layout.addWidget(self._create_description(
+            "• 在 WebUI 主界面顶部切换「模型模式」为「API 模式」\n"
+            "• 在「API 供应商」下拉框中选择对应供应商\n"
+            "• 填入从上述官网获取的 API Key\n"
+            "• 选择模型后即可生成图像；MiniMax H3 在侧边栏「多媒体视频生成 → MiniMax H3 工作台」中使用"
+        ))
+
+        layout.addWidget(self._create_note(
+            "• 各供应商均有免费额度可供体验，超出后按量计费<br>"
+            "• API Key 请妥善保管，不要泄露给他人<br>"
+            "• ModelScope 与 DashScope 为国内服务，访问速度更快；Pixapi 可调用 OpenAI / Google 模型<br>"
+            "• MiniMax H3 为视频生成模型，按生成时长计费", "info"
+        ))
+
+        return container
+
     def _create_overview_section(self) -> QWidget:
         """创建模型概述部分"""
         container = QWidget()

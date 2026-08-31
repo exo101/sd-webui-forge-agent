@@ -183,7 +183,7 @@ def configure_neveroom():
         from backend import memory_management
         memory_management.VAE_ALWAYS_TILED = True
         memory_management.vram_state = memory_management.VRAMState.NO_VRAM
-        print("显存防溢出保护已启用 (--neveroom)")
+        # print("显存防溢出保护已启用 (--neveroom)")
         startup_timer.record("neveroom")
 
 

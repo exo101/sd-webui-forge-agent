@@ -16,8 +16,6 @@ from io import BytesIO
 import base64
 import torch
 from modules import devices
-import urllib.parse
-from pathlib import Path
 
 PTPRESET = modules.scripts.basedir()
 ATTNSCALE = 8
@@ -100,85 +98,16 @@ class Script(modules.scripts.Script):
     def ui(self, is_img2img):
         eladd = "i2i" if is_img2img else "t2i"
         with gr.Accordion("场景编辑器 (Regional Prompter)", open=False, elem_id="RP_main" + eladd):
-            with gr.Tabs():
-                # ===== Tab 1: 区域提示 =====
-                with gr.Tab("🎯 区域提示"):
-                    with gr.Row():
-                        active = gr.Checkbox(value=False, label="启用", interactive=True, elem_id="RP_active" + eladd)
-                    with gr.Row():
-                        calcmode = gr.Radio(label="生成模式", choices=["Attention", "Latent"], value="Attention", type="value", interactive=True, elem_id="RP_generation_mode" + eladd)
-                    # Visual editor
-                    ve_html = open(os.path.join(PTPRESET, "visual_editor.html"), encoding="utf-8").read()
-                    ve_html = ve_html.replace("VE_ELADD", eladd)
-                    visual_html = gr.HTML(value=ve_html)
-                    visual_mask = gr.Textbox(visible=True, elem_id="ve-mask-output-" + eladd, elem_classes="ve-hidden-output")
-                    visual_prompts = gr.Textbox(visible=True, elem_id="ve-prompts-output-" + eladd, elem_classes="ve-hidden-output")
-                
-                # ===== Tab 2: 相机角度选择器 =====
-                with gr.Tab("📐 相机角度"):
-                    html_path = str(Path(__file__).parent / "camera_3d_view.html")
-                    gr.HTML(f'''
-                    <div style="position:relative; width:100%; height:400px;">
-                        <iframe id="camera-iframe-{eladd}" name="camera-iframe-{eladd}" 
-                                src="/file={urllib.parse.quote(html_path)}" 
-                                width="100%" height="100%" 
-                                style="border: 1px solid #444; border-radius: 8px;"></iframe>
-                    </div>
-                    ''')
-                    with gr.Row():
-                        apply_to_txt2img_btn = gr.Button("应用到文生图", variant="primary", visible=not is_img2img)
-                        apply_to_img2img_btn = gr.Button("应用到图生图", variant="primary", visible=is_img2img)
-                    
-                    gr.Markdown("""
-                    **使用说明：** 拖拽红色手柄调整方位角，绿色手柄调整高程角，黄色手柄调整距离，点击按钮将角度提示词添加到对应输入框。
-                    """)
-                    
-                    # JS for applying to txt2img
-                    apply_js_txt2img = """
-                    async (eladd) => {
-                        const iframe = document.getElementById('camera-iframe-' + eladd);
-                        if (!iframe || !iframe.contentWindow) { alert('错误：无法访问3D视角界面！'); return null; }
-                        await new Promise(resolve => {
-                            if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') { resolve();
-                            } else { iframe.onload = resolve; setTimeout(resolve, 1000); }
-                        });
-                        iframe.contentWindow.postMessage({ type: 'GET_CURRENT_ANGLE' }, '*');
-                        return new Promise((resolve) => {
-                            const timeoutId = setTimeout(() => {
-                                window.removeEventListener('message', handleMessage);
-                                alert('错误：等待3D视角界面响应超时！'); resolve(null);
-                            }, 3000);
-                            const handleMessage = (event) => {
-                                if (event.data.type === 'ANGLE_SELECTED') {
-                                    clearTimeout(timeoutId); window.removeEventListener('message', handleMessage);
-                                    const parts = [];
-                                    if (event.data.azimuth && event.data.azimuth !== "") parts.push(event.data.azimuth);
-                                    if (event.data.elevation && event.data.elevation !== "") parts.push(event.data.elevation);
-                                    if (event.data.distance && event.data.distance !== "") parts.push(event.data.distance);
-                                    if (parts.length === 0) { alert('错误：未能获取到有效的角度数据！'); resolve(null); return; }
-                                    const anglePrompt = parts.join(' ');
-                                    const promptId = eladd === 'i2i' ? 'img2img_prompt' : 'txt2img_prompt';
-                                    const element = document.getElementById(promptId);
-                                    if (element) {
-                                        let textarea = element.tagName !== 'TEXTAREA' && element.tagName !== 'INPUT' ?
-                                            (element.querySelector('textarea') || element.querySelector('input')) : element;
-                                        if (textarea) {
-                                            textarea.value = textarea.value ? textarea.value + ' ' + anglePrompt : anglePrompt;
-                                            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                                            textarea.dispatchEvent(new Event('change', { bubbles: true }));
-                                            alert('已应用：' + anglePrompt);
-                                        }
-                                    } else { alert('未找到提示词输入框！'); }
-                                    resolve(anglePrompt);
-                                }
-                            };
-                            window.addEventListener('message', handleMessage);
-                        });
-                    }
-                    """
-                    dummy_output = gr.Textbox(visible=False)
-                    apply_to_txt2img_btn.click(fn=None, inputs=[], outputs=[dummy_output], _js=apply_js_txt2img)
-                    apply_to_img2img_btn.click(fn=None, inputs=[], outputs=[dummy_output], _js=apply_js_txt2img)
+            with gr.Row():
+                active = gr.Checkbox(value=False, label="启用", interactive=True, elem_id="RP_active" + eladd)
+            with gr.Row():
+                calcmode = gr.Radio(label="生成模式", choices=["Attention", "Latent"], value="Attention", type="value", interactive=True, elem_id="RP_generation_mode" + eladd)
+            # Visual editor
+            ve_html = open(os.path.join(PTPRESET, "visual_editor.html"), encoding="utf-8").read()
+            ve_html = ve_html.replace("VE_ELADD", eladd)
+            visual_html = gr.HTML(value=ve_html)
+            visual_mask = gr.Textbox(visible=True, elem_id="ve-mask-output-" + eladd, elem_classes="ve-hidden-output")
+            visual_prompts = gr.Textbox(visible=True, elem_id="ve-prompts-output-" + eladd, elem_classes="ve-hidden-output")
         return [active, calcmode, visual_mask, visual_prompts]
 
     def process(self, p, active, calcmode, visual_mask="", visual_prompts=""):

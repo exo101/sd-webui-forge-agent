@@ -48,6 +48,9 @@ KEYWORDS: dict[str, list[str]] = {
 }
 
 
+_QUIET_LOGGERS = {"memory_management", "attention"}
+
+
 def setup_logger(logger: logging.Logger):
     logger.propagate = False
     if not logger.handlers:
@@ -56,4 +59,5 @@ def setup_logger(logger: logging.Logger):
         handler.setFormatter(logging.Formatter("%(message)s"))
         logger.addHandler(handler)
 
-    logger.setLevel(args.loglevel or "INFO")
+    default_level = "WARNING" if logger.name in _QUIET_LOGGERS else "INFO"
+    logger.setLevel(args.loglevel or default_level)

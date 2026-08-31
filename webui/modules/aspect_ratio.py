@@ -8,7 +8,7 @@ preserve total pixel count and snap values to the slider step.
 import gradio as gr
 
 from modules import shared
-from modules.options import OptionInfo
+from modules.options import OptionInfo, options_section
 
 # Aspect ratio presets: (display label, width ratio, height ratio)
 ASPECT_RATIOS = [
@@ -34,16 +34,18 @@ _MAX_DIM = 2048
 def register_settings():
     """Register aspect ratio helper options into shared.opts."""
     opts = shared.opts
-    if "arh_show_aspect_buttons" not in opts.data_labels:
-        opts.add_option(
-            "arh_show_aspect_buttons",
-            OptionInfo(True, "Show aspect ratio quick buttons").needs_reload_ui(),
-        )
-    if "arh_show_percentage_scaler" not in opts.data_labels:
-        opts.add_option(
-            "arh_show_percentage_scaler",
-            OptionInfo(True, "Show percentage scaler buttons").needs_reload_ui(),
-        )
+    # options_section assigns section + category_id so opts.reorder() can sort
+    # these without crashing on None section. Placed under the "ui" category.
+    items = options_section(
+        ("aspect-ratio", "Aspect Ratio", "ui"),
+        {
+            "arh_show_aspect_buttons": OptionInfo(True, "Show aspect ratio quick buttons").needs_reload_ui(),
+            "arh_show_percentage_scaler": OptionInfo(True, "Show percentage scaler buttons").needs_reload_ui(),
+        },
+    )
+    for key, info in items.items():
+        if key not in opts.data_labels:
+            opts.add_option(key, info)
 
 
 def _snap(value, step):

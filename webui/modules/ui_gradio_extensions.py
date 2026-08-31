@@ -7,7 +7,7 @@ from modules.paths import data_path, script_path
 
 
 def webpath(fn):
-    return f"file={util.truncate_path(fn)}?{os.path.getmtime(fn)}"
+    return f"/gradio_api/file={util.truncate_path(fn).replace(chr(92), '/')}?{os.path.getmtime(fn)}"
 
 
 def javascript_html():

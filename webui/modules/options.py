@@ -287,7 +287,10 @@ class Options:
         def sort_key(x):
             item: OptionInfo = x[1]
             category_order = category_ids.get(item.category_id, len(category_ids))
-            section_order = item.section[1]
+            # Some options (e.g. dynamically registered ones) may not have a
+            # section assigned; treat them as a final fallback group instead of
+            # crashing with 'NoneType' object is not subscriptable.
+            section_order = item.section[1] if item.section is not None else float('inf')
 
             return category_order, section_order
 

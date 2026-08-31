@@ -1,5 +1,14 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
+---
+license: Apache License 2.0
+domain: multi-modal
+tags:
+- stable-diffusion
+- webui
+- image-generation
+deployspec:
+  entry_file: app.py
+---
+
 # Stable Diffusion WebUI Forge - Neo (中文改良版)
 
 <div align="center">
@@ -28,7 +37,43 @@
 
 ---
 
-## � 部署区
+## 🆕 更新说明
+
+### v3.6.4 — 全面支持云端 API 模型
+
+本次更新全面支持 **API 云端模型**，无需本地部署大模型即可使用最新图像生成与编辑能力，大幅降低显存门槛。
+
+#### 支持的 API 供应商
+
+| 供应商 | 官网 | 说明 |
+|--------|------|------|
+| **ModelScope 魔搭** | [modelscope.cn](https://www.modelscope.cn) | 阿里云开源模型社区，提供丰富的图像生成 API |
+| **DashScope 通义千问** | [dashscope.aliyun.com](https://dashscope.aliyun.com) | 阿里云大模型服务，支持 Qwen-Image 文生图与图像编辑 |
+| **PixAPI** | [pixapi.ai](https://pixapi.ai) | 聚合 GPT-Image、Gemini 等多模型的统一 API 平台 |
+
+#### 支持的云端模型
+
+| 模型名称 | 供应商 | 类型 | 说明 |
+|---------|--------|------|------|
+| **🍌 香蕉模型 (Banana)** | ModelScope | 文生图 / 图像编辑 | 高质量图像生成与编辑模型 |
+| **MiniMax H3** | ModelScope | 视频生成 | 文生视频 / 图生视频 |
+| **GPT-Image 2** | PixAPI | 文生图 / 编辑 | OpenAI 最新图像模型 |
+| **Qwen-Image-Edit-2511 (满血版)** | ModelScope | 图像编辑 | 满血版本图像编辑模型 |
+| **FireRed-Image-Edit-1.1 (满血版)** | ModelScope | 图像编辑 | 满血版本图像编辑模型 |
+| **Krea-2-Turbo (满血版)** | ModelScope | 文生图 | 高速实时满血图像生成 |
+
+#### 使用方式
+
+1. 在 WebUI 中切换到 **API 模式**
+2. 在设置或对应插件面板中填入供应商的 **API Key**
+3. 选择目标模型即可开始生成，无需下载本地权重
+
+> [!TIP]
+> API Key 可在各供应商官网的控制台中创建。API 模式与本地模型模式可自由切换。
+
+---
+
+## 📋 部署区
 
 > 部署区涵盖从零开始部署本项目所需的所有信息，包括系统要求、安装步骤、启动器使用和常见问题。
 
@@ -103,7 +148,7 @@ cd sd-webui-forge-neo-v3
 | **启动器显示"环境检测失败"？** | 检查是否安装了 Python 3.13.12 并勾选了 "Add Python to PATH"，重启电脑后重试 |
 | **首次启动卡在"安装依赖"？** | 首次安装需要 10-30 分钟，请检查网络连接，可在启动器中配置代理 |
 | **浏览器显示"无法访问此网站"？** | 检查启动器日志，确认端口 7860 未被占用，或点击启动器"页面"按钮手动打开 |
-| **生成图片时提示"显存不足"？** | 启用"显存防溢出保护"，降低分辨率，使用 FP8 量化模型 |
+| **生成图片时提示"显存不足"？** | 启用"显存防溢出保护"，降低分辨率，使用 FP8 量化模型，或切换 API 云端模式 |
 | **生成的图片全黑或质量差？** | 确认选择了正确的模型，检查提示词，尝试换采样器（如 `Euler a`），增加采样步数 |
 | **如何更新到最新版本？** | 在启动器主控台点击"检查启动器更新"，或重新 `git pull` |
 
@@ -301,7 +346,7 @@ models/VAE/
 
 | 插件名称 | 优化说明 |
 |---------|---------|
-| **🔧 ADetailer** | 兼容性优化，修复人脸修复问题 |
+| **🔧 ADetailer** | 兼容性优化，模型懒加载（首次使用时下载），修复人脸修复问题 |
 | **🔧 Photoshop 插件** | Auto-Photoshop-StableDiffusion-Plugin 增强 |
 | **🏷️ WD 1.4 标签器** | 自动生成图像标签，支持中文 |
 | **🌐 Civitai Helper** | 模型下载与管理，支持一键下载、元数据同步、批量操作 |
@@ -372,30 +417,3 @@ models/VAE/
 Made with ❤️ by exo101
 
 </div>
-=======
-=======
->>>>>>> modelscope/master
----
-license: Apache License 2.0
-domain: multi-modal
-tags:
-- stable-diffusion
-- webui
-- image-generation
-deployspec:
-  entry_file: app.py
----
-
-# sd-webui-forge-neo-v3
-
-SD WebUI Forge Neo v3 with extensions - 基于 Stable Diffusion WebUI Forge 的增强版图像生成工具
-
-## 使用说明
-
-1. 等待环境初始化完成
-<<<<<<< HEAD
-2. 打开 Gradio 界面即可使用
->>>>>>> 7aca3ced49e7c0b4941268f3b6e502274fe232b1
-=======
-2. 打开 Gradio 界面即可使用
->>>>>>> modelscope/master

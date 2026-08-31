@@ -13,7 +13,6 @@ def register(options_templates, options_section, OptionInfo):
                 "forge_api_provider": OptionInfo("modelscope"),
                 "forge_api_key": OptionInfo(""),
                 "forge_api_model": OptionInfo(""),
-                "forge_api_vision_model": OptionInfo("Qwen/Qwen3.8-27B"),
             },
         )
     )

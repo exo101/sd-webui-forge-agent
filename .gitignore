@@ -32,5 +32,7 @@ __pycache__/
 ms_deploy.json
 
 # 创空间重复目录
-sd-webui-forge-neo-v3/# 启动器大文件 (超过 GitHub 100MB 限制)
+sd-webui-forge-neo-v3/
+
+# 启动器大文件 (超过 GitHub 100MB 限制)
 *.exe

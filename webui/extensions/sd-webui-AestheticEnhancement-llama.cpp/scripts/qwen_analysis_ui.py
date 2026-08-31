@@ -29,19 +29,6 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "localhost")
 OLLAMA_PORT = os.getenv("OLLAMA_PORT", "11434")
 OLLAMA_URL = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}/api/chat"
 
-# OpenAI API 客户端（用于视觉 API 模式 - ModelScope 等）
-try:
-    from openai import OpenAI
-    OPENAI_AVAILABLE = True
-    logger.info("✅ OpenAI 模块加载成功，API 视觉模式可用")
-except ImportError:
-    OPENAI_AVAILABLE = False
-    logger.warning("openai 模块未安装，API 视觉模式不可用（pip install openai）")
-
-# 默认 API 视觉模型配置
-DEFAULT_API_VISION_MODEL = "Qwen/Qwen3.8-27B"
-DEFAULT_API_BASE_URL = "https://api-inference.modelscope.cn/v1"
-
 # 默认配置
 DEFAULT_MODEL = "qwen3.5:4b"
 DEFAULT_QWEN_MODEL = DEFAULT_MODEL  # 兼容别名
@@ -66,137 +53,6 @@ def encode_image_to_base64(image_data):
     except Exception as e:
         logger.error(f"图片编码失败：{e}")
         return None
-
-def get_response_vision_api(message: str, image_path: str = None,
-                             api_key: str = None,
-                             model: str = DEFAULT_API_VISION_MODEL,
-                             base_url: str = DEFAULT_API_BASE_URL,
-                             timeout: int = 600) -> str:
-    """使用 OpenAI 兼容 API 进行视觉分析（支持 ModelScope 等）"""
-    if not OPENAI_AVAILABLE:
-        return "openai 模块未安装，请执行: pip install openai"
-    if not api_key:
-        return "API Key 未配置，请在 WebUI 设置中配置 API Key"
-
-    try:
-        client = OpenAI(
-            base_url=base_url,
-            api_key=api_key,
-            timeout=timeout
-        )
-
-        content = []
-        if message:
-            content.append({"type": "text", "text": message})
-        else:
-            content.append({"type": "text", "text": "请详细描述这张图片"})
-
-        if image_path and os.path.exists(image_path):
-            with open(image_path, "rb") as f:
-                img_b64 = base64.b64encode(f.read()).decode("utf-8")
-            ext = os.path.splitext(image_path)[1].lower()
-            mime = "image/png" if ext == ".png" else "image/jpeg"
-            content.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:{mime};base64,{img_b64}"
-                }
-            })
-        elif isinstance(image_path, str) and image_path.startswith(("http://", "https://")):
-            content.append({
-                "type": "image_url",
-                "image_url": {"url": image_path}
-            })
-
-        messages = [{"role": "user", "content": content}]
-
-        logger.info(f"Vision API: 调用模型 {model}")
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            stream=False,
-            max_tokens=4096
-        )
-        result = response.choices[0].message.content or ""
-        logger.info(f"Vision API: 响应完成，长度={len(result)}字符")
-        return result
-    except Exception as e:
-        err_msg = f"视觉 API 请求失败: {str(e)}"
-        logger.error(err_msg)
-        return err_msg
-
-
-def analyze_with_api(image_data, prompt, model=DEFAULT_API_VISION_MODEL):
-    """
-    使用 ModelScope API 进行视觉分析
-
-    Args:
-        image_data: 图片路径或 PIL Image
-        prompt: 分析提示词
-        model: 模型名称
-
-    Returns:
-        dict: 分析结果
-    """
-    try:
-        # 获取 API Key 和模型配置
-        try:
-            from modules import shared
-            api_key = getattr(shared.opts, 'forge_api_key', '')
-            api_vision_model = getattr(shared.opts, 'forge_api_vision_model', model) or model
-        except Exception:
-            api_key = os.getenv("MODELSCOPE_API_KEY", "")
-            api_vision_model = model
-
-        if not api_key:
-            return {"success": False, "analysis": "❌ API Key 未配置，请在 WebUI 设置中配置 API Key"}
-
-        # 保存图片到临时文件
-        temp_path = None
-        try:
-            if isinstance(image_data, str):
-                if os.path.exists(image_data):
-                    temp_path = image_data
-                else:
-                    return {"success": False, "analysis": "❌ 图片文件不存在"}
-            elif hasattr(image_data, 'save'):
-                from PIL import Image
-                temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tmp", "vision_analysis")
-                os.makedirs(temp_dir, exist_ok=True)
-                temp_path = os.path.join(temp_dir, f"analysis_{os.urandom(4).hex()}.png")
-                img = image_data
-                if img.mode == 'RGBA':
-                    img = img.convert('RGB')
-                img.save(temp_path)
-            else:
-                return {"success": False, "analysis": "❌ 不支持的图片格式"}
-
-            result = get_response_vision_api(
-                message=prompt,
-                image_path=temp_path,
-                api_key=api_key,
-                model=api_vision_model,
-                timeout=600
-            )
-
-            return {
-                "success": True,
-                "analysis": result,
-                "model": api_vision_model,
-                "image_path": getattr(image_data, 'name', str(image_data)) if isinstance(image_data, str) else "uploaded_image.png"
-            }
-        finally:
-            # 清理临时文件
-            if temp_path and temp_path != image_data and os.path.exists(temp_path):
-                try:
-                    os.remove(temp_path)
-                except:
-                    pass
-
-    except Exception as e:
-        logger.error(f"API 视觉分析失败：{e}")
-        return {"success": False, "analysis": f"❌ 分析过程出错：{str(e)}"}
-
 
 def analyze_with_ollama(image_data, prompt, model=DEFAULT_MODEL):
     """
@@ -326,7 +182,7 @@ def analyze_with_backend(image_path, prompt, model, backend="ollama", llamacpp_h
         image_path: 图片路径
         prompt: 分析提示词
         model: 模型名称
-        backend: 后端类型 ("ollama", "llamacpp" 或 "api")
+        backend: 后端类型 ("ollama" 或 "llamacpp")
         llamacpp_host: llama.cpp 服务器地址
 
     Returns:
@@ -336,8 +192,6 @@ def analyze_with_backend(image_path, prompt, model, backend="ollama", llamacpp_h
         return analyze_with_ollama(image_path, prompt, model)
     elif backend == "llamacpp" and LLAMACPP_AVAILABLE:
         return analyze_with_llamacpp(image_path, prompt, model, llamacpp_host or _LLAMA_URL)
-    elif backend == "api":
-        return analyze_with_api(image_path, prompt, model)
     else:
         return {"success": False, "analysis": f"❌ 不支持的后端：{backend}"}
 
@@ -955,11 +809,10 @@ def create_qwen_analysis_ui():
             choices=[
                 ("🦙 Ollama", "ollama"),
                 ("🦄 llama.cpp", "llamacpp"),
-                ("☁️ API (ModelScope)", "api"),
             ],
             value=DEFAULT_BACKEND,
             label="选择模型后端",
-            info="Ollama 简单易用，llama.cpp 性能更好，API 模式使用 ModelScope 免费 API"
+            info="Ollama 简单易用，llama.cpp 性能更好"
         )
 
         with gr.Row():
@@ -978,8 +831,9 @@ def create_qwen_analysis_ui():
                         value=11434,
                         placeholder="11434"
                     )
+                    test_ollama_btn = gr.Button("🔌 测试 Ollama 连接", variant="secondary")
 
-                test_connection_btn = gr.Button("🔌 测试后端连接", variant="secondary")
+                test_llamacpp_btn = gr.Button("🔌 测试 llama.cpp 连接", variant="secondary")
 
                 connection_info = gr.Textbox(
                     label="连接状态",
@@ -987,22 +841,6 @@ def create_qwen_analysis_ui():
                     value="点击上方按钮测试连接...",
                     interactive=False
                 )
-
-                # API 配置信息（仅 API 模式显示）
-                with gr.Group(visible=False) as api_config_info:
-                    api_vision_model_input = gr.Textbox(
-                        label="API Vision Model (视觉模型)",
-                        value=lambda: DEFAULT_API_VISION_MODEL,
-                        placeholder="例如: Qwen/Qwen3.8-27B",
-                        elem_id="forge_api_vision_model",
-                    )
-                    gr.Markdown("""
-                    **API 模式配置说明：**
-                    1. 在 WebUI 设置中切换到 **API 模型** 模式
-                    2. 配置 **API Key**（魔搭 Token）
-                    3. 在上方输入框填写视觉模型名称
-                    4. 默认模型：`Qwen/Qwen3.8-27B`
-                    """)
 
                 # 模型选择和刷新
                 with gr.Row():
@@ -1086,26 +924,8 @@ def create_qwen_analysis_ui():
             """根据后端显示不同的配置界面"""
             if backend == "ollama":
                 return (
-                    gr.update(visible=True),    # ollama_config
-                    gr.update(choices=default_ollama_vision_models, value=DEFAULT_MODEL),  # model_selector
-                    gr.update(visible=False),   # api_config_info
-                )
-            elif backend == "api":
-                # API 模式：使用默认 API 视觉模型列表
-                api_vision_models = [
-                    "Qwen/Qwen3.8-27B",
-                    "Qwen/Qwen3.8-7B",
-                    "Qwen/Qwen2.5-VL-72B-Instruct",
-                    "Qwen/Qwen2.5-VL-7B-Instruct",
-                    "Qwen/Qwen2-VL-7B-Instruct",
-                    "Qwen/QwQ-32B-Preview",
-                    "iic/CogVideoX-5B-S2V",
-                    "iic/SEINE",
-                ]
-                return (
-                    gr.update(visible=False),   # ollama_config
-                    gr.update(choices=api_vision_models, value=DEFAULT_API_VISION_MODEL),  # model_selector
-                    gr.update(visible=True),    # api_config_info
+                    gr.update(visible=True),
+                    gr.update(choices=default_ollama_vision_models, value=DEFAULT_MODEL)
                 )
             else:
                 # 尝试刷新 llama.cpp 模型列表
@@ -1116,9 +936,8 @@ def create_qwen_analysis_ui():
                         if models:
                             logger.info(f"✅ 获取到 llama.cpp 模型: {models}")
                             return (
-                                gr.update(visible=False),   # ollama_config
-                                gr.update(choices=models + default_llamacpp_vision_models, value=models[0]),  # model_selector
-                                gr.update(visible=False),   # api_config_info
+                                gr.update(visible=False),
+                                gr.update(choices=models + default_llamacpp_vision_models, value=models[0])
                             )
                         else:
                             logger.warning("⚠️ llama.cpp 未返回模型，使用默认列表")
@@ -1126,9 +945,8 @@ def create_qwen_analysis_ui():
                         logger.error(f"❌ 获取 llama.cpp 模型时出错: {e}")
                 # 回退到默认
                 return (
-                    gr.update(visible=False),   # ollama_config
-                    gr.update(choices=default_llamacpp_vision_models, value="qwen3-vl-4b"),  # model_selector
-                    gr.update(visible=False),   # api_config_info
+                    gr.update(visible=False),
+                    gr.update(choices=default_llamacpp_vision_models, value="qwen3-vl-4b")
                 )
 
         def refresh_ollama_models():
@@ -1165,40 +983,18 @@ def create_qwen_analysis_ui():
             """根据后端刷新模型列表"""
             if backend == "ollama":
                 return refresh_ollama_models()
-            elif backend == "api":
-                api_vision_models = [
-                    "Qwen/Qwen3.8-27B",
-                    "Qwen/Qwen3.8-7B",
-                    "Qwen/Qwen2.5-VL-72B-Instruct",
-                    "Qwen/Qwen2.5-VL-7B-Instruct",
-                    "Qwen/Qwen2-VL-7B-Instruct",
-                    "Qwen/QwQ-32B-Preview",
-                    "iic/CogVideoX-5B-S2V",
-                    "iic/SEINE",
-                ]
-                return gr.update(choices=api_vision_models, value=DEFAULT_API_VISION_MODEL)
             else:
                 return refresh_llamacpp_models()
 
         def test_current_connection(backend, ollama_host, ollama_port):
             """测试当前选择的后端连接"""
             if backend == "ollama":
-                return test_ollama_connection()[1]
-            elif backend == "api":
-                try:
-                    from modules import shared
-                    api_key = getattr(shared.opts, 'forge_api_key', '')
-                    if api_key:
-                        return "✅ API 配置正常（API Key 已配置）"
-                    else:
-                        return "❌ API Key 未配置，请在 WebUI 设置中配置 API Key"
-                except Exception as e:
-                    return f"❌ 检查配置时出错：{str(e)}"
+                return test_ollama_connection()
             else:
                 if LLAMACPP_AVAILABLE:
-                    return test_llamacpp_connection(_LLAMA_URL)[1]
+                    return test_llamacpp_connection(_LLAMA_URL)
                 else:
-                    return "❌ llama.cpp 模块不可用"
+                    return False, "❌ llama.cpp 模块不可用"
 
         def update_analysis_mode_ui(mode):
             """更新分析模式界面"""
@@ -1241,12 +1037,18 @@ def create_qwen_analysis_ui():
         backend_selector.change(
             fn=update_backend_ui,
             inputs=[backend_selector],
-            outputs=[ollama_config, model_selector, api_config_info]
+            outputs=[ollama_config, model_selector]
         )
 
-        test_connection_btn.click(
-            fn=test_current_connection,
-            inputs=[backend_selector, ollama_host, ollama_port],
+        test_ollama_btn.click(
+            fn=lambda: test_ollama_connection()[1],
+            inputs=[],
+            outputs=[connection_info]
+        )
+
+        test_llamacpp_btn.click(
+            fn=lambda: test_llamacpp_connection(_LLAMA_URL)[1] if LLAMACPP_AVAILABLE else "❌ llama.cpp 模块不可用",
+            inputs=[],
             outputs=[connection_info]
         )
 
@@ -1268,22 +1070,6 @@ def create_qwen_analysis_ui():
             outputs=[result_output, frame_gallery]
         )
 
-        # 保存 API Vision Model 配置
-        def on_api_vision_model_change(model_name: str):
-            if model_name:
-                try:
-                    from modules import shared
-                    shared.opts.set("forge_api_vision_model", model_name)
-                except Exception as e:
-                    logger.warning(f"保存视觉模型配置失败: {e}")
-
-        api_vision_model_input.change(
-            fn=on_api_vision_model_change,
-            inputs=[api_vision_model_input],
-            queue=False,
-            show_progress=False,
-        )
-
         # 使用说明
         with gr.Accordion("📖 使用说明", open=False):
             gr.Markdown("""
@@ -1292,7 +1078,7 @@ def create_qwen_analysis_ui():
             1. **安装 Ollama**: 从 https://ollama.com 下载并安装
             2. **下载模型**: 运行命令 `ollama run qwen3.5:4b`
             3. **选择 Ollama 后端**: 在界面选择 Ollama
-            4. **测试连接**: 点击"测试后端连接"按钮
+            4. **测试连接**: 点击"测试 Ollama 连接"按钮
             5. **开始分析**: 上传图片或视频并分析
 
             ### llama.cpp 使用方法
@@ -1308,21 +1094,6 @@ def create_qwen_analysis_ui():
             5. **配置服务器地址**: 填入你的 llama.cpp 服务器地址
             6. **开始分析**: 上传图片或视频并分析
 
-            ### API (ModelScope) 使用方法
-
-            1. **获取 Token**: 登录 https://modelscope.cn ，进入个人中心获取 Token
-            2. **配置 API Key**: 在 WebUI 顶部切换到 **API 模型** 模式，输入你的 Token
-            3. **配置视觉模型**: 在 WebUI 设置的 **API Vision Model** 输入框填写视觉模型名称
-            4. **选择 API 后端**: 在界面选择 **API (ModelScope)**
-            5. **测试连接**: 点击"测试后端连接"按钮
-            6. **开始分析**: 上传图片并分析
-
-            **推荐免费视觉模型**:
-            - `Qwen/Qwen3.8-27B`: 最强视觉理解，推荐
-            - `Qwen/Qwen2.5-VL-72B-Instruct`: 超强视觉能力
-            - `Qwen/Qwen2.5-VL-7B-Instruct`: 平衡速度和质量
-            - `Qwen/Qwen2-VL-7B-Instruct`: 经典视觉模型
-
             ### 模型选择建议
 
             **Ollama 推荐**:
@@ -1335,27 +1106,19 @@ def create_qwen_analysis_ui():
             - **qwen2.5-vl-7b**: 更好的视觉理解能力
             - **llava-v1.6-7b**: 经典视觉模型
 
-            **API (ModelScope) 推荐**:
-            - **Qwen/Qwen3.8-27B**: 最强视觉理解，完全免费
-            - **Qwen/Qwen2.5-VL-72B-Instruct**: 超强视觉能力
-            - **Qwen/Qwen2.5-VL-7B-Instruct**: 快速响应
-
             ### 常见问题
 
             **Q: 提示"无法连接到服务"**
-            A: 请确保 Ollama 或 llama.cpp 服务正在运行，或 API Key 配置正确
+            A: 请确保 Ollama 或 llama.cpp 服务正在运行
 
             **Q: 分析时间很长**
-            A: 首次运行需要加载模型到显存，可能需要 1-2 分钟。API 模式通常响应更快
+            A: 首次运行需要加载模型到显存，可能需要 1-2 分钟。后续分析会快很多
 
             **Q: 显存不足**
-            A: 尝试使用更小的模型，或降低图片分辨率，或切换到 API 模式
+            A: 尝试使用更小的模型，或降低图片分辨率
 
             **Q: 如何同时使用多个模型？**
-            A: 启动多个 llama-server 实例，每个使用不同端口和模型，或使用 API 模式切换模型
-
-            **Q: API 模式需要付费吗？**
-            A: ModelScope API-Inference 提供免费额度，使用 Qwen 系列模型完全免费
+            A: 启动多个 llama-server 实例，每个使用不同端口和模型
             """)
 
 
