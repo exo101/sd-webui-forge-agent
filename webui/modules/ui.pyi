@@ -1100,7 +1100,7 @@ if (!sessionStorage.getItem('physton_icon_refreshed')) {
 // Then: load sidebar.js via fetch+eval to bypass browser script caching.
 // Same path rule: NO "webui/" prefix.
 (function() {
-    fetch('/gradio_api/file=javascript/sidebar.js?v=81&t=' + Date.now(), { cache: 'no-store' })
+    fetch('/gradio_api/file=javascript/sidebar.js?v=85&t=' + Date.now(), { cache: 'no-store' })
         .then(function(r) { return r.text(); })
         .then(function(code) {
             try {

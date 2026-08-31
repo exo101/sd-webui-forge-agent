@@ -793,11 +793,22 @@ function rebuildSidebarHTML() {
         });
 
         // Observe new tabs and Svelte re-renders
-        // When Gradio 5 re-renders tab buttons (Svelte), new DOM elements
+        // When Gradio re-renders tab buttons (Svelte), new DOM elements
         // are created without the sd-tab-hidden class. We must re-apply
         // visibility to keep user's toggle preferences in effect.
+        //
+        // IMPORTANT: This observer must NOT fire on changes WE make ourselves,
+        // otherwise applyAllTabVisibility() -> DOM change -> observer ->
+        // applyAllTabVisibility() creates an infinite loop causing flickering.
+        var sdApplyingVisibility = false; // guard flag
+        var sdVisibilityTimer = null;     // debounce timer
+
         var bodyObserver = new MutationObserver(function(mutations) {
+            // Skip if we are currently modifying the DOM ourselves
+            if (sdApplyingVisibility) return;
+
             var newTabs = document.querySelectorAll('[id^="tab_"]:not([data-sidebar-observed])');
+            var hasNewTabs = newTabs.length > 0;
             newTabs.forEach(function(container) {
                 container.setAttribute('data-sidebar-observed', 'true');
                 var btn = container.querySelector('button');
@@ -805,14 +816,26 @@ function rebuildSidebarHTML() {
                     observer.observe(btn, { attributes: true, attributeFilter: ['aria-selected'] });
                 }
             });
-            // Re-apply tab visibility on any DOM mutation inside #tabs
-            // to handle Svelte re-rendering of tab buttons.
-            applyAllTabVisibility();
+
+            // Only re-apply visibility when genuinely new tabs appeared,
+            // NOT on every mutation (prevents infinite loop).
+            // Debounce so rapid successive mutations only trigger once.
+            if (hasNewTabs) {
+                if (sdVisibilityTimer) clearTimeout(sdVisibilityTimer);
+                sdVisibilityTimer = setTimeout(function() {
+                    sdApplyingVisibility = true;
+                    try {
+                        applyAllTabVisibility();
+                    } finally {
+                        sdApplyingVisibility = false;
+                    }
+                }, 150);
+            }
 
             // Gradio 6.x: if sidebar exists but plugin section is empty and
             // new tab buttons have appeared, rebuild sidebar HTML.
             var sidebar = document.getElementById('sd-sidebar');
-            if (sidebar && !sidebar.__sdRebuildScheduled) {
+            if (sidebar && !sidebar.__sdRebuildScheduled && hasNewTabs) {
                 var pluginSection = sidebar.querySelector('[data-section="plugins"]');
                 var hasPluginItems = pluginSection && pluginSection.querySelectorAll('.sd-sidebar-item').length > 0;
                 if (!hasPluginItems) {
@@ -822,15 +845,28 @@ function rebuildSidebarHTML() {
                         if (btns.length > 2) {
                             sidebar.__sdRebuildScheduled = true;
                             setTimeout(function() {
-                                rebuildSidebarHTML();
-                                sidebar.__sdRebuildScheduled = false;
+                                sdApplyingVisibility = true;
+                                try {
+                                    rebuildSidebarHTML();
+                                } finally {
+                                    sdApplyingVisibility = false;
+                                    sidebar.__sdRebuildScheduled = false;
+                                }
                             }, 300);
                         }
                     }
                 }
             }
         });
-        bodyObserver.observe(document.body, { childList: true, subtree: true });
+        // Observe only #tabs container, not entire body, to avoid sidebar
+        // internal changes (clicks, rebuilds) triggering this observer.
+        var tabsRoot = document.getElementById('tabs');
+        if (tabsRoot) {
+            bodyObserver.observe(tabsRoot, { childList: true, subtree: true });
+        } else {
+            // Fallback: observe body but rely on sdApplyingVisibility guard
+            bodyObserver.observe(document.body, { childList: true, subtree: true });
+        }
     }
 
     // ============================================================
