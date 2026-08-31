@@ -137,7 +137,6 @@ API_PROVIDER_CONFIGS = {
         "base_url": "https://api-inference.modelscope.cn/v1/images/generations",
         "doc_url": "https://www.modelscope.cn/docs/API-Inference/Overview",
         "fallback_models": [
-            "Qwen/Qwen-Image-2512",
             "Qwen/Qwen-Image-Edit-2511",
             "FireRedTeam/FireRed-Image-Edit-1.1",
             "krea/Krea-2-Turbo",

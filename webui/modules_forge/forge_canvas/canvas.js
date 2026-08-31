@@ -855,3 +855,6 @@ class ForgeCanvas {
 
 const True = true;
 const False = false;
+
+// Expose to global scope for Gradio 5+ (class declarations don't auto-attach to window)
+window.ForgeCanvas = ForgeCanvas;

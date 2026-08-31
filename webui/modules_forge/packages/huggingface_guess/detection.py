@@ -212,30 +212,11 @@ def detect_unet_config(state_dict: dict, key_prefix: str) -> dict:
         dit_config["concat_padding_mask"] = True
         dit_config["crossattn_emb_channels"] = 1024
         dit_config["adaln_lora_dim"] = 256
+        dit_config["num_blocks"] = 28
         dit_config["num_heads"] = 16
         dit_config["rope_h_extrapolation_ratio"] = 4.0
         dit_config["rope_w_extrapolation_ratio"] = 4.0
         dit_config["rope_t_extrapolation_ratio"] = 1.0
-
-        # Dynamically detect actual block count for Anima 2.9B compatibility
-        try:
-            max_block = -1
-            prefix = "{}blocks.".format(key_prefix)
-            for k in state_dict_keys:
-                if k.startswith(prefix):
-                    parts = k[len(prefix):].split(".")
-                    if parts and parts[0].isdigit():
-                        max_block = max(max_block, int(parts[0]))
-            if max_block != -1:
-                actual_blocks = max_block + 1
-                dit_config["num_blocks"] = actual_blocks
-                if actual_blocks != 28:
-                    print("[Anima Patch] Dynamically patched Anima blocks from 28 to {}".format(actual_blocks))
-            else:
-                dit_config["num_blocks"] = 28
-        except Exception as patch_err:
-            print("[Anima Patch] Warning: Failed to detect block count, using default 28: {}".format(patch_err))
-            dit_config["num_blocks"] = 28
 
         return dit_config
 

@@ -31,7 +31,7 @@ def _configure_ffmpeg_path():
         result = subprocess.run(["ffmpeg", "-version"], 
                               capture_output=True, text=True, check=True)
         if result.returncode == 0:
-            print(f"[FFmpeg配置] ✓ 系统 PATH 中已找到 FFmpeg")
+            # print(f"[FFmpeg配置] ✓ 系统 PATH 中已找到 FFmpeg")
             return True
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass

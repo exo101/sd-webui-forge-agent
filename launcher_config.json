@@ -11,6 +11,9 @@
   "xformers": false,
   "lowvram": false,
   "neveroom": true,
+  "no_half": false,
+  "no_half_vae": false,
+  "precision_full": false,
   "api": true,
   "share": false,
   "skip_install": true,
@@ -23,7 +26,7 @@
   "extra_args": "",
   "wallpaper": "",
   "llama": {
-    "enabled": true,
+    "enabled": false,
     "port": 8079,
     "model": "",
     "ngl": 100,
@@ -54,9 +57,6 @@
     "birefnet_dir": "webui\\models\\BiRefNet"
   },
   "presets": {},
-  "no_half": false,
-  "no_half_vae": false,
-  "precision_full": false,
   "proxy": {
     "mode": "none",
     "address": "",

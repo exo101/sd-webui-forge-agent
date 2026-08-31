@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import time
 from typing import Any
 from urllib.parse import quote
@@ -13,8 +12,6 @@ from .backend_manager import backend_manager
 from .comfy_client import ComfyClient, normalize_base_url
 from .config import (
     DEFAULT_CONFIG,
-    DATA_DIR,
-    EXTENSION_ROOT,
     load_config,
     load_lora_presets,
     save_config,
@@ -64,7 +61,7 @@ def _validate_settings(payload: dict[str, Any]) -> dict[str, Any]:
         raise H3StudioError("设置格式无效")
     cleaned: dict[str, Any] = {}
     if "backend_mode" in payload:
-        if payload["backend_mode"] not in {"managed", "external", "api"}:
+        if payload["backend_mode"] not in {"managed", "external"}:
             raise H3StudioError("后端模式无效")
         cleaned["backend_mode"] = payload["backend_mode"]
     for key in ("comfy_path", "python_executable", "extra_args", "output_prefix"):
@@ -83,8 +80,6 @@ def _validate_settings(payload: dict[str, Any]) -> dict[str, Any]:
         cleaned["request_timeout"] = max(3, min(int(payload["request_timeout"]), 600))
     if "auto_start_on_tab" in payload:
         cleaned["auto_start_on_tab"] = bool(payload["auto_start_on_tab"])
-    if "minimax_api_key" in payload:
-        cleaned["minimax_api_key"] = str(payload["minimax_api_key"] or "").strip()
     mode = cleaned.get("backend_mode", load_config().get("backend_mode"))
     port = cleaned.get("port", load_config().get("port", 8189))
     if mode == "managed":
@@ -142,19 +137,6 @@ def register_api(_: Any, app: FastAPI) -> None:
     @app.get(f"{API_ROOT}/catalog")
     def catalog():
         try:
-            config = load_config()
-            if config.get("backend_mode") == "api":
-                # API 模式：返回 MiniMax 云 API 支持的配置
-                return {
-                    "models": ["MiniMax-H3"],
-                    "text_encoders": [],
-                    "vaes": [],
-                    "loras": [],
-                    "samplers": ["euler"],
-                    "schedulers": ["simple"],
-                    "h3_ready": True,
-                    "missing_nodes": [],
-                }
             return ComfyClient().catalog()
         except Exception as exc:
             _fail(exc, 503)
@@ -166,32 +148,10 @@ def register_api(_: Any, app: FastAPI) -> None:
             suffix = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
             if suffix not in ASSET_EXTENSIONS:
                 raise H3StudioError("只允许上传常见的图片、视频或音频文件")
-
-            config = load_config()
-            if config.get("backend_mode") == "api":
-                # API 模式：保存到本地 data 目录
-                import uuid
-                local_name = f"api_asset_{uuid.uuid4().hex}{suffix}"
-                assets_dir = EXTENSION_ROOT / "data" / "assets"
-                assets_dir.mkdir(parents=True, exist_ok=True)
-                dest = assets_dir / local_name
-                content = file.file.read()
-                with open(str(dest), "wb") as f:
-                    f.write(content)
-                # 返回可直接访问的 URL 路径
-                result = {
-                    "name": local_name,
-                    "subfolder": "api_assets",
-                    "type": "input",
-                    "url": f"{API_ROOT}/media?filename={quote(local_name)}&subfolder=api_assets&type=input",
-                }
-                result["file"] = "api_assets/" + local_name
-                return result
-            else:
-                result = ComfyClient().upload(file.file, file.filename or "asset.bin", file.content_type)
-                result["file"] = "/".join(part for part in (result.get("subfolder"), result.get("name")) if part)
-                result["url"] = _asset_url(result)
-                return result
+            result = ComfyClient().upload(file.file, file.filename or "asset.bin", file.content_type)
+            result["file"] = "/".join(part for part in (result.get("subfolder"), result.get("name")) if part)
+            result["url"] = _asset_url(result)
+            return result
         except Exception as exc:
             _fail(exc)
         finally:
@@ -208,21 +168,6 @@ def register_api(_: Any, app: FastAPI) -> None:
         type: str = Query("output"),
     ):
         try:
-            # API 模式下的本地素材
-            if subfolder == "api_assets":
-                assets_dir = EXTENSION_ROOT / "data" / "assets"
-                file_path = assets_dir / filename
-                if not file_path.is_file():
-                    raise H3StudioError("文件不存在")
-                content = file_path.read_bytes()
-                import mimetypes
-                mime = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
-                return Response(
-                    content=content,
-                    media_type=mime,
-                    headers={"Cache-Control": "public, max-age=3600"},
-                )
-
             response, iterator = ComfyClient().open_media(
                 filename,
                 subfolder,

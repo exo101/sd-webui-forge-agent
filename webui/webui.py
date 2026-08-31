@@ -103,6 +103,9 @@ def webui_worker():
                 auto_launch_browser = not cmd_opts.webui_is_non_local
 
         from modules_forge.forge_canvas.canvas import canvas_js_root_path
+        from modules.paths import script_path
+
+        mcp_server_enabled = os.environ.get("GRADIO_MCP_SERVER", "").lower() in ("1", "true", "yes")
 
         app, local_url, share_url = shared.demo.launch(
             share=cmd_opts.share,
@@ -115,7 +118,8 @@ def webui_worker():
             auth=gradio_auth_creds,
             inbrowser=auto_launch_browser,
             prevent_thread_lock=True,
-            allowed_paths=cmd_opts.gradio_allowed_path + [canvas_js_root_path],
+            mcp_server=mcp_server_enabled,
+            allowed_paths=cmd_opts.gradio_allowed_path + [canvas_js_root_path, script_path],
             app_kwargs={
                 "docs_url": "/docs",
                 "redoc_url": "/redoc",

@@ -52,6 +52,7 @@ sd_upscalers: list["upscaler.Upscaler"] = []
 progress_print_out = sys.stdout
 
 gradio_theme = gr.themes.Base()
+gradio_head = ""
 
 total_tqdm: "shared_total_tqdm.TotalTQDM" = None
 

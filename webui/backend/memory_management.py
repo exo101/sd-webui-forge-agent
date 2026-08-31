@@ -543,7 +543,7 @@ WINDOWS: bool = any(platform.win32_ver())
 
 if args.reserve_vram is not None:
     EXTRA_RESERVED_VRAM = args.reserve_vram * 1024 * 1024 * 1024
-    logger.debug("Reserving {:0.0f} MB VRAM".format(EXTRA_RESERVED_VRAM / (1024 * 1024)))
+    logger.info("Reserving {:0.0f} MB VRAM".format(EXTRA_RESERVED_VRAM / (1024 * 1024)))
 else:
     EXTRA_RESERVED_VRAM = 400 * 1024 * 1024
     if WINDOWS:
@@ -1385,7 +1385,7 @@ else:
     NUM_STREAMS = int(args.cuda_stream)
 
 if NUM_STREAMS > 0:
-    logger.debug("Using async weight offloading with {} streams".format(NUM_STREAMS))
+    logger.info("Using async weight offloading with {} streams".format(NUM_STREAMS))
 
 
 def current_stream(device: torch.device):
@@ -1459,7 +1459,7 @@ if args.pin_shared_memory:
             MAX_PINNED_MEMORY = get_total_memory(torch.device("cpu")) * 0.45  # Windows limit is apparently 50%
         else:
             MAX_PINNED_MEMORY = get_total_memory(torch.device("cpu")) * 0.95
-        logger.debug("Pinned Memory: {} MB".format(round(MAX_PINNED_MEMORY / (1024 * 1024))))
+        logger.info("Pinned Memory: {} MB".format(round(MAX_PINNED_MEMORY / (1024 * 1024))))
 
 
 def discard_cuda_async_error():

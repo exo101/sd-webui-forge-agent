@@ -2,11 +2,8 @@ import gradio as gr
 import os
 import sys
 import json
-import logging
 from pathlib import Path
 from modules import shared
-
-logger = logging.getLogger(__name__)
 
 # 定义插件目录
 plugin_dir = Path(__file__).parent.parent
@@ -23,8 +20,8 @@ MODELS_DIR = WEBUI_ROOT / "models" / "ace-step"
 # 设置 ACESTEP_CHECKPOINTS_DIR 环境变量，告诉原项目模型在哪里
 os.environ["ACESTEP_CHECKPOINTS_DIR"] = str(MODELS_DIR)
 
-# 调试信息（DEBUG 级别，默认不输出，避免污染 webui 启动日志）
-logger.debug(f"[ACE-Step-1.5] Checkpoints 目录: {MODELS_DIR}")
+# 打印调试信息
+# print(f"[ACE-Step-1.5] Checkpoints 目录: {MODELS_DIR}")
 
 # 模型版本配置
 # display_name: UI 显示名称
@@ -52,7 +49,7 @@ def load_ace_step_model(model_version="ACE-Step-v15-xl-turbo"):
     
     # 如果模型已加载且版本相同，使用缓存
     if ace_step_handler is not None and current_model_version == internal_name:
-        logger.debug(f"[ACE-Step-1.5] 模型已加载 (版本: {internal_name})")
+        print(f"[ACE-Step-1.5] 模型已加载 (版本: {internal_name})")
         return ace_step_handler
     
     try:
@@ -64,9 +61,9 @@ def load_ace_step_model(model_version="ACE-Step-v15-xl-turbo"):
         handler = AceStepHandler()
         
         # 初始化服务 - 使用原项目的自动查找机制（ACESTEP_CHECKPOINTS_DIR 已设置）
-        logger.debug(f"[ACE-Step-1.5] 正在初始化模型...")
-        logger.debug(f"[ACE-Step-1.5] 模型: {internal_name}")
-        logger.debug(f"[ACE-Step-1.5] Checkpoints 目录: {MODELS_DIR}")
+        print(f"[ACE-Step-1.5] 正在初始化模型...")
+        print(f"[ACE-Step-1.5] 模型: {internal_name}")
+        print(f"[ACE-Step-1.5] Checkpoints 目录: {MODELS_DIR}")
         
         # 不强制设置 offload 参数，让原项目根据显存大小自动判断
         status_msg, ok = handler.initialize_service(
@@ -80,15 +77,15 @@ def load_ace_step_model(model_version="ACE-Step-v15-xl-turbo"):
         if ok:
             ace_step_handler = handler
             current_model_version = internal_name
-            logger.debug(f"✅ ACE-Step-1.5 模型加载成功 (版本: {internal_name})")
+            print(f"✅ ACE-Step-1.5 模型加载成功 (版本: {internal_name})")
             return handler
         else:
             raise RuntimeError(f"模型初始化失败: {status_msg}")
     
     except Exception as e:
-        logger.debug(f"❌ ACE-Step-1.5 模型加载失败: {e}")
+        print(f"❌ ACE-Step-1.5 模型加载失败: {e}")
         import traceback
-        logger.debug(traceback.format_exc())
+        print(traceback.format_exc())
         raise
 
 # 全局 LLM Handler（用于音频分析）
@@ -107,15 +104,15 @@ def get_llm_handler(model_version=None):
         try:
             from acestep.llm_inference import LLMHandler
             _llm_handler_instance = LLMHandler()
-            logger.debug("[ACE-Step-1.5] LLM Handler 已创建（未初始化）")
+            print("[ACE-Step-1.5] LLM Handler 已创建（未初始化）")
         except Exception as e:
-            logger.debug(f"[ACE-Step-1.5] 创建 LLM Handler 失败: {e}")
+            print(f"[ACE-Step-1.5] 创建 LLM Handler 失败: {e}")
             return None
     
     # 如果 LLM 未初始化，尝试初始化
     if not _llm_handler_instance.llm_initialized and _model_version_for_llm:
         try:
-            logger.debug("[ACE-Step-1.5] 正在尝试初始化 LLM...")
+            print("[ACE-Step-1.5] 正在尝试初始化 LLM...")
             
             # 获取模型目录
             from acestep.model_downloader import get_checkpoints_dir
@@ -135,7 +132,7 @@ def get_llm_handler(model_version=None):
                 lm_path = os.path.join(model_dir, lm_name)
                 if os.path.exists(lm_path):
                     lm_model_path = lm_path
-                    logger.debug(f"[ACE-Step-1.5] 找到 LLM 模型: {lm_model_path}")
+                    print(f"[ACE-Step-1.5] 找到 LLM 模型: {lm_model_path}")
                     break
             
             if lm_model_path:
@@ -149,16 +146,16 @@ def get_llm_handler(model_version=None):
                 )
                 
                 if success:
-                    logger.debug(f"[ACE-Step-1.5] LLM 初始化成功！")
+                    print(f"[ACE-Step-1.5] LLM 初始化成功！")
                 else:
-                    logger.debug(f"[ACE-Step-1.5] LLM 初始化失败: {status}")
+                    print(f"[ACE-Step-1.5] LLM 初始化失败: {status}")
             else:
-                logger.debug("[ACE-Step-1.5] 未找到 LLM 模型，跳过初始化")
+                print("[ACE-Step-1.5] 未找到 LLM 模型，跳过初始化")
                 
         except Exception as e:
-            logger.debug(f"[ACE-Step-1.5] 初始化 LLM 时出错: {e}")
+            print(f"[ACE-Step-1.5] 初始化 LLM 时出错: {e}")
             import traceback
-            logger.debug(traceback.format_exc())
+            print(traceback.format_exc())
     
     return _llm_handler_instance
 
@@ -171,14 +168,14 @@ def analyze_src_audio_wrapper(src_audio, model_version):
         if not src_audio:
             return "请先上传源音频", "", "", None, None, "", "", ""
         
-        logger.debug(f"[ACE-Step-1.5] 开始分析源音频: {src_audio}")
+        print(f"[ACE-Step-1.5] 开始分析源音频: {src_audio}")
         
         # 第一步：转换为 codes
         try:
             codes_string = handler.convert_src_audio_to_codes(src_audio)
-            logger.debug(f"[ACE-Step-1.5] 音频代码转换成功，长度: {len(codes_string) if codes_string else 0}")
+            print(f"[ACE-Step-1.5] 音频代码转换成功，长度: {len(codes_string) if codes_string else 0}")
         except Exception as e:
-            logger.debug(f"[ACE-Step-1.5] 音频转换失败: {e}")
+            print(f"[ACE-Step-1.5] 音频转换失败: {e}")
             return f"音频转换失败: {str(e)}", "", "", None, None, "", "", ""
         
         if not codes_string:
@@ -216,24 +213,24 @@ def analyze_src_audio_wrapper(src_audio, model_version):
                     language = result.language or ""
                     timesignature = result.timesignature or ""
                     status_msg = "✅ 音频分析完成！已提取曲风、歌词、BPM、时长等信息"
-                    logger.debug(f"[ACE-Step-1.5] LLM 分析成功: BPM={bpm}, Key={keyscale}, Language={language}")
+                    print(f"[ACE-Step-1.5] LLM 分析成功: BPM={bpm}, Key={keyscale}, Language={language}")
                 else:
                     status_msg = "⚠️ 音频代码已生成，但 LLM 分析失败"
-                    logger.debug(f"[ACE-Step-1.5] LLM 分析失败: {result.status_message}")
+                    print(f"[ACE-Step-1.5] LLM 分析失败: {result.status_message}")
                     
             except Exception as e:
                 status_msg = "⚠️ 音频代码已生成，但 LLM 分析出错"
-                logger.debug(f"[ACE-Step-1.5] 理解音乐时出错: {e}")
+                print(f"[ACE-Step-1.5] 理解音乐时出错: {e}")
         else:
             status_msg = "⚠️ 音频代码已生成，但 LLM 未初始化（需要加载 LLM 模型才能分析歌词和曲风）"
-            logger.debug("[ACE-Step-1.5] LLM 未初始化，无法分析歌词和曲风")
+            print("[ACE-Step-1.5] LLM 未初始化，无法分析歌词和曲风")
         
         # 分析完成后卸载 LLM 模型释放显存
         if _llm_handler_instance is not None:
-            logger.debug(f"[ACE-Step-1.5] 卸载 LLM 模型释放显存...")
+            print(f"[ACE-Step-1.5] 卸载 LLM 模型释放显存...")
             _llm_handler_instance.unload()
             _llm_handler_instance = None
-            logger.debug(f"[ACE-Step-1.5] LLM 模型已卸载")
+            print(f"[ACE-Step-1.5] LLM 模型已卸载")
         
         # 清理缓存
         import gc
@@ -247,7 +244,7 @@ def analyze_src_audio_wrapper(src_audio, model_version):
             try:
                 free = torch.cuda.memory_reserved(0) / (1024 ** 3)
                 total = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
-                logger.debug(f"[ACE-Step-1.5] 显存使用分析后: {(total - free):.1f} GB / {total:.1f} GB")
+                print(f"[ACE-Step-1.5] 显存使用分析后: {(total - free):.1f} GB / {total:.1f} GB")
             except Exception:
                 pass
         
@@ -256,8 +253,8 @@ def analyze_src_audio_wrapper(src_audio, model_version):
     except Exception as e:
         import traceback
         error_msg = f"分析音频失败: {str(e)}"
-        logger.debug(f"[ACE-Step-1.5] {error_msg}")
-        logger.debug(traceback.format_exc())
+        print(f"[ACE-Step-1.5] {error_msg}")
+        print(traceback.format_exc())
         # 即使出错也要尝试清理
         if _llm_handler_instance is not None:
             try:
@@ -282,17 +279,17 @@ def generate_music(prompt, lyrics, duration, infer_steps, guidance_scale, model_
             try:
                 free = torch.cuda.memory_reserved(0) / (1024 ** 3)
                 total = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
-                logger.debug(f"[ACE-Step-1.5] 显存使用生成前: {(total - free):.1f} GB / {total:.1f} GB")
+                print(f"[ACE-Step-1.5] 显存使用生成前: {(total - free):.1f} GB / {total:.1f} GB")
             except Exception:
                 pass
         
         handler = load_ace_step_model(model_version)
         
-        logger.debug(f"[ACE-Step-1.5] 开始生成音乐...")
-        logger.debug(f"[ACE-Step-1.5] 提示词: {prompt[:50]}..." if len(prompt) > 50 else f"[ACE-Step-1.5] 提示词: {prompt}")
-        logger.debug(f"[ACE-Step-1.5] 歌词: {lyrics[:50]}..." if len(lyrics) > 50 else f"[ACE-Step-1.5] 歌词: {lyrics}")
-        logger.debug(f"[ACE-Step-1.5] 推理步数: {infer_steps}, 引导强度: {guidance_scale}, 时长: {duration}秒")
-        logger.debug(f"[ACE-Step-1.5] BPM: {bpm}, 调式: {key_scale}, 拍号: {time_signature}, 语言: {vocal_language}")
+        print(f"[ACE-Step-1.5] 开始生成音乐...")
+        print(f"[ACE-Step-1.5] 提示词: {prompt[:50]}..." if len(prompt) > 50 else f"[ACE-Step-1.5] 提示词: {prompt}")
+        print(f"[ACE-Step-1.5] 歌词: {lyrics[:50]}..." if len(lyrics) > 50 else f"[ACE-Step-1.5] 歌词: {lyrics}")
+        print(f"[ACE-Step-1.5] 推理步数: {infer_steps}, 引导强度: {guidance_scale}, 时长: {duration}秒")
+        print(f"[ACE-Step-1.5] BPM: {bpm}, 调式: {key_scale}, 拍号: {time_signature}, 语言: {vocal_language}")
         
         # 准备参数
         kwargs = {
@@ -320,11 +317,11 @@ def generate_music(prompt, lyrics, duration, infer_steps, guidance_scale, model_
         result = handler.generate_music(**kwargs)
         
         # 打印返回结果结构用于调试
-        logger.debug(f"[ACE-Step-1.5] 返回类型: {type(result)}")
+        print(f"[ACE-Step-1.5] 返回类型: {type(result)}")
         if isinstance(result, dict):
-            logger.debug(f"[ACE-Step-1.5] 字典键: {result.keys()}")
+            print(f"[ACE-Step-1.5] 字典键: {result.keys()}")
             for key, value in result.items():
-                logger.debug(f"[ACE-Step-1.5]   {key}: {type(value)} = {value if not hasattr(value, 'shape') else f'shape={value.shape}'}")
+                print(f"[ACE-Step-1.5]   {key}: {type(value)} = {value if not hasattr(value, 'shape') else f'shape={value.shape}'}")
         
         # 处理输出 - 支持多种返回格式
         audio_tensor = None
@@ -361,7 +358,7 @@ def generate_music(prompt, lyrics, duration, infer_steps, guidance_scale, model_
             if os.path.exists(output_path):
                 import torchaudio
                 audio_tensor, _ = torchaudio.load(output_path)
-                logger.debug(f"[ACE-Step-1.5] 从文件读取音频: {output_path}")
+                print(f"[ACE-Step-1.5] 从文件读取音频: {output_path}")
             else:
                 raise ValueError(f"音频文件不存在: {output_path}")
         
@@ -383,7 +380,7 @@ def generate_music(prompt, lyrics, duration, infer_steps, guidance_scale, model_
             audio_np = np.array(audio_tensor)
         
         # 检查形状，处理可能的通道维度
-        logger.debug(f"[ACE-Step-1.5] 音频张量形状: {audio_np.shape}")
+        print(f"[ACE-Step-1.5] 音频张量形状: {audio_np.shape}")
         
         # 如果是双通道，转换为单通道
         if len(audio_np.shape) > 1:
@@ -392,13 +389,13 @@ def generate_music(prompt, lyrics, duration, infer_steps, guidance_scale, model_
         
         # 确保是一维数组
         audio_np = np.squeeze(audio_np)
-        logger.debug(f"[ACE-Step-1.5] 处理后音频形状: {audio_np.shape}")
+        print(f"[ACE-Step-1.5] 处理后音频形状: {audio_np.shape}")
         
         # 归一化到 [-1, 1]
         max_val = np.max(np.abs(audio_np))
         if max_val > 0:
             audio_np = audio_np / max_val
-            logger.debug(f"[ACE-Step-1.5] 归一化因子: {max_val}")
+            print(f"[ACE-Step-1.5] 归一化因子: {max_val}")
         
         # 转换为 int16
         audio_int16 = (audio_np * 32767).astype(np.int16)
@@ -410,13 +407,13 @@ def generate_music(prompt, lyrics, duration, infer_steps, guidance_scale, model_
             wf.setframerate(sample_rate)  # 使用模型原生采样率
             wf.writeframes(audio_int16.tobytes())
         
-        logger.debug(f"✅ 音乐生成成功！文件已保存到: {output_path} (采样率: {sample_rate} Hz)")
+        print(f"✅ 音乐生成成功！文件已保存到: {output_path} (采样率: {sample_rate} Hz)")
         return output_path, None
         
     except Exception as e:
         import traceback
         error_msg = f"❌ 音乐生成失败: {str(e)}\n{traceback.format_exc()}"
-        logger.debug(error_msg)
+        print(error_msg)
         return None, error_msg
 
 def create_ace_step_ui():

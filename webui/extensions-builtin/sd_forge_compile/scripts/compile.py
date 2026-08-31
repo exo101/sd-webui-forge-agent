@@ -44,7 +44,7 @@ class TorchCompileForForge(scripts.Script):
         return "Torch 编译集成"
 
     def show(self, is_img2img):
-        return False
+        return scripts.AlwaysVisible if TRITON_AVAILABLE else None
 
     def ui(self, *args, **kwargs):
         with gr.Accordion(open=False, label=self.title()):

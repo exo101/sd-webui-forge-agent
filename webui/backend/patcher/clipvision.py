@@ -1,6 +1,28 @@
 import torch
 from transformers import CLIPVisionConfig, CLIPVisionModelWithProjection
-from transformers.modeling_utils import no_init_weights
+
+try:
+    from transformers.modeling_utils import no_init_weights
+except ImportError:
+    from contextlib import contextmanager
+    import torch.nn as nn
+
+    @contextmanager
+    def no_init_weights():
+        init_fns = [
+            nn.init.uniform_, nn.init.normal_, nn.init.constant_,
+            nn.init.kaiming_uniform_, nn.init.kaiming_normal_,
+            nn.init.xavier_uniform_, nn.init.xavier_normal_,
+            nn.init.orthogonal_, nn.init.zeros_, nn.init.ones_,
+        ]
+        originals = {fn.__name__: getattr(nn.init, fn.__name__) for fn in init_fns}
+        for name in originals:
+            setattr(nn.init, name, lambda *args, **kwargs: None)
+        try:
+            yield
+        finally:
+            for name, fn in originals.items():
+                setattr(nn.init, name, fn)
 
 from backend import memory_management
 from backend.operations import using_forge_operations
