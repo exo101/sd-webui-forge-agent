@@ -756,40 +756,57 @@ def remove_background_tool(image, mode="auto", points=None, bg_color=None):
         meta = {"status": "success", "mode": mode}
 
         if mode == "auto":
-            # 智能抠图：优先调用 BiRefNet，回退 rembg
-            try:
-                sys.path.insert(0, os.path.join(scripts.basedir(), "extensions", "sd-webui-see-through-sam", "scripts"))
-                from image_matting import process_with_birefnet
-                # process_with_birefnet 接收文件路径列表，输出到 image-matting 目录
-                tmp_in = _save_pil_to_tempfile(img, "matting_in.png")
-                # 记录调用前的文件列表，用于精确识别本次生成的新文件
-                from modules import shared
-                out_dir = os.path.join(shared.data_path, "outputs", "image-matting")
-                os.makedirs(out_dir, exist_ok=True)
-                before_files = set(os.listdir(out_dir)) if os.path.isdir(out_dir) else set()
-                process_with_birefnet([tmp_in], bg_color or "transparent", "birefnet-matting")
-                # 只找本次新生成的文件
-                after_files = set(os.listdir(out_dir)) if os.path.isdir(out_dir) else set()
-                new_files = after_files - before_files
-                png_files = sorted([f for f in new_files if f.endswith((".png", ".webp"))], reverse=True)
-                if png_files:
-                    out_img = Image.open(os.path.join(out_dir, png_files[0]))
-                    results.append(out_img)
-                    meta["backend"] = "BiRefNet"
-            except Exception as e:
-                print(f"[Agent] BiRefNet 抠图失败，回退 rembg: {e}")
+            # 智能抠图优先级：InSPyReNet > BiRefNet > rembg
+            from modules import shared
 
-            # 回退：使用 rembg 库
+            # 辅助函数：将 RGBA 结果按 bg_color 合成
+            def _apply_bg(rgba_img):
+                target = bg_color or "transparent"
+                if target == "transparent":
+                    return rgba_img
+                bg = Image.new("RGBA", rgba_img.size, target)
+                bg.paste(rgba_img, (0, 0), rgba_img.split()[-1])
+                return bg.convert("RGB")
+
+            # 优先 1：InSPyReNet (see-through-sam 扩展的默认模型)
+            try:
+                api_path = os.path.join(scripts.basedir(), "extensions", "sd-webui-ps-plugin-api", "scripts")
+                if api_path not in sys.path:
+                    sys.path.insert(0, api_path)
+                from api_ps_plugin import process_inspyrenet
+                print("[Agent] 尝试 InSPyReNet 抠图...")
+                rgba = process_inspyrenet(img)
+                results.append(_apply_bg(rgba))
+                meta["backend"] = "InSPyReNet"
+                print("[Agent] InSPyReNet 抠图成功")
+            except Exception as e:
+                print(f"[Agent] InSPyReNet 抠图失败: {e}，尝试 BiRefNet")
+
+            # 优先 2：BiRefNet
             if not results:
                 try:
-                    # 检查 u2net 模型是否已下载
+                    api_path = os.path.join(scripts.basedir(), "extensions", "sd-webui-ps-plugin-api", "scripts")
+                    if api_path not in sys.path:
+                        sys.path.insert(0, api_path)
+                    from api_ps_plugin import process_birefnet
+                    print("[Agent] 尝试 BiRefNet 抠图...")
+                    rgba = process_birefnet(img, "birefnet-matting")
+                    results.append(_apply_bg(rgba))
+                    meta["backend"] = "BiRefNet"
+                    print("[Agent] BiRefNet 抠图成功")
+                except Exception as e:
+                    print(f"[Agent] BiRefNet 抠图失败: {e}，回退 rembg")
+
+            # 优先 3：rembg (最后回退)
+            if not results:
+                try:
                     u2net_path = os.path.join(os.path.expanduser("~"), ".u2net", "u2net.onnx")
                     if not os.path.isfile(u2net_path):
                         meta["note"] = "首次使用 rembg 正在下载 u2net.onnx 模型（约 170MB），请耐心等待..."
                         print("[Agent] rembg 首次使用，正在下载 u2net.onnx 模型...")
                     from rembg import remove
                     out_img = remove(img)
-                    results.append(out_img)
+                    results.append(_apply_bg(out_img))
                     meta["fallback"] = "rembg"
                     meta["backend"] = "rembg"
                 except ImportError:
