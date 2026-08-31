@@ -188,14 +188,39 @@ window.__sdSidebarLoaded = true;
     function collectTabs() {
         allTabPanels = [];
         // Only collect TOP-LEVEL main tab buttons inside #tabs (the main
-        // Gradio tab bar). Must use :scope > to scope to DIRECT children of
-        // the main tablist — querySelectorAll at any depth would also match
-        // nested sub-tablists inside txt2img/img2img panels (ControlNet units,
-        // LoRA tabs, Regional Prompter sub-tabs, etc.).
+        // Gradio tab bar). Must scope to the MAIN tablist — querySelectorAll
+        // at any depth would also match nested sub-tablists inside txt2img/
+        // img2img panels (ControlNet units, LoRA tabs, etc.).
         var tabBar = document.getElementById('tabs');
         if (!tabBar) return;
         var seenPanelIds = {};
-        var tablist = tabBar.querySelector(':scope > [role="tablist"]') || tabBar.querySelector('[role="tablist"]');
+
+        // Gradio 6.x: main tablist is inside #tabs > .tab-wrapper > .tab-container
+        // Gradio 5.x: main tablist is a direct child of #tabs
+        // We try multiple selectors in order of specificity.
+        var tablist = null;
+        // 1. Gradio 6.x structure: #tabs > .tab-wrapper > .tab-container[role=tablist]
+        var wrappers = tabBar.querySelectorAll(':scope > .tab-wrapper, :scope > div.tab-wrapper');
+        for (var w = 0; w < wrappers.length; w++) {
+            var tl = wrappers[w].querySelector(':scope > .tab-container[role="tablist"]');
+            if (tl) { tablist = tl; break; }
+        }
+        // 2. Gradio 5.x structure: direct child of #tabs
+        if (!tablist) {
+            tablist = tabBar.querySelector(':scope > [role="tablist"]');
+        }
+        // 3. Fallback: first tablist anywhere in #tabs (but verify it's not nested)
+        if (!tablist) {
+            var allTablists = tabBar.querySelectorAll('[role="tablist"]');
+            for (var t = 0; t < allTablists.length; t++) {
+                // A nested tablist is inside a [role=tabpanel]
+                if (!allTablists[t].closest('[role="tabpanel"]')) {
+                    tablist = allTablists[t];
+                    break;
+                }
+            }
+        }
+
         var tabButtons = tablist ? tablist.querySelectorAll(':scope > button[role="tab"]') : [];
         // Fallback: direct button children of #tabs (Gradio 4 style)
         if (tabButtons.length === 0) {
@@ -206,9 +231,9 @@ window.__sdSidebarLoaded = true;
             if (!panelId || seenPanelIds[panelId]) return;
             var panel = document.getElementById(panelId);
             if (!panel) return;
+            // Skip panels that are nested inside another tabpanel (sub-tabs)
+            if (panel.closest('[role="tabpanel"]') && panel.closest('[role="tabpanel"]') !== panel) return;
             seenPanelIds[panelId] = true;
-            // Skip panels that are nested inside another tab (not direct children of main content)
-            // Check if panel is a direct child of the main tab content area
             var id = panelId.replace(/^tabs?_/, '').replace(/^tab_/, '');
             var buttonText = btn.textContent.trim();
             var label = getChineseName(id, buttonText || id);
@@ -528,22 +553,9 @@ window.__sdSidebarLoaded = true;
 //  Inject Sidebar HTML
 // ============================================================
 
-function injectSidebar() {
-    if (document.getElementById('sd-sidebar')) return;
-
-    // Tab button visibility is managed by CSS (style.css):
-    //   - #tabs tab-nav bar is shown
-    //   - only txt2img and img2img tab buttons are visible
-    //   - all other tab buttons are hidden
-
-    // Collect all tabs first
-    collectTabs();
-
-    // Build sidebar
-    var sidebar = document.createElement('aside');
-    sidebar.id = 'sd-sidebar';
-    sidebar.className = 'sd-sidebar';
-
+// Build sidebar inner HTML from current allTabPanels.
+// Extracted so rebuildSidebarHTML() can reuse it.
+function buildSidebarHTML() {
     var html = '';
     html += '<div class="sd-sidebar-brand">';
     html += '  <div class="sd-sidebar-logo">SD</div>';
@@ -577,7 +589,6 @@ function injectSidebar() {
     });
 
     // Unified "插件" section: ALL external plugin tabs with eye-toggles
-    // "绘梦智能体助手" is excluded — it gets its own dedicated section below.
     var externalPlugins = allTabPanels.filter(function(panel) {
         return !isBuiltinTab(panel) && panel.id !== 'sd_webui_agent';
     });
@@ -589,7 +600,6 @@ function injectSidebar() {
         html += '    <span class="sd-sidebar-chevron">▾</span>';
         html += '  </div>';
         html += '  <div class="sd-sidebar-section-body">';
-        // Eye-toggle items for each plugin
         externalPlugins.forEach(function(panel) {
             var isHidden = isTabHidden(panel.id);
             var eyeIcon = isHidden ? '🚫' : '👁';
@@ -617,24 +627,47 @@ function injectSidebar() {
     }
 
     html += '</nav>';
+    html += '<div class="sd-sidebar-footer"></div>';
+    return html;
+}
 
-    // Footer: 设置和扩展已移至主页标签页，侧边栏不再显示
-        html += '<div class="sd-sidebar-footer">';
-        html += '</div>';
+function injectSidebar() {
+    if (document.getElementById('sd-sidebar')) return;
 
-    sidebar.innerHTML = html;
+    collectTabs();
 
-        // Toggle button
-        var toggle = document.createElement('button');
-        toggle.id = 'sd-sidebar-toggle';
-        toggle.className = 'sd-sidebar-toggle';
-        toggle.innerHTML = '☰';
-        toggle.setAttribute('title', '切换侧边栏');
+    var sidebar = document.createElement('aside');
+    sidebar.id = 'sd-sidebar';
+    sidebar.className = 'sd-sidebar';
+    sidebar.innerHTML = buildSidebarHTML();
 
-        document.body.appendChild(sidebar);
-        document.body.appendChild(toggle);
-        document.body.classList.add('sd-sidebar-active');
-    }
+    var toggle = document.createElement('button');
+    toggle.id = 'sd-sidebar-toggle';
+    toggle.className = 'sd-sidebar-toggle';
+    toggle.innerHTML = '☰';
+    toggle.setAttribute('title', '切换侧边栏');
+
+    document.body.appendChild(sidebar);
+    document.body.appendChild(toggle);
+    document.body.classList.add('sd-sidebar-active');
+}
+
+// Rebuild sidebar HTML when new plugin tabs appear after initial render.
+// Handles Gradio 6.x async Svelte rendering where tab buttons appear late.
+function rebuildSidebarHTML() {
+    var sidebar = document.getElementById('sd-sidebar');
+    if (!sidebar) return;
+    collectTabs();
+    if (allTabPanels.length === 0) return;
+    sidebar.innerHTML = buildSidebarHTML();
+    // Re-bind events for new elements
+    setupSidebarEvents();
+    // Re-apply visibility preferences
+    document.querySelectorAll('[id^="tab_"]').forEach(function(panel) {
+        panel.classList.remove('sd-panel-hidden');
+    });
+    applyAllTabVisibility();
+}
 
     // ============================================================
     //  Setup events
@@ -643,6 +676,15 @@ function injectSidebar() {
     function setupSidebarEvents() {
         var sidebar = document.getElementById('sd-sidebar');
         if (!sidebar) return;
+
+        // Guard toggle button against duplicate event binding
+        var toggle = document.getElementById('sd-sidebar-toggle');
+        if (toggle && !toggle.__sdToggleBound) {
+            toggle.__sdToggleBound = true;
+            toggle.addEventListener('click', function() {
+                document.body.classList.toggle('sd-sidebar-collapsed');
+            });
+        }
 
         // Section header expand/collapse
         sidebar.querySelectorAll('.sd-sidebar-section-header').forEach(function(header) {
@@ -705,14 +747,6 @@ function injectSidebar() {
                 switchTab(tab, accordionId, subTabLabel, containerIds);
             });
         });
-
-        // Toggle sidebar
-        var toggle = document.getElementById('sd-sidebar-toggle');
-        if (toggle) {
-            toggle.addEventListener('click', function() {
-                document.body.classList.toggle('sd-sidebar-collapsed');
-            });
-        }
     }
 
     // ============================================================
@@ -768,6 +802,27 @@ function injectSidebar() {
             // Re-apply tab visibility on any DOM mutation inside #tabs
             // to handle Svelte re-rendering of tab buttons.
             applyAllTabVisibility();
+
+            // Gradio 6.x: if sidebar exists but plugin section is empty and
+            // new tab buttons have appeared, rebuild sidebar HTML.
+            var sidebar = document.getElementById('sd-sidebar');
+            if (sidebar && !sidebar.__sdRebuildScheduled) {
+                var pluginSection = sidebar.querySelector('[data-section="plugins"]');
+                var hasPluginItems = pluginSection && pluginSection.querySelectorAll('.sd-sidebar-item').length > 0;
+                if (!hasPluginItems) {
+                    var tabsEl = document.getElementById('tabs');
+                    if (tabsEl) {
+                        var btns = tabsEl.querySelectorAll('button[role="tab"]');
+                        if (btns.length > 2) {
+                            sidebar.__sdRebuildScheduled = true;
+                            setTimeout(function() {
+                                rebuildSidebarHTML();
+                                sidebar.__sdRebuildScheduled = false;
+                            }, 300);
+                        }
+                    }
+                }
+            }
         });
         bodyObserver.observe(document.body, { childList: true, subtree: true });
     }
@@ -880,34 +935,47 @@ function injectSidebar() {
         // Migrate: remove old localStorage key from previous implementation
         try { localStorage.removeItem('sd-hidden-tabs'); } catch (e) { /* ignore */ }
 
+        var tabsEl = document.querySelector('#tabs');
+        if (!tabsEl) return false;
+
+        // Collect tabs first — in Gradio 6.x the #tabs element exists early but
+        // the tablist/buttons are rendered asynchronously by Svelte. We must
+        // wait until at least some tab buttons are present before building the
+        // sidebar, otherwise the "插件" section will be empty.
+        collectTabs();
+        if (allTabPanels.length === 0) {
+            // Tab buttons not yet rendered — will retry
+            return false;
+        }
+
         var initialized = false;
         if (document.getElementById('sd-sidebar')) {
-            // Sidebar already exists, just re-run setup for new elements
+            // Sidebar already exists — check if we need to rebuild with new tabs
+            var sidebar = document.getElementById('sd-sidebar');
+            var pluginSection = sidebar.querySelector('[data-section="plugins"]');
+            var hasPluginItems = pluginSection && pluginSection.querySelectorAll('.sd-sidebar-item').length > 0;
+            var externalCount = allTabPanels.filter(function(p) { return !isBuiltinTab(p) && p.id !== 'sd_webui_agent'; }).length;
+            if (!hasPluginItems && externalCount > 0) {
+                // Rebuild sidebar HTML to include newly discovered plugin tabs
+                rebuildSidebarHTML();
+            }
             initialized = true;
-        } else if (document.querySelector('#tabs')) {
+        } else {
             injectSidebar();
             setupSidebarEvents();
             observeTabChanges();
-            collectTabs();
             // Hide embedded accordions (ControlNet, ADetailer, etc.) by default
             hideEmbeddedAccordions();
             // FAILSAFE: remove sd-panel-hidden from ALL tab panels.
-            // Previously only 7 native IDs were cleared, but with the new
-            // "show all tabs" approach every panel must be unhidden in case
-            // a previous session left stale sd-panel-hidden classes.
             document.querySelectorAll('[id^="tab_"]').forEach(function(panel) {
                 panel.classList.remove('sd-panel-hidden');
             });
             // Apply user's saved tab visibility preferences from localStorage
             applyAllTabVisibility();
-            // NOTE: setupPopupControls() removed — seed rows restored to native
-            // Gradio positions in the main UI, no longer shown via sidebar popup.
             initialized = true;
         }
         // Always enhance seed dice buttons (function has guard for single execution)
         if (initialized) {
-            // NOTE: ensureOverflowTabsFixed() removed — moving Svelte-managed tab buttons
-            // causes Svelte to re-render and drop them. Tab visibility is now CSS-only.
             enhanceSeedDiceButtons();
             relabelControls();
             // Re-apply tab visibility in case Gradio re-rendered tab buttons
@@ -1120,7 +1188,10 @@ function injectSidebar() {
             return;
         }
         var retries = 0;
-        var maxRetries = 30;
+        // Gradio 6.x UI creation can take 40+ seconds on first load (Svelte
+        // async rendering). Retry for up to 90 seconds to make sure all tab
+        // buttons are present before giving up.
+        var maxRetries = 180;
         var checkInterval = setInterval(function() {
             retries++;
             if (tryInit() || retries >= maxRetries) {
