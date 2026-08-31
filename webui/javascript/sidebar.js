@@ -667,6 +667,12 @@ function rebuildSidebarHTML() {
         panel.classList.remove('sd-panel-hidden');
     });
     applyAllTabVisibility();
+    // Re-add theme & home buttons to the freshly rebuilt footer.
+    // rebuildSidebarHTML() wipes the innerHTML which clears any buttons
+    // previously appended by the theme manager.
+    if (window.SDThemeManager && window.SDThemeManager.rebuildFooter) {
+        window.SDThemeManager.rebuildFooter();
+    }
 }
 
     // ============================================================
@@ -1435,7 +1441,8 @@ function rebuildSidebarHTML() {
         current: getCurrentTheme,
         show: showThemeModal,
         hide: hideThemeModal,
-        themes: THEMES
+        themes: THEMES,
+        rebuildFooter: addThemeButtonToSidebar
     };
 
 })();

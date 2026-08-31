@@ -295,8 +295,6 @@ def create_ui():
                                 # 纵横比快捷按钮（整合自 aspect-ratio-helper 插件）
                                 if opts.arh_show_aspect_buttons:
                                     aspect_ratio.create_aspect_ratio_buttons("txt2img", width, height)
-                                if opts.arh_show_percentage_scaler:
-                                    aspect_ratio.create_percentage_scaler("txt2img", width, height)
 
                             with gr.Column(elem_id="txt2img_dimensions_row", scale=1, elem_classes="dimensions-tools"):
                                 res_switch_btn = ToolButton(value=switch_values_symbol, elem_id="txt2img_res_switch_btn", tooltip="Switch width/height")
@@ -685,8 +683,6 @@ def create_ui():
                                                 # 纵横比快捷按钮（整合自 aspect-ratio-helper 插件）
                                                 if opts.arh_show_aspect_buttons:
                                                     aspect_ratio.create_aspect_ratio_buttons("img2img", width, height)
-                                                if opts.arh_show_percentage_scaler:
-                                                    aspect_ratio.create_percentage_scaler("img2img", width, height)
                                             with gr.Column(elem_id="img2img_dimensions_row", scale=1, elem_classes="dimensions-tools"):
                                                 res_switch_btn = ToolButton(value=switch_values_symbol, elem_id="img2img_res_switch_btn", tooltip="Switch width/height")
                                                 detect_image_size_btn = ToolButton(value=detect_image_size_symbol, elem_id="img2img_detect_image_size_btn", tooltip="Auto detect size from img2img")
@@ -1133,7 +1129,7 @@ if (!sessionStorage.getItem('physton_icon_refreshed')) {
 // Then: load sidebar.js via fetch+eval to bypass browser script caching.
 // Same path rule: NO "webui/" prefix.
 (function() {
-    fetch('/gradio_api/file=javascript/sidebar.js?v=83&t=' + Date.now(), { cache: 'no-store' })
+    fetch('/gradio_api/file=javascript/sidebar.js?v=84&t=' + Date.now(), { cache: 'no-store' })
         .then(function(r) { return r.text(); })
         .then(function(code) {
             try {
