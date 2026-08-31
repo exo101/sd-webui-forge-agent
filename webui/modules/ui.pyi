@@ -92,58 +92,29 @@ detect_image_size_symbol = "\U0001f4d0"  # 📐
 plaintext_to_html = ui_common.plaintext_to_html
 
 
-# ============================================================
-# Gradio 5 compatibility monkey-patches
-# Gradio 5 added strict bounds checking in Slider.preprocess and
-# Dropdown.preprocess that rejects:
-#   - Seed sentinel value -1 (means "random seed") when slider minimum > -1
-#   - Empty-string dropdown values when choices list is empty
-# Without these patches, generation requests fail with HTTP 500.
-# ============================================================
-
-_original_slider_preprocess = gr.Slider.preprocess
-
-
-def _patched_slider_preprocess(self, payload):
-    try:
-        return _original_slider_preprocess(self, payload)
-    except gr.Error:
-        # -1 is the sentinel for "random seed" — let it pass through.
-        # Forge's processing code handles -1 as "pick a random seed".
-        if payload == -1:
-            return -1
-        # Otherwise clamp to minimum as a safe fallback.
-        minimum = getattr(self, "minimum", None)
-        if minimum is not None and payload < minimum:
-            return minimum
-        raise
-
-
-gr.Slider.preprocess = _patched_slider_preprocess
-
-_original_dropdown_preprocess = gr.Dropdown.preprocess
-
-
-def _patched_dropdown_preprocess(self, payload):
-    try:
-        return _original_dropdown_preprocess(self, payload)
-    except gr.Error:
-        # Empty choices + empty payload: return None instead of crashing.
-        # This happens during model/VAE dropdown initialization when the
-        # choices list hasn't been populated yet.
-        choice_values = [value for _, value in getattr(self, "choices", [])]
-        if not choice_values:
-            return None
-        # Payload not in choices: return first available choice as fallback.
-        if choice_values:
-            return choice_values[0] if self.type == "value" else 0
-        return None
-
-
-gr.Dropdown.preprocess = _patched_dropdown_preprocess
-
-
 _STEP = int(opts.res_step)
+
+from gradio.events import Dependency
+
+class SafeSlider(gr.Slider):
+    """防御性 Slider：Gradio 5 前端偶尔会发送 -1（未初始化占位值），
+    此子类在 preprocess 时将越界值替换为组件默认值或最小值，避免生成时崩溃。"""
+
+    def preprocess(self, payload):
+        try:
+            return super().preprocess(payload)
+        except Exception:
+            # -1 或其他越界值 → 回退到默认值，再回退到最小值
+            fallback = self.value if self.value is not None else self.minimum
+            try:
+                return float(fallback)
+            except (TypeError, ValueError):
+                return float(self.minimum)
+    from typing import Callable, Literal, Sequence, Any, TYPE_CHECKING
+    from gradio.blocks import Block
+    if TYPE_CHECKING:
+        from gradio.components import Timer
+        from gradio.components.base import Component
 
 
 def sRound(val: int | float) -> int:
@@ -289,8 +260,8 @@ def create_ui():
                     elif category == "dimensions":
                         with FormRow():
                             with gr.Column(elem_id="txt2img_column_size", scale=4):
-                                width = gr.Slider(minimum=64, maximum=2048, step=_STEP, label="Width", value=1024, elem_id="txt2img_width")
-                                height = gr.Slider(minimum=64, maximum=2048, step=_STEP, label="Height", value=1024, elem_id="txt2img_height")
+                                width = SafeSlider(minimum=64, maximum=2048, step=_STEP, label="Width", value=1024, elem_id="txt2img_width")
+                                height = SafeSlider(minimum=64, maximum=2048, step=_STEP, label="Height", value=1024, elem_id="txt2img_height")
 
                                 # 纵横比快捷按钮（整合自 aspect-ratio-helper 插件）
                                 if opts.arh_show_aspect_buttons:
@@ -679,8 +650,8 @@ def create_ui():
                                     with gr.Tab(label="Resize to", id="to", elem_id="img2img_tab_resize_to") as tab_scale_to:
                                         with FormRow():
                                             with gr.Column(elem_id="img2img_column_size", scale=4):
-                                                width = gr.Slider(minimum=64, maximum=2048, step=_STEP, label="Width", value=1024, elem_id="img2img_width")
-                                                height = gr.Slider(minimum=64, maximum=2048, step=_STEP, label="Height", value=1024, elem_id="img2img_height")
+                                                width = SafeSlider(minimum=64, maximum=2048, step=_STEP, label="Width", value=1024, elem_id="img2img_width")
+                                                height = SafeSlider(minimum=64, maximum=2048, step=_STEP, label="Height", value=1024, elem_id="img2img_height")
 
                                                 # 纵横比快捷按钮（整合自 aspect-ratio-helper 插件）
                                                 if opts.arh_show_aspect_buttons:
@@ -1119,7 +1090,7 @@ if (!sessionStorage.getItem('physton_icon_refreshed')) {
 // resolves relative paths against script_path (webui dir), so the correct
 // URL is /gradio_api/file=theme.css (NOT /gradio_api/file=webui/theme.css)
 (function() {
-    fetch('/gradio_api/file=theme.css?v=82&t=' + Date.now(), { cache: 'no-store' })
+    fetch('/gradio_api/file=theme.css?v=81&t=' + Date.now(), { cache: 'no-store' })
         .then(function(r) { return r.text(); })
         .then(function(css) {
             var old = document.getElementById('sd-theme-style');
@@ -1135,7 +1106,7 @@ if (!sessionStorage.getItem('physton_icon_refreshed')) {
 // Then: load sidebar.js via fetch+eval to bypass browser script caching.
 // Same path rule: NO "webui/" prefix.
 (function() {
-    fetch('/gradio_api/file=javascript/sidebar.js?v=82&t=' + Date.now(), { cache: 'no-store' })
+    fetch('/gradio_api/file=javascript/sidebar.js?v=81&t=' + Date.now(), { cache: 'no-store' })
         .then(function(r) { return r.text(); })
         .then(function(code) {
             try {
@@ -1253,27 +1224,6 @@ def setup_ui_api(app):
 
     app.add_api_route("/internal/sysinfo", download_sysinfo, methods=["GET"])
     app.add_api_route("/internal/sysinfo-download", lambda: download_sysinfo(attachment=True), methods=["GET"])
-
-    # Global redirect for legacy Gradio file-serving prefixes.
-    # Gradio 5 mounts all file access under /gradio_api/, but many plugins still
-    # hardcode the old /file=, /stream/, /proxy= prefixes which cause 404s.
-    # Using add_api_route (NOT @app.middleware) is safe to call after the app
-    # has started, and only matches these exact path patterns — it will never
-    # interfere with /gradio_api/upload or other legitimate endpoints.
-    from fastapi import Request as _Request
-    from fastapi.responses import RedirectResponse as _RedirectResponse
-
-    def _redirect_old_gradio_prefix(request: _Request):
-        path = request.url.path
-        query = request.url.query
-        new_url = "/gradio_api" + path
-        if query:
-            new_url += "?" + query
-        return _RedirectResponse(url=new_url, status_code=301)
-
-    app.add_api_route("/file={file_path:path}", _redirect_old_gradio_prefix, methods=["GET"])
-    app.add_api_route("/stream/{file_path:path}", _redirect_old_gradio_prefix, methods=["GET"])
-    app.add_api_route("/proxy={file_path:path}", _redirect_old_gradio_prefix, methods=["GET"])
 
     import fastapi.staticfiles
 

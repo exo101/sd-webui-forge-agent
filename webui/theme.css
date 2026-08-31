@@ -1,0 +1,1589 @@
+/* ============================================================
+   SD WebUI Apple-Style Theme System
+   独立主题文件 - 高特异性确保覆盖 Gradio dark 主题
+   ============================================================ */
+
+:root {
+    --sd-radius-sm: 8px;
+    --sd-radius-md: 12px;
+    --sd-radius-lg: 16px;
+    --sd-radius-xl: 20px;
+    --sd-radius-pill: 999px;
+    --sd-transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --sd-transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --sd-font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Microsoft YaHei', sans-serif;
+
+    /* Unified spacing system — 统一间距尺度 */
+    --sd-gap-xs: 4px;
+    --sd-gap-sm: 8px;
+    --sd-gap-md: 12px;
+    --sd-gap-lg: 16px;
+    --sd-gap-xl: 20px;
+    --sd-gap-2xl: 24px;
+
+    /* Sidebar width — 侧边栏宽度 */
+    --sd-sidebar-width: 220px;
+    --sd-main-left: var(--sd-sidebar-width);
+}
+
+/* ============================================================
+   Theme Variables - 高特异性选择器
+   body.dark.theme-xxx 确保覆盖 Gradio 的 html.dark 变量
+   ============================================================ */
+
+body.theme-apple-light,
+body.dark.theme-apple-light {
+    --sd-bg-page: #e8e8ed;
+    --sd-bg-sidebar: #f5f5f7;
+    --sd-bg-card: #ffffff;
+    --sd-bg-elevated: #f0f0f2;
+    --sd-bg-hover: rgba(0, 0, 0, 0.04);
+    --sd-bg-active: rgba(0, 113, 227, 0.1);
+    --sd-text-primary: #1d1d1f;
+    --sd-text-secondary: #6e6e73;
+    --sd-text-tertiary: #86868b;
+    --sd-text-on-accent: #ffffff;
+    --sd-accent: #0071e3;
+    --sd-accent-hover: #0077ed;
+    --sd-accent-soft: rgba(0, 113, 227, 0.08);
+    --sd-border: rgba(0, 0, 0, 0.08);
+    --sd-border-strong: rgba(0, 0, 0, 0.12);
+    --sd-divider: rgba(0, 0, 0, 0.06);
+    --sd-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --sd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+    --sd-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.12);
+    --sd-success: #34c759;
+    --sd-warning: #ff9500;
+    --sd-error: #ff3b30;
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+body.theme-dark-blue,
+body.dark.theme-dark-blue {
+    --sd-bg-page: #0d0d12;
+    --sd-bg-sidebar: #16161f;
+    --sd-bg-card: #1c1c28;
+    --sd-bg-elevated: #252532;
+    --sd-bg-hover: rgba(255, 255, 255, 0.06);
+    --sd-bg-active: rgba(10, 132, 255, 0.15);
+    --sd-text-primary: #f5f5f7;
+    --sd-text-secondary: #9898a5;
+    --sd-text-tertiary: #6e6e7e;
+    --sd-text-on-accent: #ffffff;
+    --sd-accent: #0a84ff;
+    --sd-accent-hover: #007aff;
+    --sd-accent-soft: rgba(10, 132, 255, 0.1);
+    --sd-border: rgba(255, 255, 255, 0.08);
+    --sd-border-strong: rgba(255, 255, 255, 0.14);
+    --sd-divider: rgba(255, 255, 255, 0.06);
+    --sd-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --sd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --sd-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+    --sd-success: #30d158;
+    --sd-warning: #ff9f0a;
+    --sd-error: #ff453a;
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+body.theme-dark-green,
+body.dark.theme-dark-green {
+    --sd-bg-page: #0d0d10;
+    --sd-bg-sidebar: #16161a;
+    --sd-bg-card: #1c1c20;
+    --sd-bg-elevated: #25252a;
+    --sd-bg-hover: rgba(255, 255, 255, 0.06);
+    --sd-bg-active: rgba(48, 209, 88, 0.15);
+    --sd-text-primary: #f5f5f7;
+    --sd-text-secondary: #98989d;
+    --sd-text-tertiary: #6e6e73;
+    --sd-text-on-accent: #000000;
+    --sd-accent: #30d158;
+    --sd-accent-hover: #28bd46;
+    --sd-accent-soft: rgba(48, 209, 88, 0.1);
+    --sd-border: rgba(255, 255, 255, 0.08);
+    --sd-border-strong: rgba(255, 255, 255, 0.14);
+    --sd-divider: rgba(255, 255, 255, 0.06);
+    --sd-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --sd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --sd-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+    --sd-success: #30d158;
+    --sd-warning: #ff9f0a;
+    --sd-error: #ff453a;
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+body.theme-dark-purple,
+body.dark.theme-dark-purple {
+    --sd-bg-page: #0f0d14;
+    --sd-bg-sidebar: #1a1722;
+    --sd-bg-card: #221f2e;
+    --sd-bg-elevated: #2d2938;
+    --sd-bg-hover: rgba(255, 255, 255, 0.06);
+    --sd-bg-active: rgba(191, 90, 242, 0.15);
+    --sd-text-primary: #f5f5f7;
+    --sd-text-secondary: #a098a8;
+    --sd-text-tertiary: #736e7e;
+    --sd-text-on-accent: #ffffff;
+    --sd-accent: #bf5af2;
+    --sd-accent-hover: #af52de;
+    --sd-accent-soft: rgba(191, 90, 242, 0.1);
+    --sd-border: rgba(255, 255, 255, 0.08);
+    --sd-border-strong: rgba(255, 255, 255, 0.14);
+    --sd-divider: rgba(255, 255, 255, 0.06);
+    --sd-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --sd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --sd-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+    --sd-success: #30d158;
+    --sd-warning: #ff9f0a;
+    --sd-error: #ff453a;
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+body.theme-dark-orange,
+body.dark.theme-dark-orange {
+    --sd-bg-page: #0d0d0e;
+    --sd-bg-sidebar: #16161a;
+    --sd-bg-card: #1c1c1e;
+    --sd-bg-elevated: #25252a;
+    --sd-bg-hover: rgba(255, 255, 255, 0.06);
+    --sd-bg-active: rgba(255, 149, 0, 0.15);
+    --sd-text-primary: #f5f5f7;
+    --sd-text-secondary: #98989d;
+    --sd-text-tertiary: #6e6e73;
+    --sd-text-on-accent: #000000;
+    --sd-accent: #ff9500;
+    --sd-accent-hover: #e68300;
+    --sd-accent-soft: rgba(255, 149, 0, 0.1);
+    --sd-border: rgba(255, 255, 255, 0.08);
+    --sd-border-strong: rgba(255, 255, 255, 0.14);
+    --sd-divider: rgba(255, 255, 255, 0.06);
+    --sd-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --sd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --sd-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+    --sd-success: #30d158;
+    --sd-warning: #ffd60a;
+    --sd-error: #ff453a;
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+body.theme-obsidian,
+body.dark.theme-obsidian {
+    --sd-bg-page: #000000;
+    --sd-bg-sidebar: #0a0a0a;
+    --sd-bg-card: #111111;
+    --sd-bg-elevated: #1a1a1a;
+    --sd-bg-hover: rgba(255, 255, 255, 0.05);
+    --sd-bg-active: rgba(255, 255, 255, 0.1);
+    --sd-text-primary: #f5f5f7;
+    --sd-text-secondary: #98989d;
+    --sd-text-tertiary: #6e6e73;
+    --sd-text-on-accent: #000000;
+    --sd-accent: #f5f5f7;
+    --sd-accent-hover: #e8e8ed;
+    --sd-accent-soft: rgba(255, 255, 255, 0.08);
+    --sd-border: rgba(255, 255, 255, 0.08);
+    --sd-border-strong: rgba(255, 255, 255, 0.14);
+    --sd-divider: rgba(255, 255, 255, 0.06);
+    --sd-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --sd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.6);
+    --sd-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.7);
+    --sd-success: #30d158;
+    --sd-warning: #ff9f0a;
+    --sd-error: #ff453a;
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+body.theme-light-blue,
+body.dark.theme-light-blue {
+    --sd-bg-page: #e8f0fe;
+    --sd-bg-sidebar: #f0f5ff;
+    --sd-bg-card: #ffffff;
+    --sd-bg-elevated: #f0f5ff;
+    --sd-bg-hover: rgba(10, 132, 255, 0.06);
+    --sd-bg-active: rgba(10, 132, 255, 0.12);
+    --sd-text-primary: #121a2e;
+    --sd-text-secondary: #5a6a88;
+    --sd-text-tertiary: #8690a8;
+    --sd-text-on-accent: #ffffff;
+    --sd-accent: #0a84ff;
+    --sd-accent-hover: #007aff;
+    --sd-accent-soft: rgba(10, 132, 255, 0.08);
+    --sd-border: rgba(10, 132, 255, 0.1);
+    --sd-border-strong: rgba(10, 132, 255, 0.18);
+    --sd-divider: rgba(0, 0, 0, 0.05);
+    --sd-shadow-sm: 0 1px 3px rgba(10, 132, 255, 0.08);
+    --sd-shadow-md: 0 4px 16px rgba(10, 132, 255, 0.12);
+    --sd-shadow-lg: 0 8px 40px rgba(10, 132, 255, 0.15);
+    --sd-success: #34c759;
+    --sd-warning: #ff9500;
+    --sd-error: #ff3b30;
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+body.theme-light-green,
+body.dark.theme-light-green {
+    --sd-bg-page: #eaf5eb;
+    --sd-bg-sidebar: #f0faf0;
+    --sd-bg-card: #ffffff;
+    --sd-bg-elevated: #f0f8f0;
+    --sd-bg-hover: rgba(52, 199, 89, 0.06);
+    --sd-bg-active: rgba(52, 199, 89, 0.12);
+    --sd-text-primary: #1a2e1c;
+    --sd-text-secondary: #5a7a5e;
+    --sd-text-tertiary: #869988;
+    --sd-text-on-accent: #ffffff;
+    --sd-accent: #34c759;
+    --sd-accent-hover: #2db84e;
+    --sd-accent-soft: rgba(52, 199, 89, 0.08);
+    --sd-border: rgba(52, 199, 89, 0.1);
+    --sd-border-strong: rgba(52, 199, 89, 0.18);
+    --sd-divider: rgba(0, 0, 0, 0.05);
+    --sd-shadow-sm: 0 1px 3px rgba(52, 199, 89, 0.08);
+    --sd-shadow-md: 0 4px 16px rgba(52, 199, 89, 0.12);
+    --sd-shadow-lg: 0 8px 40px rgba(52, 199, 89, 0.15);
+    --sd-success: #34c759;
+    --sd-warning: #ff9500;
+    --sd-error: #ff3b30;
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+body.theme-warm-orange,
+body.dark.theme-warm-orange {
+    --sd-bg-page: #f5ede0;
+    --sd-bg-sidebar: #fdf6f0;
+    --sd-bg-card: #fffcf8;
+    --sd-bg-elevated: #fff8f0;
+    --sd-bg-hover: rgba(255, 149, 0, 0.06);
+    --sd-bg-active: rgba(255, 149, 0, 0.12);
+    --sd-text-primary: #2e1e0e;
+    --sd-text-secondary: #8b7355;
+    --sd-text-tertiary: #b09977;
+    --sd-text-on-accent: #ffffff;
+    --sd-accent: #ff9500;
+    --sd-accent-hover: #ff8800;
+    --sd-accent-soft: rgba(255, 149, 0, 0.08);
+    --sd-border: rgba(255, 149, 0, 0.12);
+    --sd-border-strong: rgba(255, 149, 0, 0.2);
+    --sd-divider: rgba(0, 0, 0, 0.05);
+    --sd-shadow-sm: 0 1px 3px rgba(255, 149, 0, 0.08);
+    --sd-shadow-md: 0 4px 16px rgba(255, 149, 0, 0.12);
+    --sd-shadow-lg: 0 8px 40px rgba(255, 149, 0, 0.15);
+    --sd-success: #34c759;
+    --sd-warning: #ff9500;
+    --sd-error: #ff3b30;
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+body.theme-sakura-pink,
+body.dark.theme-sakura-pink {
+    --sd-bg-page: #f5e8ee;
+    --sd-bg-sidebar: #fef5f7;
+    --sd-bg-card: #fffafa;
+    --sd-bg-elevated: #fef0f4;
+    --sd-bg-hover: rgba(232, 67, 147, 0.06);
+    --sd-bg-active: rgba(232, 67, 147, 0.12);
+    --sd-text-primary: #3a1a28;
+    --sd-text-secondary: #8b5a6e;
+    --sd-text-tertiary: #b0808e;
+    --sd-text-on-accent: #ffffff;
+    --sd-accent: #e84393;
+    --sd-accent-hover: #d63384;
+    --sd-accent-soft: rgba(232, 67, 147, 0.08);
+    --sd-border: rgba(232, 67, 147, 0.12);
+    --sd-border-strong: rgba(232, 67, 147, 0.2);
+    --sd-divider: rgba(0, 0, 0, 0.05);
+    --sd-shadow-sm: 0 1px 3px rgba(232, 67, 147, 0.08);
+    --sd-shadow-md: 0 4px 16px rgba(232, 67, 147, 0.12);
+    --sd-shadow-lg: 0 8px 40px rgba(232, 67, 147, 0.15);
+    --sd-success: #34c759;
+    --sd-warning: #ff9500;
+    --sd-error: #ff3b30;
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+/* ============================================================
+   Gradio 5 Text Color Variable Mapping
+   高特异性 body.dark[class*="theme-"] (0,2,1) 覆盖 Gradio dark 主题
+   解决浅色主题下顶部区域文字仍为深色主题浅色值的问题
+   ============================================================ */
+
+body.dark[class*="theme-"],
+body[class*="theme-"] {
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --block-title-text-color: var(--sd-text-primary);
+    --block-label-text-color: var(--sd-text-secondary);
+    --block-info-text-color: var(--sd-text-tertiary);
+    --block-error-text-color: var(--sd-error);
+    --checkbox-label-text-color: var(--sd-text-primary);
+    --input-text-color: var(--sd-text-primary);
+    --input-text-color-placeholder: var(--sd-text-tertiary);
+    --input-text-color-focus: var(--sd-text-primary);
+    --link-text-color: var(--sd-accent);
+    --link-text-color-hover: var(--sd-accent-hover);
+    --tab-text-color: var(--sd-text-secondary);
+    --tab-selected-text-color: var(--sd-accent);
+    --tab-selected-text-color-hover: var(--sd-accent-hover);
+    --accordion-text-color: var(--sd-text-primary);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-primary-text-color-hover: var(--sd-text-on-accent);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --button-secondary-text-color-hover: var(--sd-text-primary);
+    --button-cancel-text-color: var(--sd-text-primary);
+    --error-text-color: var(--sd-error);
+    --section-header-text-color: var(--sd-text-secondary);
+    --item-text-color: var(--sd-text-primary);
+    --radio-text-color: var(--sd-text-primary);
+    --slider-text-color: var(--sd-text-secondary);
+    --footer-text-color: var(--sd-text-tertiary);
+}
+
+/* 显式强制顶部区域文字颜色（防止个别组件内联样式覆盖） */
+body.dark[class*="theme-"] #tabs,
+body.dark[class*="theme-"] #tabs *,
+body.dark[class*="theme-"] #tabs button,
+body.dark[class*="theme-"] #tabs .tab-nav button,
+body.dark[class*="theme-"] .tab-nav,
+body.dark[class*="theme-"] .tab-nav *,
+body.dark[class*="theme-"] .quicksettings,
+body.dark[class*="theme-"] .quicksettings *,
+body.dark[class*="theme-"] .toolbar,
+body.dark[class*="theme-"] .toolbar *,
+body.dark[class*="theme-"] header,
+body.dark[class*="theme-"] header *,
+body.dark[class*="theme-"] .gradio-container,
+body.dark[class*="theme-"] .gradio-container * {
+    color: var(--sd-text-primary);
+}
+
+/* 链接使用主题强调色 */
+body.dark[class*="theme-"] a,
+body.dark[class*="theme-"] .link,
+body.dark[class*="theme-"] .gr-link {
+    color: var(--sd-accent) !important;
+}
+
+/* 选中的 tab 使用强调色 */
+body.dark[class*="theme-"] #tabs .tab-nav button.selected,
+body.dark[class*="theme-"] #tabs button[aria-selected="true"] {
+    color: var(--sd-accent) !important;
+}
+
+/* 辅助文字使用次要色 */
+body.dark[class*="theme-"] .text-subdued,
+body.dark[class*="theme-"] .gr-text-subdued,
+body.dark[class*="theme-"] .info,
+body.dark[class*="theme-"] .gr-info {
+    color: var(--sd-text-secondary) !important;
+}
+
+/* 输入框文字 */
+body.dark[class*="theme-"] input,
+body.dark[class*="theme-"] textarea,
+body.dark[class*="theme-"] select {
+    color: var(--sd-text-primary) !important;
+    -webkit-text-fill-color: var(--sd-text-primary) !important;
+}
+
+body.dark[class*="theme-"] input::placeholder,
+body.dark[class*="theme-"] textarea::placeholder {
+    color: var(--sd-text-tertiary) !important;
+    -webkit-text-fill-color: var(--sd-text-tertiary) !important;
+}
+
+/* ============================================================
+   Apple-Style Component Overrides
+   高特异性: body[class*="theme-"] 确保覆盖所有主题状态
+   ============================================================ */
+
+body[class*="theme-"] {
+    font-family: var(--sd-font) !important;
+    transition: var(--sd-transition);
+    background-color: var(--sd-bg-page) !important;
+    color: var(--sd-text-primary) !important;
+}
+
+body[class*="theme-"] .gradio-container,
+body[class*="theme-"] .gradio-container > .wrap,
+body[class*="theme-"] #tabs {
+    background-color: var(--sd-bg-page) !important;
+}
+
+/* 全局圆角覆盖——仅容器/输入框类，不包含按钮（按钮保持圆润） */
+body[class*="theme-"] input,
+body[class*="theme-"] textarea,
+body[class*="theme-"] select,
+body[class*="theme-"] .block,
+body[class*="theme-"] .form,
+body[class*="theme-"] .panel,
+body[class*="theme-"] .group,
+body[class*="theme-"] .tabs,
+body[class*="theme-"] .tab,
+body[class*="theme-"] .input-accordion,
+body[class*="theme-"] .accordion,
+body[class*="theme-"] .dropdown,
+body[class*="theme-"] .slider,
+body[class*="theme-"] .number,
+body[class*="theme-"] .textbox,
+body[class*="theme-"] .checkbox,
+body[class*="theme-"] .radio {
+    border-radius: 2px !important;
+    transition: var(--sd-transition) !important;
+}
+
+/* 按钮特殊圆角 - 更大更圆润 (Apple pill shape) */
+body[class*="theme-"] button.primary,
+body[class*="theme-"] button.secondary,
+body[class*="theme-"] button.lg,
+body[class*="theme-"] button[class*="primary"],
+body[class*="theme-"] button[class*="secondary"],
+body[class*="theme-"] .gradio-container button {
+    border-radius: var(--sd-radius-pill) !important;
+}
+
+/* 排除：Gallery 缩略图按钮保持正常圆角，pill(999px) 会把缩略图裁成圆形 */
+body[class*="theme-"] .gradio-gallery button,
+body[class*="theme-"] .gallery button,
+body[class*="theme-"] .thumbnail-item,
+body[class*="theme-"] .thumbnail-item button {
+    border-radius: var(--sd-radius-md) !important;
+}
+
+body[class*="theme-"] button.primary {
+    box-shadow: var(--sd-shadow-sm);
+    font-weight: 500;
+}
+
+body[class*="theme-"] button.primary:hover {
+    box-shadow: var(--sd-shadow-md);
+    transform: translateY(-1px);
+}
+
+body[class*="theme-"] button.primary:active {
+    transform: translateY(0);
+    box-shadow: var(--sd-shadow-sm);
+}
+
+/* 输入框（UI 框不使用大圆角，避免遮挡边缘文字） */
+body[class*="theme-"] input[type="text"],
+body[class*="theme-"] input[type="number"],
+body[class*="theme-"] textarea,
+body[class*="theme-"] select {
+    border-radius: 2px !important;
+    transition: var(--sd-transition-fast) !important;
+    background-color: var(--sd-bg-elevated) !important;
+    border-color: var(--sd-border) !important;
+}
+
+body[class*="theme-"] input[type="text"]:focus,
+body[class*="theme-"] input[type="number"]:focus,
+body[class*="theme-"] textarea:focus,
+body[class*="theme-"] select:focus {
+    box-shadow: 0 0 0 3px var(--sd-accent-soft) !important;
+    border-color: var(--sd-accent) !important;
+}
+
+/* 滑块 */
+body[class*="theme-"] .gradio-slider input[type="range"] {
+    border-radius: var(--sd-radius-pill) !important;
+}
+
+body[class*="theme-"] .gradio-slider input[type="range"]::-webkit-slider-thumb {
+    border-radius: 50% !important;
+    box-shadow: var(--sd-shadow-sm);
+    transition: var(--sd-transition-fast);
+}
+
+body[class*="theme-"] .gradio-slider input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: var(--sd-shadow-md);
+}
+
+/* 卡片/面板（UI 框不使用大圆角） */
+body[class*="theme-"] .block,
+body[class*="theme-"] .form {
+    box-shadow: var(--sd-shadow-sm);
+    border-radius: 2px !important;
+    background-color: var(--sd-bg-card) !important;
+}
+
+/* 标签页 */
+body[class*="theme-"] .tabs {
+    border-radius: 2px !important;
+}
+
+body[class*="theme-"] .tab-nav button {
+    border-radius: var(--sd-radius-pill) !important;
+}
+
+body[class*="theme-"] .tab-nav button.selected {
+    background-color: var(--sd-accent-soft) !important;
+    color: var(--sd-accent) !important;
+}
+
+/* 下拉菜单 */
+body[class*="theme-"] .gradio-dropdown ul.options,
+body[class*="theme-"] .dropdown ul.options {
+    border-radius: var(--sd-radius-md) !important;
+    box-shadow: var(--sd-shadow-md);
+}
+
+/* 滚动条 */
+body[class*="theme-"] ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+body[class*="theme-"] ::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+body[class*="theme-"] ::-webkit-scrollbar-thumb {
+    background: var(--sd-border-strong);
+    border-radius: var(--sd-radius-pill);
+}
+
+body[class*="theme-"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--sd-text-tertiary);
+}
+
+/* 主题弹窗样式 */
+#sd-theme-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#sd-theme-overlay.sd-theme-visible {
+    display: flex;
+    opacity: 1;
+}
+
+#sd-theme-modal {
+    background: var(--sd-bg-card, #ffffff);
+    border-radius: var(--sd-radius-xl, 20px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    padding: 28px;
+    max-width: 520px;
+    width: 90%;
+    transform: scale(0.95);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+#sd-theme-overlay.sd-theme-visible #sd-theme-modal {
+    transform: scale(1);
+}
+
+#sd-theme-modal h3 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--sd-text-primary, #1d1d1f);
+}
+
+.sd-theme-subtitle {
+    margin: 0 0 20px;
+    font-size: 14px;
+    color: var(--sd-text-secondary, #6e6e73);
+}
+
+.sd-theme-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.sd-theme-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 8px;
+    border-radius: var(--sd-radius-md, 12px);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+    background: var(--sd-bg-elevated, #f0f0f2);
+}
+
+.sd-theme-option:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sd-shadow-md, 0 4px 16px rgba(0,0,0,0.1));
+}
+
+.sd-theme-option.sd-theme-active {
+    border-color: var(--sd-accent, #0071e3);
+    background: var(--sd-accent-soft, rgba(0,113,227,0.08));
+}
+
+.sd-theme-swatch {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    box-shadow: var(--sd-shadow-sm, 0 1px 3px rgba(0,0,0,0.1));
+}
+
+.sd-theme-option span {
+    font-size: 12px;
+    color: var(--sd-text-primary, #1d1d1f);
+    font-weight: 500;
+}
+
+#sd-theme-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--sd-bg-elevated, #f0f0f2);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--sd-text-secondary, #6e6e73);
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#sd-theme-close:hover {
+    background: var(--sd-border-strong, rgba(0,0,0,0.12));
+    color: var(--sd-text-primary, #1d1d1f);
+}
+
+/* ============================================================
+   Sidebar Theme Integration
+   统一侧边栏与主界面风格：所有颜色映射到主题变量
+   苹果毛玻璃效果：半透明背景 + backdrop-filter blur
+   ============================================================ */
+
+/* 侧边栏主容器 - 毛玻璃效果，背景随主题变化 */
+body[class*="theme-"] .sd-sidebar {
+    background: color-mix(in srgb, var(--sd-bg-sidebar) 82%, transparent) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+    border-right: 1px solid var(--sd-border) !important;
+    box-shadow: var(--sd-shadow-sm) !important;
+}
+
+/* 侧边栏顶部品牌区 */
+body[class*="theme-"] .sd-sidebar-brand,
+body[class*="theme-"] .sd-sidebar-logo {
+    color: var(--sd-text-primary) !important;
+    border-bottom: 1px solid var(--sd-divider) !important;
+}
+
+/* 侧边栏导航项 - 正常状态 */
+body[class*="theme-"] .sd-sidebar-item {
+    color: var(--sd-text-primary) !important;
+    background: transparent !important;
+    border-radius: var(--sd-radius-md) !important;
+    transition: var(--sd-transition-fast) !important;
+    margin: 2px 8px !important;
+    padding: 8px 12px 8px 38px !important;
+}
+
+/* 侧边栏导航项 - 悬停状态 */
+body[class*="theme-"] .sd-sidebar-item:hover {
+    background: var(--sd-bg-hover) !important;
+    color: var(--sd-text-primary) !important;
+    transform: translateX(2px);
+}
+
+/* 侧边栏导航项 - 激活状态 */
+body[class*="theme-"] .sd-sidebar-item.active {
+    background: var(--sd-bg-active) !important;
+    color: var(--sd-accent) !important;
+    font-weight: 600 !important;
+}
+
+body[class*="theme-"] .sd-sidebar-item.active::before {
+    background: var(--sd-accent) !important;
+}
+
+/* 侧边栏图标颜色 */
+body[class*="theme-"] .sd-sidebar-icon,
+body[class*="theme-"] .sd-sidebar-item svg,
+body[class*="theme-"] .sd-sidebar-item .icon {
+    color: var(--sd-text-secondary) !important;
+    fill: var(--sd-text-secondary) !important;
+}
+
+body[class*="theme-"] .sd-sidebar-item.active .sd-sidebar-icon,
+body[class*="theme-"] .sd-sidebar-item.active svg {
+    color: var(--sd-accent) !important;
+    fill: var(--sd-accent) !important;
+}
+
+/* 侧边栏分组标签 */
+body[class*="theme-"] .sd-sidebar-group-label,
+body[class*="theme-"] .sd-sidebar-section-title {
+    color: var(--sd-text-tertiary) !important;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* 侧边栏页脚 */
+body[class*="theme-"] .sd-sidebar-footer {
+    background: transparent !important;
+    border-top: 1px solid var(--sd-divider) !important;
+}
+
+/* 侧边栏页脚项 */
+body[class*="theme-"] .sd-sidebar-footer-item {
+    color: var(--sd-text-secondary) !important;
+    background: transparent !important;
+    border-radius: var(--sd-radius-md) !important;
+    transition: var(--sd-transition-fast) !important;
+}
+
+body[class*="theme-"] .sd-sidebar-footer-item:hover {
+    background: var(--sd-bg-hover) !important;
+    color: var(--sd-text-primary) !important;
+}
+
+body[class*="theme-"] .sd-sidebar-footer-item.active {
+    background: var(--sd-bg-active) !important;
+    color: var(--sd-accent) !important;
+}
+
+/* 侧边栏页脚图标 */
+body[class*="theme-"] .sd-sidebar-footer-icon {
+    color: var(--sd-text-secondary) !important;
+}
+
+body[class*="theme-"] .sd-sidebar-footer-item:hover .sd-sidebar-footer-icon {
+    color: var(--sd-text-primary) !important;
+}
+
+/* 侧边栏底部主题按钮特殊样式 */
+body[class*="theme-"] #sd-theme-btn {
+    color: var(--sd-text-secondary) !important;
+}
+
+body[class*="theme-"] #sd-theme-btn:hover {
+    background: var(--sd-bg-hover) !important;
+    color: var(--sd-accent) !important;
+}
+
+/* 侧边栏分隔线 */
+body[class*="theme-"] .sd-sidebar-divider,
+body[class*="theme-"] .sd-sidebar-separator {
+    background: var(--sd-divider) !important;
+}
+
+/* 侧边栏折叠按钮 */
+body[class*="theme-"] .sd-sidebar-toggle,
+body[class*="theme-"] .sd-sidebar-collapse {
+    color: var(--sd-text-tertiary) !important;
+    background: var(--sd-bg-elevated) !important;
+    border-radius: var(--sd-radius-pill) !important;
+}
+
+body[class*="theme-"] .sd-sidebar-toggle:hover {
+    background: var(--sd-bg-hover) !important;
+    color: var(--sd-text-primary) !important;
+}
+
+/* === 控制辅助区域（种子行 + 提示词预设）=== */
+body[class*="theme-"] .sd-sidebar-controls-section {
+    border-top: 1px solid var(--sd-divider) !important;
+    margin-top: 4px !important;
+    padding-top: 4px !important;
+}
+
+body[class*="theme-"] .sd-controls-loading {
+    color: var(--sd-text-tertiary) !important;
+    font-size: 12px !important;
+    padding: 8px 12px !important;
+    text-align: center !important;
+}
+
+/* ============================================================
+   Seed popup CSS removed (v62): seed rows restored to native
+   Gradio positions in the main UI. No more sidebar popup for seed.
+   ============================================================ */
+
+/* 侧边栏滚动条（窄版） */
+body[class*="theme-"] .sd-sidebar ::-webkit-scrollbar {
+    width: 4px;
+}
+
+body[class*="theme-"] .sd-sidebar ::-webkit-scrollbar-thumb {
+    background: var(--sd-border-strong);
+    border-radius: var(--sd-radius-pill);
+}
+
+body[class*="theme-"] .sd-sidebar ::-webkit-scrollbar-thumb:hover {
+    background: var(--sd-text-tertiary);
+}
+
+/* ============================================================
+   Layout & Spacing Unification
+   1. 修复 UI Preset 双线 + 下方间距过大
+   2. 侧边栏与主内容间距
+   3. 圆角遮挡文字 → 增加内边距
+   4. 全局布局间隔均匀
+   ============================================================ */
+
+/* --- PROBLEM 1: UI Preset 双线 + 下方间距 --- */
+/* 移除 Gradio wrap 容器的冗余底部边框（双线来源） */
+body[class*="theme-"] .wrap.svelte-1hfxrpf,
+body[class*="theme-"] .gradio-container > .wrap {
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+/* 紧凑下拉框/输入框行的底部间距（UI Preset 所在行） */
+body[class*="theme-"] .gradio-row,
+body[class*="theme-"] .row {
+    margin-bottom: var(--sd-gap-sm) !important;
+    gap: var(--sd-gap-sm) !important;
+}
+
+/* 下拉框容器紧凑化 */
+body[class*="theme-"] .gradio-dropdown,
+body[class*="theme-"] .dropdown,
+body[class*="theme-"] .gradio-textbox,
+body[class*="theme-"] .textbox,
+body[class*="theme-"] .gradio-number,
+body[class*="theme-"] .number {
+    margin-bottom: var(--sd-gap-sm) !important;
+}
+
+/* --- PROBLEM 2: 侧边栏与主内容一体化缩放 ---
+   之前侧边栏用 position: fixed 脱离文档流，缩放时不同步
+   现在改用 body flex 布局，侧边栏 + 主内容在同一 flex 容器中，同步缩放 */
+body[class*="theme-"] {
+    display: flex !important;
+    flex-direction: row !important;
+    min-height: 100vh !important;
+}
+
+/* 侧边栏从 fixed 改为 sticky，在 flex 容器中随文档流缩放 */
+/* order:-1 确保侧边栏始终在左侧，即使 DOM 顺序在 gradio-container 之后 */
+body[class*="theme-"] .sd-sidebar {
+    position: sticky !important;
+    top: 0 !important;
+    left: 0 !important;
+    order: -1 !important;
+    flex-shrink: 0 !important;
+    width: var(--sd-sidebar-width) !important;
+    min-width: var(--sd-sidebar-width) !important;
+    height: 100vh !important;
+    z-index: 999 !important;
+}
+
+/* 主内容区在 flex 容器中自适应填充，不再需要 margin-left */
+html body[class*="theme-"] div.gradio-container,
+html body[class*="theme-"] .gradio-container {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    padding-left: var(--sd-gap-lg) !important;
+    padding-right: var(--sd-gap-lg) !important;
+    max-width: none !important;
+    width: auto !important;
+}
+
+/* 侧边栏折叠时收起到屏幕左侧外 */
+body[class*="theme-"] .sd-sidebar-collapsed .sd-sidebar {
+    transform: translateX(calc(-1 * var(--sd-sidebar-width) + 30px)) !important;
+}
+
+body[class*="theme-"] .sd-sidebar-collapsed .gradio-container {
+    margin-left: 0 !important;
+    max-width: none !important;
+}
+
+/* --- PROBLEM 3: 圆角遮挡文字 → 增加内边距 --- */
+/* 大圆角容器必须有足够内边距，防止文字被圆角裁切 (Gradio 5 实际类名) */
+body[class*="theme-"] .block,
+body[class*="theme-"] .gradio-form,
+body[class*="theme-"] .gradio-dropdown,
+body[class*="theme-"] .gradio-textbox,
+body[class*="theme-"] .gradio-number,
+body[class*="theme-"] .gradio-slider,
+body[class*="theme-"] .gradio-checkbox,
+body[class*="theme-"] .gradio-radio,
+body[class*="theme-"] .gradio-colorpicker,
+body[class*="theme-"] .panel,
+body[class*="theme-"] .group {
+    padding: var(--sd-gap-md) !important;
+}
+
+/* === 紧凑行特殊覆盖（UI Preset 所在行 .compact）===
+   防止 dropdown 被 padding 撑大导致换行，但保持足够内边距避免文字贴边 */
+body[class*="theme-"] .gradio-row.compact,
+body[class*="theme-"] .row.compact {
+    gap: 6px !important;
+    margin-bottom: 6px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+}
+
+body[class*="theme-"] .gradio-row.compact .gradio-dropdown,
+body[class*="theme-"] .row.compact .gradio-dropdown,
+body[class*="theme-"] .gradio-row.compact .block,
+body[class*="theme-"] .row.compact .block {
+    padding: 4px 10px !important;
+    margin-bottom: 4px !important;
+}
+
+/* 紧凑行内 dropdown 内部保持足够内边距，文字不贴圆角边缘 */
+body[class*="theme-"] .gradio-row.compact .gradio-dropdown .wrap,
+body[class*="theme-"] .row.compact .gradio-dropdown .wrap {
+    padding: 6px 12px !important;
+}
+
+/* === 全局圆角容器最小内边距，防止文字被圆角裁切 === */
+body[class*="theme-"] .gradio-dropdown,
+body[class*="theme-"] .gradio-textbox,
+body[class*="theme-"] .gradio-number,
+body[class*="theme-"] .gradio-checkbox,
+body[class*="theme-"] .gradio-radio,
+body[class*="theme-"] .block {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+}
+
+/* 进一步压缩模型栏与输入框之间的间距（当前 118px 过大） */
+body[class*="theme-"] #sampler_selection_txt2img,
+body[class*="theme-"] #sampler_selection_img2img {
+    margin-bottom: 4px !important;
+    padding-bottom: 4px !important;
+}
+
+body[class*="theme-"] #sampler_selection_txt2img + *,
+body[class*="theme-"] #sampler_selection_img2img + * {
+    margin-top: 4px !important;
+}
+
+/* === 双横线移除 ===
+   top:119 的链接 border-bottom 和 top:143 的 wrap border-bottom 形成双线 */
+body[class*="theme-"] .wrap.svelte-1scun43 {
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+/* 移除顶部导航链接的底部边框（双线来源之一） */
+body[class*="theme-"] .tab-nav a,
+body[class*="theme-"] #tabs > div > a,
+body[class*="theme-"] .gradio-container a[href] {
+    border-bottom: none !important;
+}
+
+/* === 真正根因：tab-container 的 ::after 伪元素绘制了两条 1px 分隔线 ===
+   模型栏与输入框之间的双线来自两个可见 tab-container 的 ::after
+   用最高特异性 + !important 覆盖 Svelte scoped CSS */
+html body[class*="theme-"] div[class*="tab-container"]::after,
+html body[class*="theme-"] div[class*="tab-nav"]::after,
+html body[class*="theme-"] div[class*="tab-wrapper"]::after,
+html body[class*="theme-"] .tab-container::after,
+html body[class*="theme-"] .tab-nav::after,
+html body[class*="theme-"] .tab-wrapper::after {
+    display: none !important;
+    content: none !important;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* tab-nav 不再整体隐藏——侧边栏导航与原生 tab 按钮并存
+   双线仅来自 ::after 伪元素，已在上方隐藏，无需隐藏 tab-nav */
+
+/* 下拉框/输入框内部文字不贴边 */
+body[class*="theme-"] .gradio-dropdown .wrap,
+body[class*="theme-"] .dropdown .wrap,
+body[class*="theme-"] .gradio-textbox textarea,
+body[class*="theme-"] .textbox textarea,
+body[class*="theme-"] .gradio-number input,
+body[class*="theme-"] .number input {
+    padding: 8px 14px !important;
+}
+
+/* 药丸按钮保证最小内边距，文字不被圆角切到 */
+body[class*="theme-"] button,
+body[class*="theme-"] .gradio-button,
+body[class*="theme-"] .tab-nav button {
+    padding: 6px 16px !important;
+    min-height: 32px !important;
+}
+
+/* 标签页按钮文字不贴边 */
+body[class*="theme-"] .tab-nav button {
+    padding: 8px 18px !important;
+}
+
+/* --- PROBLEM 4: 全局布局间隔均匀 --- */
+/* Gradio 5 主区块统一垂直间距 (使用实际存在的 gradio-* 类名) */
+body[class*="theme-"] .gradio-dropdown,
+body[class*="theme-"] .gradio-textbox,
+body[class*="theme-"] .gradio-number,
+body[class*="theme-"] .gradio-slider,
+body[class*="theme-"] .gradio-checkbox,
+body[class*="theme-"] .gradio-radio,
+body[class*="theme-"] .gradio-colorpicker,
+body[class*="theme-"] .gradio-form,
+body[class*="theme-"] .gradio-accordion,
+body[class*="theme-"] .gradio-file,
+body[class*="theme-"] .gradio-model3d,
+body[class*="theme-"] .panel,
+body[class*="theme-"] .group {
+    margin-bottom: var(--sd-gap-md) !important;
+}
+
+/* 图片画廊等大区块稍大间距 */
+body[class*="theme-"] .gradio-gallery,
+body[class*="theme-"] .gallery,
+body[class*="theme-"] .gradio-image,
+body[class*="theme-"] .image-container {
+    margin-bottom: var(--sd-gap-lg) !important;
+}
+
+/* 行内块水平间距统一 */
+body[class*="theme-"] .gradio-row,
+body[class*="theme-"] .row {
+    gap: var(--sd-gap-md) !important;
+}
+
+/* 列内垂直间距统一 */
+body[class*="theme-"] .gradio-column,
+body[class*="theme-"] .column {
+    gap: var(--sd-gap-sm) !important;
+}
+
+/* 提示词行紧凑但不挤压 */
+body[class*="theme-"] .prompt-row,
+body[class*="theme-"] .generate-box {
+    gap: var(--sd-gap-sm) !important;
+    margin-bottom: var(--sd-gap-sm) !important;
+}
+
+/* 滑块/控件间距统一 */
+body[class*="theme-"] .gradio-slider,
+body[class*="theme-"] .slider-container,
+body[class*="theme-"] .gradio-checkbox,
+body[class*="theme-"] .gradio-radio {
+    margin-bottom: var(--sd-gap-sm) !important;
+}
+
+/* --- 额外: 修复侧边栏折叠状态下的过渡 --- */
+body[class*="theme-"] .sd-sidebar {
+    transition: transform var(--sd-transition), background var(--sd-transition-fast) !important;
+}
+
+body[class*="theme-"] .gradio-container {
+    transition: margin-left var(--sd-transition), max-width var(--sd-transition) !important;
+}
+
+/* All tab buttons are visible by default (no whitelist).
+   The sidebar provides optional additional navigation; it does NOT hide
+   any tabs. Newly installed plugin tabs will appear automatically. */
+
+/* Do NOT hide the Gradio 5 overflow-menu trigger — with all tabs visible,
+   the overflow menu (three-dots) is essential when there are many plugin
+   tabs. Only hide extension-registered topbars that float above content. */
+body[class*="theme-"] .svelte-1g7w2rj,
+body[class*="theme-"] div[id*="_top"],
+body[class*="theme-"] .extension_topbar {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Batch Count restored to original visibility */
+
+/* === 隐藏缩放%应用整行 === */
+body[class*="theme-"] .aspect-pct-row,
+body[class*="theme-"] #txt2img_pct_scale_row,
+body[class*="theme-"] #img2img_pct_scale_row {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+/* === 图像对比模块：响应式容器，消除多余留白 === */
+/* 策略：容器宽度自适应父列（max 640px），aspect-ratio 保持正方形。
+   JS 现在通过 ResizeObserver 动态读取容器实际宽度，不再依赖固定值。
+   这样在窄屏自动缩小、宽屏不浪费空间，对比图片始终完美叠加。 */
+body[class*="theme-"] #img_comp_panel {
+    padding: 8px !important;
+}
+
+body[class*="theme-"] #img_comp_row_container,
+body[class*="theme-"] #img_comp_row {
+    width: 100% !important;
+    max-width: 640px !important;
+    min-width: 280px !important;
+    aspect-ratio: 1 / 1 !important;
+    height: auto !important;
+    min-height: 280px !important;
+    position: relative !important;
+    overflow: hidden !important;
+    margin: 0 auto !important;
+    border-radius: 8px !important;
+    background: var(--sd-bg-input, #1a1a1a) !important;
+}
+
+/* 对比块绝对定位 + 裁切 */
+body[class*="theme-"] #img_comp_row .comp-block {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 100 !important;
+    overflow: hidden !important;
+}
+
+/* Overlay 裁切容器：只有它的宽高会变，img 永远不动 */
+body[class*="theme-"] #img_comp_overlay {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    z-index: 200 !important;
+    pointer-events: none !important;
+}
+
+body[class*="theme-"] #img_comp_row .comp-block img {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+    user-select: none !important;
+    -webkit-user-drag: none !important;
+}
+
+body[class*="theme-"] #img_comp_row .bar {
+    position: absolute !important;
+    z-index: 500 !important;
+}
+
+/* 紧凑控制行：单行排列所有按钮和滑块 */
+body[class*="theme-"] #img_comp_utils {
+    gap: 6px !important;
+    margin-top: 8px !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+}
+
+body[class*="theme-"] #img_comp_utils button {
+    padding: 4px 10px !important;
+    font-size: 13px !important;
+}
+
+body[class*="theme-"] #img_comp_utils input[type="range"] {
+    height: 4px !important;
+}
+
+/* 差异对比区紧凑显示 */
+body[class*="theme-"] #img_comp_info {
+    gap: 8px !important;
+    margin-top: 8px !important;
+    max-height: 300px !important;
+    overflow-y: auto !important;
+}
+
+/* PNG 信息面板紧凑化 */
+body[class*="theme-"] #pnginfo_info_panel {
+    padding: 10px !important;
+    max-height: calc(100vh - 120px) !important;
+    overflow-y: auto !important;
+}
+
+/* 隐藏 sd-webui-image-comparison 扩展创建的重复对比按钮
+   用户只需要"对比上传"这一个功能，移除图生图/局部重绘/后期处理对比 */
+body[class*="theme-"] #img_comp_i2i,
+body[class*="theme-"] #img_comp_inpaint,
+body[class*="theme-"] #img_comp_extras {
+    display: none !important;
+}
+
+/* 同时隐藏扩展创建的重复上传区（img_comp_tools 整行） */
+body[class*="theme-"] #img_comp_tools {
+    display: none !important;
+}
+
+/* ============================================================
+   Compact controls: Shift + CFG Scale + Seed on one line
+   Strategy: Use CSS Grid on txt2img settings container with 2 columns.
+   Most children span full width (1/-1). The CFG/Shift row and
+   seed row auto-place into columns 1 and 2, sitting side-by-side.
+   Note: img2img is NOT targeted because it has an extra
+   denoising_strength slider between CFG and seed that breaks grid flow.
+   ============================================================ */
+
+/* Convert txt2img settings column to 2-column grid.
+   Seed is simple (just number + buttons), give it 1/3 width. */
+body[class*="theme-"] #txt2img_settings {
+    display: grid !important;
+    grid-template-columns: 2fr 1fr !important;
+    gap: 8px !important;
+}
+
+/* All direct children default to full grid width */
+body[class*="theme-"] #txt2img_settings > * {
+    grid-column: 1 / -1 !important;
+    min-width: 0 !important;
+}
+
+/* Target the row containing Shift + CFG Scale (only row with
+   .form > .gradio-slider structure). Auto-place into column 1. */
+body[class*="theme-"] #txt2img_settings > div.row:has(> div.form > div.gradio-slider) {
+    grid-column: 1 !important;
+    width: 100% !important;
+}
+
+/* Seed row auto-places into column 2, next to CFG/Shift */
+body[class*="theme-"] #txt2img_seed_row {
+    grid-column: 2 !important;
+    width: 100% !important;
+    gap: 4px !important;
+}
+
+/* Inside the CFG/Shift row: make both sliders sit side-by-side */
+body[class*="theme-"] #txt2img_settings > div.row:has(> div.form > div.gradio-slider) > div.form {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+}
+
+body[class*="theme-"] #txt2img_settings > div.row:has(> div.form > div.gradio-slider) > div.form > div.gradio-slider {
+    flex: 1 1 calc(50% - 4px) !important;
+    min-width: 90px !important;
+}
+
+/* Compact seed row internals: hide label, narrow input + small buttons */
+body[class*="theme-"] #txt2img_seed_row > .form:first-child {
+    flex: 1 1 auto !important;
+    min-width: 50px !important;
+}
+
+/* Hide the "随机数种子 (Seed)" label — the seed field is self-explanatory
+   with the dice/reuse buttons next to it. Saves vertical space. */
+body[class*="theme-"] #txt2img_seed_row .gradio-number > label > span,
+body[class*="theme-"] #img2img_seed_row .gradio-number > label > span {
+    display: none !important;
+}
+
+/* Compact the seed number input block */
+body[class*="theme-"] #txt2img_seed_row .gradio-number,
+body[class*="theme-"] #img2img_seed_row .gradio-number {
+    padding: 4px 6px !important;
+    min-height: 32px !important;
+}
+
+body[class*="theme-"] #txt2img_seed_row .gradio-number input[type="number"],
+body[class*="theme-"] #img2img_seed_row .gradio-number input[type="number"] {
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 2px 6px !important;
+    font-size: 13px !important;
+}
+
+body[class*="theme-"] #txt2img_seed_row > button,
+body[class*="theme-"] #img2img_seed_row > button {
+    flex: 0 0 28px !important;
+    min-width: 28px !important;
+    width: 28px !important;
+    height: 32px !important;
+    padding: 4px !important;
+}
+
+/* Hide the extra empty form in seed row if present */
+body[class*="theme-"] #txt2img_seed_row > .form:last-child {
+    display: none !important;
+}
+
+/* Also compact img2img seed row (keep original layout, just smaller) */
+body[class*="theme-"] #img2img_seed_row {
+    gap: 4px !important;
+}
+body[class*="theme-"] #img2img_seed_row > .form:last-child {
+    display: none !important;
+}

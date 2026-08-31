@@ -1,23 +1,34 @@
 // A full size 'lightbox' preview modal shown when left clicking on gallery previews
 function closeModal() {
-    gradioApp().getElementById("lightboxModal").style.display = "none";
+    const modal = document.getElementById("lightboxModal");
+    if (modal) modal.style.display = "none";
+    // Signal CSS that the lightbox is closed — restore normal element visibility.
+    document.body.classList.remove("lightbox-open");
 }
 
 function showModal(event) {
     const source = event.target || event.srcElement;
-    const modalImage = gradioApp().getElementById("modalImage");
-    const modalToggleLivePreviewBtn = gradioApp().getElementById(
+    const modalImage = document.getElementById("modalImage");
+    const modalToggleLivePreviewBtn = document.getElementById(
         "modal_toggle_live_preview",
     );
     modalToggleLivePreviewBtn.innerHTML = opts.js_live_preview_in_modal_lightbox
         ? "&#x1F5C7;"
         : "&#x1F5C6;";
-    const lb = gradioApp().getElementById("lightboxModal");
+    const lb = document.getElementById("lightboxModal");
+    // Safety: ensure modal is a direct child of body (Gradio 5 Svelte re-render
+    // may occasionally move it back into the gradio-app container, which would
+    // trap it in a lower stacking context).
+    if (lb && lb.parentElement !== document.body) {
+        document.body.appendChild(lb);
+    }
     modalImage.src = source.src;
     if (modalImage.style.display === "none") {
         lb.style.setProperty("background-image", "url(" + source.src + ")");
     }
     lb.style.display = "flex";
+    // Signal CSS that the lightbox is open — hides all competing UI elements.
+    document.body.classList.add("lightbox-open");
     lb.focus();
 
     const tabTxt2Img = gradioApp().getElementById("tab_txt2img");
@@ -27,9 +38,9 @@ function showModal(event) {
         tabTxt2Img.style.display != "none" ||
         tabImg2Img.style.display != "none"
     ) {
-        gradioApp().getElementById("modal_save").style.display = "inline";
+        document.getElementById("modal_save").style.display = "inline";
     } else {
-        gradioApp().getElementById("modal_save").style.display = "none";
+        document.getElementById("modal_save").style.display = "none";
     }
     event.stopPropagation();
 }
@@ -39,7 +50,7 @@ function negmod(n, m) {
 }
 
 function updateOnBackgroundChange() {
-    const modalImage = gradioApp().getElementById("modalImage");
+    const modalImage = document.getElementById("modalImage");
     if (modalImage && modalImage.offsetParent) {
         let currentButton = selected_gallery_button();
         let preview = gradioApp().querySelectorAll(".livePreview > img");
@@ -52,7 +63,7 @@ function updateOnBackgroundChange() {
         ) {
             modalImage.src = currentButton.children[0].src;
             if (modalImage.style.display === "none") {
-                const modal = gradioApp().getElementById("lightboxModal");
+                const modal = document.getElementById("lightboxModal");
                 modal.style.setProperty("background-image", `url(${modalImage.src})`);
             }
         }
@@ -69,8 +80,8 @@ function modalImageSwitch(offset) {
             let nextButton =
                 galleryButtons[negmod(result + offset, galleryButtons.length)];
             nextButton.click();
-            const modalImage = gradioApp().getElementById("modalImage");
-            const modal = gradioApp().getElementById("lightboxModal");
+            const modalImage = document.getElementById("modalImage");
+            const modal = document.getElementById("lightboxModal");
             modalImage.src = nextButton.children[0].src;
             if (modalImage.style.display === "none") {
                 modal.style.setProperty("background-image", `url(${modalImage.src})`);
@@ -155,7 +166,7 @@ function setupImageForLightbox(e) {
             if (!opts.js_modal_lightbox || evt.button != 0) return;
 
             modalZoomSet(
-                gradioApp().getElementById("modalImage"),
+                document.getElementById("modalImage"),
                 opts.js_modal_lightbox_initially_zoomed,
             );
             evt.preventDefault();
@@ -170,7 +181,7 @@ function modalZoomSet(modalImage, enable) {
 }
 
 function modalZoomToggle(event) {
-    let modalImage = gradioApp().getElementById("modalImage");
+    let modalImage = document.getElementById("modalImage");
     modalZoomSet(
         modalImage,
         !modalImage.classList.contains("modalImageFullscreen"),
@@ -179,7 +190,7 @@ function modalZoomToggle(event) {
 }
 
 function modalLivePreviewToggle(event) {
-    const modalToggleLivePreview = gradioApp().getElementById(
+    const modalToggleLivePreview = document.getElementById(
         "modal_toggle_live_preview",
     );
     opts.js_live_preview_in_modal_lightbox =
@@ -191,8 +202,8 @@ function modalLivePreviewToggle(event) {
 }
 
 function modalTileImageToggle(event) {
-    const modalImage = gradioApp().getElementById("modalImage");
-    const modal = gradioApp().getElementById("lightboxModal");
+    const modalImage = document.getElementById("modalImage");
+    const modal = document.getElementById("lightboxModal");
     const isTiling = modalImage.style.display === "none";
     if (isTiling) {
         modalImage.style.display = "block";
@@ -288,11 +299,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     modal.appendChild(modalNext);
 
-    try {
-        gradioApp().appendChild(modal);
-    } catch (e) {
-        gradioApp().body.appendChild(modal);
-    }
-
+    // CRITICAL: append directly to document.body, NOT to gradioApp().
+    // Gradio's root container creates its own stacking context (via
+    // transform/opacity/filter), which traps the modal's z-index inside it.
+    // UI elements in sibling stacking contexts (sidebar, toprow) would then
+    // render on top of the modal regardless of how high its z-index is.
     document.body.appendChild(modal);
 });
