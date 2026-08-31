@@ -13,7 +13,7 @@ def create_ui():
         with gr.Column(variant="compact"):
             with gr.Tabs(elem_id="mode_extras"):
                 with gr.Tab("Single Image", id="single_image", elem_id="extras_single_tab") as tab_single:
-                    extras_image = gr.Image(label="Source", interactive=True, type="pil", elem_id="extras_image", image_mode="RGBA", height="48vh", sources="upload", show_download_button=False, show_share_button=False)
+                    extras_image = gr.Image(label="Source", interactive=True, type="pil", elem_id="extras_image", image_mode="RGBA", height="48vh", sources="upload")
 
                 with gr.Tab("Batch Process", id="batch_process", elem_id="extras_batch_process_tab") as tab_batch:
                     image_batch = gr.Files(label="Batch Process", interactive=True, elem_id="extras_image_batch")
