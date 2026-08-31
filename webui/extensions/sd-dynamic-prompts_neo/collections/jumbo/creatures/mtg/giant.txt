@@ -1,0 +1,7 @@
+__creatures/mtg/giant/giant_berserker__
+__creatures/mtg/giant/giant_druid__
+__creatures/mtg/giant/giant_general__
+__creatures/mtg/giant/giant_knight__
+__creatures/mtg/giant/giant_shaman__
+__creatures/mtg/giant/giant_soldier__
+__creatures/mtg/giant/giant_warrior__

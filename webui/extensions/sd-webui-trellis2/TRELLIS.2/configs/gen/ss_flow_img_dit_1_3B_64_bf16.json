@@ -1,0 +1,78 @@
+{
+    "models": {
+        "denoiser": {
+            "name": "SparseStructureFlowModel",
+            "args": {
+                "resolution": 16,
+                "in_channels": 8,
+                "out_channels": 8,
+                "model_channels": 1536,
+                "cond_channels": 1024,
+                "num_blocks": 30,
+                "num_heads": 12,
+                "mlp_ratio": 5.3334,
+                "pe_mode": "rope",
+                "share_mod": true,
+                "initialization": "scaled",
+                "qk_rms_norm": true,
+                "qk_rms_norm_cross": true
+            }
+        }
+    },
+    "dataset": {
+        "name": "ImageConditionedSparseStructureLatent",
+        "args": {
+           "min_aesthetic_score": 4.5,
+            "image_size": 512,
+            "pretrained_ss_dec": "microsoft/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16"
+        }
+    },
+    "trainer": {
+        "name": "ImageConditionedFlowMatchingCFGTrainer",
+        "args": {
+            "max_steps": 1000000,
+            "batch_size_per_gpu": 8,
+            "batch_split": 4,
+            "optimizer": {
+                "name": "AdamW",
+                "args": {
+                    "lr": 1e-4,
+                    "weight_decay": 0.01,
+                    "betas": [0.9, 0.95],
+                    "eps": 1e-8
+                }
+            },
+            "ema_rate": [
+                0.9999
+            ],
+            "mix_precision_mode": "amp",
+            "mix_precision_dtype": "bfloat16",
+            "grad_clip": {
+                "name": "AdaptiveGradClipper",
+                "args": {
+                    "max_norm": 1.0,
+                    "clip_percentile": 95
+                }
+            },
+            "i_log": 500,
+            "i_sample": 10000,
+            "i_save": 10000,
+            "p_uncond": 0.1,
+            "t_schedule": {
+                "name": "logitNormal",
+                "args": {
+                    "mean": 1.0,
+                    "std": 1.0
+                }
+            },
+            "sigma_min": 1e-5,
+            "image_cond_model": {
+                "name": "DinoV3FeatureExtractor",
+                "args": {
+                    "model_name": "facebook/dinov3-vitl16-pretrain-lvd1689m",
+                    "image_size": 512
+                }
+            }
+        }
+    }
+}

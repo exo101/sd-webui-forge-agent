@@ -1,0 +1,13 @@
+# Enforce LF line endings across the entire codebase
+* text=auto eol=lf
+
+# Explicitly declare binary files to prevent corruption
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.safetensors binary
+*.ckpt binary
+*.pt binary
+*.db binary

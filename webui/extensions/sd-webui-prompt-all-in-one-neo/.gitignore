@@ -1,0 +1,18 @@
+/.idea
+/development_styles
+/index.php
+/src/node_modules
+/src/package-lock.json
+/styles/extensions/demo
+__pycache__
+# ============================================
+# Documentação privada de contexto para IA
+# (contém decisões internas e histórico)
+# ============================================
+.specstory/
+AGENTS.local.md
+docs/PROJECT_LOG.md
+.github/copilot-instructions.md
+# Internal agent documentation
+AGENTS.md
+

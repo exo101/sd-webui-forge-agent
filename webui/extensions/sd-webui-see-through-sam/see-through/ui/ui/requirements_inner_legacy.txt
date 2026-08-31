@@ -1,0 +1,10 @@
+PyQt6==6.6.1
+termcolor
+colorama
+faster-coco-eval
+Pillow<=9.5.0   # Pillow>=10.0 is incompatible with mmcv
+py7zr
+qtpy
+diffusers
+accelerate
+timm

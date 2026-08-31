@@ -1,0 +1,5 @@
+# mmcv/mmdet for anime instance segmentation (animeinsseg)
+# Requires CUDA toolkit. Install: pip install -r requirements-inference-mmdet.txt
+mmcv==2.1.0
+mmdet==3.3.0
+mmengine==0.10.7

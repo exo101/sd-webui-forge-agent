@@ -1,0 +1,3 @@
+__creatures/mtg/naga/naga_cleric__
+__creatures/mtg/naga/naga_shaman__
+__creatures/mtg/naga/naga_warrior__

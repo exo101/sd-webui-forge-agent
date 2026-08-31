@@ -1,0 +1,11 @@
+{
+  "api_key": "local",
+  "base_url": "http://localhost:8080/v1",
+  "model": "Qwen3.5-4B-Q6_K.gguf",
+  "local_mode": true,
+  "max_tool_iterations": 8,
+  "default_steps": 4,
+  "default_width": 1024,
+  "default_height": 1024,
+  "default_cfg_scale": 1.0
+}

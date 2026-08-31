@@ -1,0 +1,4389 @@
+# 👍ヒントワードの統合元：「路过银河（zhihu）」、「不明な作者（Google Drive）」、「インターネット」など、これらの作者に無私な貢献を感謝します！
+#
+# ⚠️このファイルの内容を変更しないでください。このファイルの作者は定期的に更新する可能性がありますので、変更すると更新時に競合が発生する可能性があります。
+# ⚠️カスタムキーワードグループを作成する場合は、このファイルをコピーして「custom.yaml」という名前に変更し、そのファイルで変更を行ってください。
+# ⚠️プラグインは、custom.yamlファイルを優先して読み込みます。custom.yamlファイルが存在しない場合は、このファイルを読み込みます。
+#
+# ⚠️現在のファイルの前に自分のコンテンツを追加したい場合は、prepend.yamlファイルを作成します。
+# ⚠️現在のファイルの後に自分のコンテンツを追加したい場合は、append.yamlファイルを作成します。
+# ⚠️custom.yaml: 現在のファイルを上書きします
+# ⚠️prepend.yaml: 現在のファイルの前に追加します
+# ⚠️append.yaml: 現在のファイルの後に追加します
+#
+# ⚠️専門のテキストエディタ（例：Visual Studio Code）を使用して、このファイルを編集することをお勧めします。これにより、エンコーディングやフォーマットエラーが回避されます。
+# ⚠️Windowsのメモ帳は使用しないでください。
+# ⚠️編集後は、https://www.yamllint.com/ にアクセスしてコンテンツのフォーマットが正しいかどうかを確認してください。
+
+# コンテンツのフォーマット：
+# - name: 一次分類名
+#   groups: 二次分類リスト
+#     - name: 二次分類名
+#       color: キーワードのデフォルトテキスト色（空欄でも可）。CSSカラーコードを使用します。例：#ff0000、red、rgb(255,0,0)、rgba(255,0,0,1)、hsl(0,100%,50%)、hsla(0,100%,50%,1)
+#       tags: キーワードリスト
+#         - 英語のキーワード: ローカライズされた翻訳
+#         - 英語のキーワード: ローカライズされた翻訳
+#         ...
+
+# このコンテンツのローカライズ翻訳は、機械翻訳によるものであり、正確でない場合があります。修正が必要な場合は、GitHubにPRを提出して修正してください。
+# 分類の誤りやキーワードの誤り、キーワードの翻訳の誤りなどの問題がある場合は、GitHubにIssueを提出してフィードバックしてください。
+
+- name: 人物
+  groups:
+    - name: キャラクター
+      color: rgba(255, 123, 2, .4)
+      tags:
+        1girl: 1人の女の子
+        1boy: 1人の男の子
+        2girls: 2人の女の子
+        2boys: 2人の男の子
+        3girls: 3人の女の子
+        3boys: 3人の男の子
+        girl: 女の子
+        boy: 男の子
+        solo: 一人
+        multiple_girls: 複数の女の子
+        little_girl: 小さな女の子
+        little_boy: 小さな男の子
+        shota: ショタ
+        loli: ロリ
+        kawaii: 可愛い
+        mesugaki: メスガキ
+        adorable_girl: 可愛い女の子
+        bishoujo: 美少女
+        gyaru: ギャル
+        sisters: 姉妹
+        ojousama: お嬢様
+        female: 女性
+        mature_female: 成熟した女性
+        mature: 成熟した
+        female_pervert: 痴女
+        male: 男性
+        milf: 熟女
+        otoko_no_ko: 男の娘
+        crossdressing: 女装
+
+    - name: 身分
+      color: rgba(255, 123, 2, .4)
+      tags:
+        lifeguard: ライフセーバー
+        boxer: ボクサー
+        scientist: 科学者
+        athletes: アスリート
+        office lady: オフィスレディ
+        monk: 修道士
+        crobat: 曲芸師
+        nun: 修道女
+        nurse: 看護師
+        stewardess: スチュワーデス
+        student: 学生
+        waitress: ウェイトレス
+        teacher: 教師
+        racer: レーサー
+        police: 警察官
+        soldier: 兵士
+        cheerleader: チアリーダー
+        actor: 俳優
+        actress: 女優
+        spy: スパイ
+        agent: エージェント
+        assassin: 暗殺者
+        poet: 詩人
+        samurai: 侍
+        dancing girl: ダンスガール
+        motorcyclist: モーターサイクリスト
+        hacker: ハッカー
+        magician: 魔術師
+        detective: 探偵
+        doll: 人形
+        maid: メイド
+        pilot: パイロット
+        diver: ダイバー
+        bar censor: バーセンサー
+        missionary: 宣教師
+        firefighter: 消防士
+        goalkeeper: ゴールキーパー
+        chef: シェフ
+        astronaut: 宇宙飛行士
+        cashier: レジ係
+        mailman: 郵便配達員
+        barista: バリスタ
+        the hermit: 隠者
+        makihitsuji: 牧羊人
+        office_lady: オフィスレディ
+        race_queen: レースクイーン
+        queen: 女王
+        doctor: 医師
+        knight: 騎士
+        housemaid: メイド
+        dancer: ダンサー
+        ballerina: バレリーナ
+        gym_leader: ジムリーダー
+        trap: 男の娘
+        female: 女性
+        harem: ハーレム
+        idol: アイドル
+        male: 男性
+        priest: 司祭
+        cleric: 聖職者（キリスト教）
+        wa_maid: 和風メイド
+        yaoi: ヤオイ
+        yuri: 百合
+        albino: アルビノ患者
+        amputee: 切断者
+
+    - name: 二次元キャラクター
+      color: rgba(255, 123, 2, .4)
+      tags:
+        pokemon: ポケモン
+        teddy bear: テディベア
+        mario: マリオ
+        pikachu: ピカチュウ
+        neon genesis evangelion: 新世紀エヴァンゲリオン
+        hatsune miku: 初音ミク
+        harry potter: ハリー・ポッター
+        doraemon: ドラえもん
+        saint seiya: 聖闘士星矢
+        gojou satoru: 五条悟
+        avengers: アベンジャーズ
+        mazinger: マジンガー
+        captain america: キャプテン・アメリカ
+        crayon shin-chan: クレヨンしんちゃん
+        slam dunk: スラムダンク
+        sun wukong: 孫悟空
+        witch: 魔女
+        miko: 巫女
+        ninja: 忍者
+        vampire: 吸血鬼
+        knight: 騎士
+        magical_girl: 魔法少女
+        orc: オーク
+        druid: ドルイド
+        elf: エルフ
+        fairy: 妖精
+        furry: ファーリー
+        mermaid: 人魚
+        kamen rider: 仮面ライダー
+        magister: 魔導師
+        spider-man: スパイダーマン
+        santa alter: サンタオルタ
+        monster_girl: モンスター娘
+        cat_girl: 猫娘
+        dog_girl: 犬娘
+        fox_girl: 狐娘
+        kitsune: キツネ
+        kyuubi: 九尾狐
+        raccoon_girl: タヌキ娘
+        wolf_girl: 狼女の子
+        bunny_girl: バニーガール
+        horse_girl: 馬娘
+        cow_girl: 牛娘
+        dragon_girl: ドラゴン娘
+        centaur: ケンタウロス
+        slime_musume: スライム娘
+        spider_girl: スパイダーガール
+        dominatrix: 女王（SM）
+        sailor_senshi: セーラー戦士
+        mecha: メカ
+        mecha_musume: メカ娘
+        humanoid_robot_: 人型ロボット
+        cyborg: サイボーグ
+        angel: 天使
+        devil: 悪魔
+        dark_elf: ダークエルフ
+        imp: インプ
+        succubus: サキュバス
+        giantess: 巨人女性
+        minigirl: ミニガール
+        monster: モンスター
+        no humans: 人間以外
+
+    - name: 年齢
+      color: rgba(255, 123, 2, .4)
+      tags:
+        toddler: 幼児
+        kindergartener: 幼稚園児
+        child: 子供
+        underage: 未成年
+        teenager: 10代
+        teen: 10代
+        early teen: 10代前半（11-15）
+        adult: 大人
+        elder: 年配者
+        old: 高齢者
+        loli: ロリ
+        shota: ショタ
+
+    - name: 皮膚
+      color: rgba(255, 123, 2, .4)
+      tags:
+        white_skin: 白い肌
+        pale_skin: 蒼白な肌
+        fair_skin: 良い肌
+        brown_skin: 茶色の肌
+        deep_skin: 濃い肌
+        dark_skin: 黒い肌
+        black_skin: 黒い肌
+        shiny_skin: 輝く肌
+        white_marble_glowing_skin: 白い大理石の輝く肌
+        tattoo: 入れ墨
+        tan: 日焼け
+        tanlines: 日焼け痕
+        oil: オイリー
+
+    - name: 体型
+      color: rgba(255, 123, 2, .4)
+      tags:
+        skinny: スリム
+        plump: ふっくら
+        curvy: 曲線美のある体型
+        gyaru: ギャル
+        pregnant: 妊娠中
+        fat: 太っている
+        thin: 細い
+        slender: すらりとした
+        glamor: 魅力的な
+        tall: 背が高い
+        petite: 小柄
+        chibi: ちび
+        muscular: 筋肉質
+
+    - name: 顔の形
+      color: rgba(255, 123, 2, .4)
+      tags:
+        slender face: 細い顔
+        round face: 丸顔
+        oval face: 卵型の顔
+        baby face: 赤ちゃんの顔
+        inverted triangle face: 逆三角形の顔
+        heart shaped face: ハート型の顔
+        diamond face: ダイヤモンド型の顔
+        square face: 四角い顔
+        long face: 長い顔
+        triangular face: 三角形の顔
+
+    - name: 髪の毛
+      color: rgba(255, 123, 2, .4)
+      tags:
+        white hair: 白髪
+        blonde hair: 金髪
+        silver hair: 銀髪
+        grey hair: 灰色の髪
+        purple hair: 紫髪
+        red hair: 赤髪
+        yellow hair: 黄色の髪
+        green hair: 緑髪
+        blue hair: 青髪
+        black hair: 黒髪
+        brown hair: 茶髪
+        straight_hair: ストレートヘア
+        short hair: ショートヘア
+        curly hair: カールヘア
+        long hair: ロングヘア
+        pony-tail: ポニーテール
+        bunches: おさげ
+        streaked hair: ストリーク入りの髪
+        grey gradient hair: グレーグラデーションの髪
+        light brown hair: 明るい茶髪
+        two-tone hair: 2色の髪
+        multicolored hair: 多色の髪
+        high ponytail: ハイポニーテール
+        twintails: ツインテール
+        braided ponytail: 結び目のあるポニーテール
+        ponytail: ポニーテール
+        short ponytail: ショートポニーテール
+        twin braids: ツインブレード
+        medium hair: ミディアムヘア
+        very long hair: 非常に長い髪
+        braided bangs: 編み込みバング
+        swept bangs: サイドバング
+        hair between eyes: 目の間の髪
+        bob cut: ボブカット
+        hime cut: 姫カット
+        crossed bangs: クロスバング
+        bangs: バング
+        blunt bangs: ブラントバング
+        air bangs: エアバング
+        hair wings: 髪の翼
+        long bangs: 長い前髪
+        side_blunt_bangs: サイドブラントバング
+        centre parting bangs: センターパーティングバング
+        asymmetric bangs: アシンメトリーバング
+        disheveled hair: 乱れた髪
+        wavy hair: ウェーブヘア
+        hair in takes: 髪を取る
+        hair pink flowers: 髪のピンクの花
+        ahoge: アホ毛
+        antenna hair: アンテナヘア
+        Side ponytail: サイドポニーテール
+        forehead: 額
+        drill hair: ドリルヘア
+        hair bun: 髪の束
+        double bun: ダブルバン
+        messy hair: 乱れた髪型
+        hair_flaps: 髪のフラップ
+
+    - name: 顔
+      color: rgba(255, 123, 2, .4)
+      tags:
+        makeup: メイク
+        fundoshi: フンドシ
+        eyeshadow: アイシャドウ
+        lipstick: 口紅
+        mascara: マスカラ
+        long_eyelashes: 長いまつげ
+        red_lips_: 赤い唇
+        facepaint: 顔のペイント
+        lipgloss: リップグロス
+        colored_eyelashes: カラフルなまつげ
+        blush: ブラッシュ
+        light_blush: 淡いほお紅
+        anime_style_blush: アニメ風のほお紅
+        nose_blush: 鼻のほお紅
+        nosebleed: 鼻血
+        bruise_on_face: 顔にあざ
+        facial_mark: 顔のマーク
+        forehead_mark: 額のマーク
+        anger_vein: 怒りの静脈
+        mole: ほくろ
+        mole_under_eye: 目の下のほくろ
+        freckles: そばかす
+        food_on_face: 顔に食べ物
+        rice_on_face: 顔にご飯
+        cream_on_face: 顔にクリーム
+        mustache: 口ひげ
+        goatee: ゴートひげ
+        whisker_markings: ひげのマーキング
+        scar: 傷跡
+        scar_across_eye: 目の上の傷跡
+        smoking_pipe: たばこパイプ
+        tattoo: 入れ墨
+
+    - name: 耳
+      color: rgba(255, 123, 2, .4)
+      tags:
+        elf ears: エルフの耳
+        fake animal ears: 動物の耳（フェイク）
+        cat ears: 猫の耳
+        dog ears: 犬の耳
+        fox ears: 狐の耳
+        bunny ears: ウサギの耳
+        bear ears: クマの耳
+        wolf ears: オオカミの耳
+        horse ears: 馬の耳
+        cow ears: 牛の耳
+        mouse ears: ネズミの耳
+        pig ears: 豚の耳
+        sheep ears: 羊の耳
+        deer ears: 鹿の耳
+        goat ears: ヤギの耳
+        antelope ears: アンテロープの耳
+        rhino ears: サイの耳
+        elephant ears: ゾウの耳
+        bat ears: コウモリの耳
+        dragon ears: ドラゴンの耳
+        demon ears: 悪魔の耳
+        angel ears: 天使の耳
+        alien ears: 宇宙人の耳
+        ear_blush: 耳の紅潮
+        ear_ornament: 耳飾り
+        ear_piercing: 耳ピアス
+        animal_ears: 動物の耳
+        ears_down: 耳を下げる
+        fake_animal_ears: フェイクの動物の耳
+        floppy_ears: 垂れた耳
+        animal_ear_fluff: 動物の耳の毛
+        fox_ears: 狐の耳
+        cat_ears: 猫の耳
+        lion_ears: ライオンの耳
+        jaguar_ears: ジャガーの耳
+        tiger_ears: 虎の耳
+        dog_ears: 犬の耳
+        coyote_ears: コヨーテの耳
+        bunny_ears: ウサギの耳
+        horse_ears: 馬の耳
+        pointy_ears: 尖った耳
+        long_pointy_ears: 長い尖った耳
+        mouse_ears: ネズミの耳
+        raccoon_ears: アライグマの耳
+        squirrel_ears: リスの耳
+        bear_ears: クマの耳
+        panda_ears: パンダの耳
+        bat_ears: コウモリの耳
+        robot_ears: ロボットの耳
+        extra_ears: 追加の耳
+        ears_through_headwear: 帽子やヘッドウェアから出ている耳
+        alpaca_ears: アルパカの耳
+        horns: 角
+        fake_horns: フェイクの角
+        dragon_horns: ドラゴンの角
+        oni_horns: 鬼の角
+        antlers: 角
+        curled_horns: 曲がった角
+        goat_horns: ヤギの角
+        hair_on_horn: 角の上の髪
+
+    - name: 眉毛
+      color: rgba(255, 123, 2, .4)
+      tags:
+        thick eyebrows: 濃い眉毛
+        cocked eyebrow: 眉を上げる
+        short eyebrows: 短い眉毛
+        v-shaped eyebrows: V字型の眉毛
+
+    - name: 目
+      color: rgba(255, 123, 2, .4)
+      tags:
+        blue eyes: 青い目
+        red eyes: 赤い目
+        brown eyes: 茶色の目
+        green eyes: 緑の目
+        purple eyes: 紫の目
+        yellow eyes: 黄色い目
+        pink eyes: ピンクの目
+        black eyes: 黒い目
+        aqua eyes: アクアの目
+        orange eyes: オレンジの目
+        grey eyes: 灰色の目
+        multicolored eyes: 多色の目
+        white eyes: 白い目
+        gradient eyes: グラデーションの目
+        closed eyes: 閉じた目
+        half-closed eyes: 半開きの目
+        crying with eyes open: 目を開けて泣く
+        narrowed eyes: 細めた目
+        hidden eyes: 隠れた目
+        heart-shaped eyes: ハート型の目
+        button eyes: ボタンの目
+        cephalopod eyes: 軟体動物の目
+        eyes visible through hair: 髪の中から見える目
+        glowing eyes: 輝く目
+        empty eyes: 空っぽの目
+        rolling eyes: 回転する目
+        cross eyed: 斜視
+        blank eyes: 空白の目
+        no eyes: 目がない
+        sparkling eyes: 輝く目
+        extra eyes: 追加の目
+        crazy eyes: 狂気のある目
+        solid circle eyes: 完全な丸い目
+        solid oval eyes: 完全な楕円形の目
+        uneven eyes: 均一でない目
+        blood from eyes: 目から血液
+
+    - name: 瞳孔
+      color: rgba(255, 123, 2, .4)
+      tags:
+        pupils: 瞳孔
+        bright_pupils: 明るい瞳孔
+        heterochromia: 異色瞳
+        slit_pupils: 細長い瞳孔
+        snake_pupils: 蛇の瞳孔
+        symbol-shaped_pupils: シンボル型の瞳孔
+        heart-shaped_pupils: ハート型の瞳孔
+        diamond-shaped_pupils: ダイヤモンド型の瞳孔
+        star-shaped_pupils: 星型の瞳孔
+        dilated_pupils: 拡張した瞳孔
+        no_pupils: 瞳孔がない
+        ringed_eyes: 瞳孔の輪郭
+        constricted_pupils: 収縮した瞳孔
+        star_in_eye: 目の中の星
+        x-shaped_pupils: X字型の瞳孔
+        horizontal_pupils: 横長の瞳孔
+        dashed_eyes: 点線の目
+        butterfly-shaped_pupils: 蝶の瞳孔
+        rectangular_pupils: 長方形の瞳孔
+        square_pupils: 四角い瞳孔
+        dot_pupils: 点状の瞳孔
+        extra_pupils: 追加の瞳孔
+        mismatched_pupils: 不揃いな瞳孔
+        "+_+": 十字の瞳孔
+        cross-shaped_pupils: 十字型の瞳孔
+        purple_pupils: 紫色の瞳孔
+        orange_pupils: オレンジの瞳孔
+        blue_pupils: 青い瞳孔
+        symbol_in_eye: 目の中のシンボル
+
+    - name: 鼻
+      color: rgba(255, 123, 2, .4)
+      tags:
+        pointed nose: 尖った鼻
+        small nose: 小さな鼻
+        big nose: 大きな鼻
+        no_nose: 鼻がない
+        dot_nose: 点状の鼻
+        nose_bubble: 鼻の泡
+        smelling: 匂いを嗅ぐ
+        nose: 鼻
+        nosebleed: 鼻血
+        snot: 鼻水
+        snout: 鼻先
+
+    - name: 口
+      color: rgba(255, 123, 2, .4)
+      tags:
+        chestnut mouth: 栗の口
+        thick lips: 厚い唇
+        puffy lips: ふっくらとした唇
+        lipstick: リップスティック
+        heart-shaped mouth: ハート型の口
+        pout: ふくれっ面
+        open mouth: 口を開ける
+        closed mouth: 口を閉じる
+        shark mouth: サメの口
+        parted lips: 口を開ける
+        mole under mouth: 口の下のほくろ
+        open_mouth: 口を開ける
+        gasping: 息を切らす（口を大きく開ける）
+        Slightly_open_mouth: 少しだけ口を開ける
+        wavy_mouth: 波打つ口
+        close_mouth: 口を閉じる
+        dot_mouth: ドットの口
+        no_mouth: 口がない
+        gag: ギャグ
+        gnaw: かじる
+        :3: 猫の口
+        :o: 口を開ける
+        :>: V字の口
+        parted_lips: 口を開ける
+        bit_gag: 口を噛む
+        chestnut_mouth: 栗の口
+        cleave_gag: 口をふさぐ
+        closed_mouth: 口を閉じる
+        covered_mouth: 口を覆う
+        extra_mouth: 追加の口
+        hair_in_mouth: 口に髪が入っている
+        hair_tie_in_mouth: 口に髪の結び目を持っている
+        homu: ほむぺ
+        lips: 唇
+        mouth: 口
+        mouth_hold: 口で保持する
+        oral: 口で
+        pacifier: おしゃぶり
+        Pouted lips: ふくれっ面
+        sideways_mouth: 横向きの口
+        spoon_in_mouth: 口にスプーンを持っている
+        triangle_mouth: 三角の口
+        saliva: 唾液
+        drooling: よだれを垂らす
+        mouth_drool: 口の端に唾液の滴状の欠け
+
+    - name: 歯
+      color: rgba(255, 123, 2, .4)
+      tags:
+        teeth: 歯
+        upper_teeth: 上歯
+        fang: 牙
+        skin_fang: 肌色の牙
+        round_teeth: 丸い歯
+        sharp_teeth: 鋭い歯
+        clenched_teeth: 歯を食いしばる
+        tongue: 舌
+        buck_teeth: 兎歯
+        fang_out: 牙を出す
+        fangs: 牙
+        spiked_club: トゲ付きの棍棒
+        tooth: 歯
+        toothbrush: 歯ブラシ
+        tusks: 象牙
+        shark_mouth: 鮫の歯
+
+    - name: 舌
+      color: rgba(255, 123, 2, .4)
+      tags:
+        :q: 舌を上唇に置く
+        :p: 舌を下唇に置く
+        ;p: 眨眼と舌を伸ばす
+        french_kiss: フレンチキス
+        long_tongue: 長い舌
+        oral_invitation: 射精を迎えるために舌を出す
+        tongue: 舌
+        tongue_out: 舌を出す
+        uvula: 扁桃腺
+
+    - name: 爪
+      color: rgba(255, 123, 2, .4)
+      tags:
+        fingernails: 爪
+        toenails: 足の爪
+        nail_polish: ネイルポリッシュ
+        toenail_polish: 足のネイルポリッシュ
+        black_nails: 黒い爪
+        red_nails: 赤い爪
+        pink_nails: ピンクの爪
+        long_fingernails: 長い爪
+        nail: 爪
+        multicolored_nails: 多色の爪
+        nail_art: ネイルアート
+        brown_vest: 茶色のベスト
+
+    - name: 肩
+      color: rgba(255, 123, 2, .4)
+      tags:
+        bare shoulders: 裸の肩
+        collarbonea: 鎖骨
+        armpits: 脇の下
+        armpit_crease: 脇の下のしわ
+
+    - name: 胸部
+      color: rgba(255, 123, 2, .4)
+      tags:
+        chest: 胸部
+        flat chest: 平らな胸(A)
+        small_breasts: 小さい胸(B)
+        medium breasts: 中くらいの胸(C)
+        big breasts: 大きい胸(D)
+        huge breasts: 巨大な胸(E)
+        gigantic breasts: 超巨大な胸(F)
+        between breasts: 乳房の間
+        breasts apart: 胸を分ける
+        hanging breasts: 下垂した胸
+        bouncing breasts: 弾む胸
+        cleavage: 谷間
+        areola: 乳輪
+        nipples: 乳首
+        pectorals: 大胸筋
+        large_pectorals: 大きな胸筋
+        unbuttoned clothes: 前を開けた服
+
+    - name: 腰
+      color: rgba(255, 123, 2, .4)
+      tags:
+        narrow_waist: 細い腰
+        slender_waist: 細身の腰
+
+    - name: 腹部
+      color: rgba(255, 123, 2, .4)
+      tags:
+        midriff: 腹部
+        belly: お腹
+        absolute_territory: 腹筋
+        inflation: 膨らんだ腹部
+        navel: へそ
+        groin: 腹股沟
+        pregnant: 妊娠
+
+    - name: 翼
+      color: rgba(255, 123, 2, .4)
+      tags:
+        wings: 翼
+        bat_wings: バットウィング
+        butterfly_wings: バタフライウィング
+        black_wings: 黒い翼
+        demon_wings: 悪魔の翼
+        asymmetrical_wings: 非対称の翼
+        detached_wings: 本体から離れた翼
+        fairy_wings: 妖精の翼
+        fake_wings: 偽の翼
+        fiery_wings: 燃えるような翼
+        insect_wings: 昆虫の翼
+        large_wings: 大きな翼
+        low_wings: 腰の位置にある翼
+        mini_wings: ミニ翼
+        multicolored_wings: 多色の翼
+        multiple_wings: 複数の翼
+        no_wings: 翼がない
+        winged_helmet: 翼のついたヘルメット
+
+- name: 衣服や装飾品
+  groups:
+    - name: 正装
+      color: rgba(230, 84, 128, .4)
+      tags:
+        suit: スーツ
+        tuxedo: タキシード
+        formal_dress: フォーマルドレス
+        evening_gown: イブニングガウン
+        canonicals: カノニカルス（夜会服）
+        cocktail_dress: カクテルドレス
+        gown: ガウン
+        japanese_clothes: 着物
+        kimono: 着物
+        sleeveless_kimono: 袖なし着物
+        short_kimono: 短い着物
+        print_kimono: プリント着物
+        furisode: 振袖（着物の一部）
+        obi: 帯（着物用）
+        sash: サッシュ
+        cheongsam: チャイナドレス
+        china_dress: チャイナドレス
+        print_cheongsam: プリントチャイナドレス
+        pelvic_curtain: ペリネウムカーテン（チャイナドレスの前掛け）
+        wedding_dress: ウェディングドレス
+        uchikake: 白無垢（和風の結婚衣装）
+        school_uniform: 学生服
+        sailor: セーラー服
+        serafuku: セーラー服
+        summer_uniform: 夏季制服
+        kindergarten_uniform: 幼稚園制服
+        police_uniform: 警察制服
+        naval_uniform: 海軍制服
+        military_uniform: 陸軍制服
+        ss_uniform/nazi_uniform: SS制服/ナチス制服
+        maid: メイド服
+        stile_uniform: 女侍従の制服
+        miko: 巫女服
+        overalls: オーバーオール
+        business_suit: ビジネススーツ
+        nurse: ナース服
+        chef_uniform: シェフの制服
+        labcoat: 白衣
+        cheerleader: チアリーダー服
+        band_uniform: バンドの制服
+        space_suit: スペーススーツ
+        leotard: レオタード
+        domineering: 修道女服
+
+    - name: スタイル
+      color: rgba(230, 84, 128, .4)
+      tags:
+        china_dress: 中国服
+        chinese_style: 中国風
+        traditional_clothes: 伝統衣装|民族衣装
+        japanese_clothes: 和風衣装
+        hanten_(clothes): 半纏（和風）
+        hanbok: 韓服
+        korean_clothes: 朝鮮服
+        western: 西部スタイル
+        german_clothes: ドイツ服
+        gothic: ゴシックスタイル
+        lolita: ロリータスタイル
+        gothic_lolita: ゴシックロリータスタイル
+        byzantine_fashion: ビザンチンスタイル
+        Tropical: 熱帯特徴の
+        indian_style: インド風
+        Ao_Dai: ベトナム校服（アオザイ）
+        ainu_clothes: アイヌ人の衣装
+        arabian_clothes: アラビア風衣装
+        egyptian_clothes: エジプト風衣装
+        costume: コスチューム
+        animal_costume: 動物系コスチューム（ファーコート）
+        bunny_costume: バニーガール衣装
+        adapted_costume: オリジナルコスチューム改変
+        cat_costume: 猫系コスチューム
+        dog_costume: 犬系コスチューム
+        bear_costume: クマコスチューム
+        embellished_costume: 装飾されたコスチューム
+        santa_costume: サンタ衣装
+        halloween_costume: ハロウィン衣装
+        kourindou_tengu_costume: 香霖堂天狗衣装
+        alternate_costume: オリジナルと異なる服装
+        costume_switch: お着替えプレイ
+        meme_attire: ミーム衣装
+
+    - name: カジュアルウェア
+      color: rgba(230, 84, 128, .4)
+      tags:
+        casual: カジュアル
+        loungewear: ルームウェア
+        hoodie: パーカー
+        homewear: ホームウェア
+        pajamas: パジャマ
+        nightgown: ナイトガウン
+        sleepwear: 寝間着
+        babydoll: ベビードール
+        print_pajamas: プリントパジャマ
+        polka_dot_pajamas: 水玉パジャマ
+        yukata: 浴衣
+        chinese_clothes: 唐装
+        hanfu: 漢服
+        Taoist robe: 道袍
+        robe: ローブ
+        robe_of_blending: ブレンディングローブ
+        cloak: クローク
+        hooded_cloak: フード付きクローク
+        winter_clothes: 冬服
+        down jacket: ダウンジャケット
+        santa: サンタ衣装
+        harem_outfit: ハーレム衣装
+        shrug_(clothing): 肩をすくめる（衣類）
+
+    - name: スポーツウェア
+      color: rgba(230, 84, 128, .4)
+      tags:
+        sportswear: スポーツウェア
+        gym_uniform: 体育服
+        athletic_leotard: 体操服
+        tennis_uniform: テニスウェア
+        baseball_uniform: 野球ユニフォーム
+        letterman_jacket: レターマンジャケット
+        volleyball_uniform: バレーボールユニフォーム
+        biker_clothes: 自転車スポーツウェア
+        bikesuit: 自転車用スーツ
+        wrestling_outfit: レスリング用衣装
+        dougi: 道着
+
+    - name: 水着
+      color: rgba(230, 84, 128, .4)
+      tags:
+        swimsuit: 水着
+        swimwear: 水着
+        wet_swimsuit: 濡れた水着
+        school_swimsuit: スクール水着
+        new_school_swimsuit: 新しいスクール水着
+        old_school_swimsuit: 古いスクール水着
+        competition_school_swimsuit: 競泳用スクール水着
+        competition_swimsuit: 競泳用水着
+        casual_one-piece_swimsuit: ワンピース水着
+        front_zipper_swimsuit: 前ファスナー水着
+        highleg_swimsuit: ハイレグ水着
+        one-piece_swimsuit: ワンピース水着
+        swimsuit_of_perpetual_summer: 永遠の夏の水着（FGO学生制服）
+        bikini: ビキニ
+        highleg_bikini: ハイウエストビキニ
+        lowleg_bikini: ローライズビキニ
+        slingshot_swimsuit: V字型水着
+        sailor_bikini: セーラー服風ビキニ
+        shell_bikini: 貝殻ビキニ
+        sports_bikini: スポーツビキニ
+        string_bikini: ストリングビキニ
+        strapless_bikini: ストラップレスビキニ
+        side-tie_bikini: サイドタイビキニ
+        front-tie_bikini_top: 前結びビキニトップ
+        multi-strapped_bikini: マルチストラップビキニ
+        thong_bikini: Tバックビキニ
+        front-tie_bikini: 前結びビキニ
+        frilled_bikini: フリルビキニ
+        o-ring_bikini: Oリング付きビキニ
+        eyepatch_bikini: アイパッチビキニ
+        layered_bikini: レイヤードビキニ
+        bow_bikini: リボン付きビキニ
+        frilled_swimsuit: フリル水着
+        polka_dot_swimsuit: 水玉柄水着
+        striped_swimsuit: ストライプ水着
+        striped_bikini: ストライプビキニ
+        plaid_bikini: チェック柄ビキニ
+        polka_dot_bikini: 水玉柄ビキニ
+        print_bikini: プリントビキニ
+        american_flag_bikini: アメリカ国旗ビキニ
+        german_flag_bikini: ドイツ国旗ビキニ
+        impossible_swimsuit: 体に描かれた水着
+        bikini_top: ビキニトップのみ
+        bikini_top_only: ビキニトップのみ
+        bikini_top_removed: ビキニトップを外した
+        bikini_bottom_only: ビキニボトムのみ
+        bikini_bottom: ビキニパンツ
+        untied_bikini: 結ばれていないビキニ
+        bikini_aside: 三角ビキニを横にずらす
+        swimsuit_aside: 水着の股部分を横にずらす
+        swimsuit_under_clothes: 服の下に水着を着る
+        torn_swimsuit: 破れた水着
+        bikini_skirt: ビキニスカート
+        swim_briefs: 水泳用パンツ
+        swim_cap: 水泳帽
+        swim_trunks: 水泳用トランクス
+        male_swimwear: 男性用水着
+
+    - name: 制服
+      color: rgba(230, 84, 128, .4)
+      tags:
+        adapted_uniform: 改造された制服
+        anzio_military_uniform: アンツィオ軍服
+        anzio_school_uniform: アンツィオ学生服
+        aria_company_uniform: アリア社の制服
+        ashford_academy_uniform: アッシュフォード学園制服
+        bc_freedom_military_uniform: BC自由学園軍服
+        chaldea_uniform: カルデア制服
+        chi-hatan_military_uniform: 地八丹単学院軍服
+        fleur_de_lapin_uniform: フルール・ド・ラパン制服
+        garreg_mach_monastery_uniform: ガルグ・マク大修道院制服
+        gem_uniform_(houseki_no_kuni): 宝石の国の制服
+        hanasakigawa_school_uniform: 花咲川女子学園制服
+        hikarizaka_private_high_school_uniform: 光坂高校制服
+        homurahara_academy_uniform: 穂群原学園制服
+        kamiyama_high_school_uniform: 神山高校制服
+        keizoku_military_uniform: 継続高校軍服
+        kita_high_school_uniform: 北高校制服
+        kiyosumi_school_uniform: 清澄高校制服
+        luna_nova_school_uniform: ルーナノヴァ魔法学校制服
+        meiji_schoolgirl_uniform: 明治女学生制服
+        mitakihara_school_uniform: 見滝原中学校制服
+        nami_junior_high_school_uniform: 波路中学校制服
+        nanairogaoka_middle_school_uniform: 七色丘中学校制服
+        nanamori_school_uniform: 七森中学校制服
+        naoetsu_high_school_uniform: 直江津高校制服
+        national_shin_ooshima_school_uniform: 新大島学園制服
+        ooarai_military_uniform: 大洗連隊軍服
+        ooarai_school_uniform: 大洗連隊学生服
+        otonokizaka_school_uniform: 国立音ノ木坂学院女子制服
+        paradis_military_uniform: パラディ島軍服
+        polar_chaldea_uniform: 極地カルデア制服
+        pravda_military_uniform: プラウダ学園軍服
+        pravda_school_uniform: プラウダ学園制服
+        rabbit_house_uniform: ラビットハウス制服
+        raimon_soccer_uniform: 雷門サッカー部ユニフォーム
+        ryouou_school_uniform: 陵桜学園制服
+        sailor_senshi_uniform: 美少女戦士制服
+        sakugawa_school_uniform: 栅川中学校制服
+        sakuragaoka_high_school_uniform: 桜丘女子高等学校制服
+        saunders_military_uniform: サンダース学園軍服
+        saunders_school_uniform: サンダース学園制服
+        seishou_elementary_school_uniform: 聖祥大附小学校制服
+        shinda_sekai_sensen_uniform: 死後世界戦線制服
+        shuuchiin_academy_uniform: 秀知院学園制服
+        shuujin_academy_uniform: 秀尽学院制服
+        st._gloriana's_military_uniform: 聖グロリアナ軍服
+        st._gloriana's_school_uniform: 聖グロリアナ女学園制服
+        starlight_academy_uniform: スターライト学園制服
+        tokisadame_school_uniform: 時定高校制服
+        tokiwadai_school_uniform: 常盤台中学校制服
+        tomoeda_elementary_school_uniform: 友枝小学校制服
+        tsab_ground_military_uniform: 時空管理局軍服
+        u.a._school_uniform: 雄英高校制服
+        uranohoshi_school_uniform: 浦の星女学院制服
+        yasogami_school_uniform: 八十神高校制服
+        mismatched_bikini: 色違いビキニ
+        multicolored_bikini: 多色ビキニ
+
+    - name: 上着物
+      color: rgba(230, 84, 128, .4)
+      tags:
+        blouse: ブラウス
+        white_shirt: 白シャツ
+        collared_shirt: 襟付きシャツ
+        dress_shirt: ドレスシャツ
+        sailor_shirt: セーラーシャツ
+        cropped_shirt: クロップトップ
+        t-shirt: Tシャツ
+        casual T-shirts: カジュアルTシャツ
+        short sleeve T-shirts: 半袖Tシャツ
+        off-shoulder_shirt: オフショルダーシャツ
+        shrug_(clothing): 肩をすくめる（衣類）
+        cardigan: カーディガン
+        criss-cross_halter: クリスクロスハルター
+        frilled_shirt: フリルシャツ
+        sweatshirt: スウェットシャツ
+        hawaiian_shirt: ハワイアンシャツ
+        hoodie: フーディー
+        Impossible shirt: フィットしすぎるシャツ
+        kappougi: (料理時に着る)かっぽう着
+        plaid_shirt: チェック柄シャツ
+        polo_shirt: ポロシャツ
+        print_shirt: プリントシャツ
+        shirt: シャツ
+        sleeveless_hoodie: ノースリーブフーディー
+        sleeveless_shirt: ノースリーブシャツ
+        striped_shirt: ストライプシャツ
+        tank_top: タンクトップ
+        vest: ベスト
+        waistcoat: ウェストコート
+        camisole: キャミソール
+        tied_shirt: 結び付けられたシャツ
+        undershirt: アンダーシャツ
+        crop_top: クロップトップ
+        highleg: ハイレグの衣類
+        clothing_cutout: 衣類のカットアウト
+        back_cutout: バックカットアウト
+        cleavage_cutout: 胸元のカットアウト
+        navel_cutout: へそ出しカットアウト
+        midriff: 腹出しのトップス
+        heart_cutout: ハート型のカットアウト
+        torn_clothes: 破れた衣服
+        torn_shirt: 破れたシャツ
+        undressing: 着替え中
+        clothes_down: 衣服を下げる
+        shirt_lift: シャツをたくし上げる
+        shirt_pull: シャツを引っ張る
+        shirt_tucked_in: シャツをズボンに入れる
+        clothes_tug: 衣服を引っ張る
+        shirt_tug: シャツを引っ張る
+        untucked_shirt: シャツを出す
+        lifted_by_self: 自分で服を上げる
+        untied: 自分で服を上げる
+        open_clothes: 開いた服
+        unbuttoned shirt: ボタンを外したシャツ
+        button_gap: ボタン間の隙間（ボタンを外していない）
+        partially_unbuttoned: 部分的にボタンを外した
+        partially_unzipped: 上部分のジッパーを少し開けた
+        clothes_removed: 脱いだ衣服
+        shirt_removed: シャツを脱いだ
+        wardrobe_error: 衣服のズレ
+        undersized_clothes: サイズが小さすぎる衣服
+        tight: きつくなった衣服
+        wedgie: ウェッジ（股間部分の衣服が食い込むこと）
+        wardrobe_malfunction: 衣服のトラブル（破れるなど）
+        taut_shirt: 張り詰めたシャツ
+        taut_clothes: 張り詰めた衣服
+        underbust: 下胸囲に食い込む
+        oversized_clothes: 大きすぎる衣服
+        oversized_shirt: 大きすぎるシャツ
+        borrowed_garments: 彼氏の服
+        strap_slip: ストラップが滑落（露出の原因）
+        wet_shirt: 濡れたシャツ
+        clothes_theft: 衣服の盗難
+
+    - name: コート
+      color: rgba(230, 84, 128, .4)
+      tags:
+        blazer: ブレザー（ジャケット）
+        overcoat: オーバーコート（大衣）
+        double-breasted: ダブルブレスト（二重ボタン）
+        long_coat: ロングコート
+        haori: 羽織（広衣）
+        winter_coat: 冬用コート
+        hooded_coat: フード付きコート
+        fur_coat: 毛皮コート
+        fur-trimmed_coat: 毛皮飾りコート
+        duffel_coat: ダッフルコート
+        fishnet_top: フィッシュネットトップ
+        parka: パーカー（フード付きジャケット）
+        jacket: ジャケット
+        jacket_partially_removed: ジャケット部分的に取り外された
+        jacket_removed: ジャケットが取り外された
+        open_jacket: オープンジャケット（スプレッドレッグスと一緒に）
+        cropped_jacket: クロップドジャケット（短めのジャケット）
+        track_jacket: トラックジャケット（スポーツジャケット）
+        hooded_track_jacket: フード付きトラックジャケット
+        military_jacket: ミリタリージャケット
+        camouflage_jacket: 迷彩ジャケット
+        leather_jacket: レザージャケット
+        letterman_jacket: レターマンジャケット
+        bomber_jacket: ボンバージャケット
+        denim_jacket: デニムジャケット
+        loating_jacket: ロートングジャケット（カジュアルジャケット）
+        fur-trimmed_jacket: 毛皮飾りジャケット
+        two-tone_jacket: 2トーンジャケット
+        trench_coat: トレンチコート
+        furisode: 振袖（着物の一部）
+        windbreaker: ウインドブレーカー
+        raincoat: レインコート
+        hagoromo: 羽衣（はごろも）
+        tunic: チュニック（束腰の上着）
+        cape: ケープ（肩掛け）
+        capelet: ケープレット（小さなケープ）
+        winter_clothes: 冬服
+        sweater: セーター
+        pullover_sweaters: プルオーバーセーター
+        ribbed_sweater: リブ編みセーター
+        sweater_vest: セーターベスト
+        backless_sweater: バックレスセーター
+        aran_sweater: アランセーター（アイルランドセーター）
+        beige_sweater: ベージュセーター
+        brown_sweater: ブラウンセーター
+        hooded_sweater: フード付きセーター
+        off-shoulder_sweater: オフショルダーセーター
+        striped_sweater: ストライプセーター
+        virgin_killer_sweater: バージンキラーセーター
+        down_jacket: ダウンジャケット
+        puffer_jacket: パファージャケット
+
+    - name: その他
+      color: rgba(230, 84, 128, .4)
+      tags:
+        transparent: 透明な
+        burnt_clothes: 焼けた服
+        dissolving_clothes: 溶けた服
+        dirty_clothes: 汚れた服
+        expressive_clothes: 表現力豊かな服
+        impossible_clothes: 非現実的な包み込み度のある服
+        living_clothes: 生きている服
+        leotard_under_clothes: レオタードの下に着る服
+        multicolored_clothes: 多色の服
+        ofuda_on_clothes: 服に貼られた御札
+        wringing_clothes: 濡れた服を絞る
+        clothesline: 洗濯物を干す
+        shiny_clothes: 光沢のある服
+        kariginu: 狩衣（かりぎぬ）
+        front-tie_top: 前で結ぶトップス
+        jacket_on_shoulders: ジャケットを肩にかける
+        short_jumpsuit: ショートジャンプスーツ
+        harness: ハーネス（背中の帯状のもの）
+        rigging: 船装
+        aiguillette: エギュレット（肩章）
+
+    - name: 腰部
+      color: rgba(230, 84, 128, .4)
+      tags:
+        apron: エプロン
+        waist_apron: ウエストエプロン
+        maid_apron: メイドエプロン
+        bow tied at the waist: ウエストで結んだリボン
+        waist_cape: ウエストケープ
+        clothes_around_waist: ウエストに巻く服
+        jacket_around_waist: ウエストに巻いたジャケット
+        sweater_around_waist: ウエストに巻いたセーター
+        loincloth: 腰巻き
+        bustier: ブスティエ（胸当て）
+        corset: コルセット（胴締め）
+        girdle: ガードル（腰締め）
+
+    - name: よろい
+      color: rgba(230, 84, 128, .4)
+      tags:
+        armor: アーマー（鎧）
+        bikini_armor: ビキニアーマー
+        full_armor: フルアーマー
+        plate_armor: プレートアーマー
+        japanese_armor: 日本の鎧
+        kusazuri: 草摺（くさずり）
+        power_armor: パワーアーマー
+        mecha: メカ
+        helmet: ヘルメット
+        kabuto: 兜（かぶと）
+        off-shoulder_armor: オフショルダーアーマー
+        shoulder_armor: ショルダーアーマー
+        muneate: 胸当て（日本の弓道用胸甲）
+        breastplate: 胸当て
+        faulds: 腹当て
+        greaves: 脛当て
+        shin_guards: 脛当て
+        armored_boots: アーマードブーツ
+
+    - name: スカート
+      color: rgba(230, 84, 128, .4)
+      tags:
+        dress: ドレス
+        microdress: ミクロドレス
+        long_dress: ロングドレス
+        off-shoulder_dress: オフショルダードレス
+        strapless_dress: ストラップレスドレス
+        backless_dress: バックレスドレス
+        halter_dress: ハルタードレス
+        sundress: サンドレス
+        sleeveless_dress: スリーブレスドレス
+        sailor_dress: セーラードレス
+        summer_dress: サマードレス
+        china_dress: チャイナドレス
+        pinafore_dress: ピナフォアドレス
+        sweater_dress: スウェータードレス
+        wedding_dress: ウェディングドレス
+        armored_dress: アーマードドレス
+        frilled_dress: フリルドレス
+        lace-trimmed_dress: レーストリムのドレス
+        collared_dress: 襟付きドレス
+        fur-trimmed_dress: 毛皮飾りドレス
+        layered_dress: レイヤードドレス
+        pleated_dress: プリーツドレス
+        taut_dress: 張り詰めたドレス
+        pencil_dress: ペンシルドレス
+        impossible_dress: 非現実的なタイトな服
+        multicolored_dress: 多色のドレス
+        striped_dress: ストライプドレス
+        checkered_skirt: チェック柄スカート
+        plaid_dress: プレイドドレス
+        ribbed_dress: リブ編みドレス
+        polka_dot_dress: ポルカドットドレス
+        print_dress: プリントドレス
+        vertical-striped_dress: 縦縞ドレス
+        see-through_dress: 透明ドレス
+        skirt: スカート
+        microskirt: ミクロスカート
+        miniskirt: ミニスカート
+        skirt_suit: スカートスーツ
+        bikini_skirt: ビキニスカート
+        pleated_skirt: プリーツスカート
+        pencil_skirt: ペンシルスカート
+        bubble_skirt: バブルスカート
+        tutu: チュチュ（バレエスカート）
+        ballgown: ボールガウン（舞踏会のドレス）
+        pettiskirt: ペチスカート（子供用）
+        showgirl_skirt: ショーガールスカート
+        Medium length skirt: ミディアム丈スカート
+        beltskirt: ベルトスカート
+        denim_skirt: デニムスカート
+        suspender_skirt: サスペンダースカート
+        skirt_set: トップスとセットのスカート
+        long_skirt: ロングスカート
+        summer_long_skirt: 夏用ロングスカート
+        overskirt: オーバースカート
+        hakama_skirt: 袴スカート
+        high-waist_skirt: ハイウエストスカート
+        kimono_skirt: 着物スカート
+        suspender_long_skirt: サスペンダーロングスカート
+        chiffon_skirt: シフォンスカート
+        frilled_skirt: フリルスカート
+        fur-trimmed_skirt: 毛皮飾りスカート
+        lace_skirt: レーススカート
+        lace-trimmed_skirt: レーストリムスカート
+        ribbon-trimmed_skirt: リボン飾りスカート
+        layered_skirt: レイヤードスカート
+        print_skirt: プリントスカート
+        multicolored_skirt: 多色のスカート
+        striped_skirt: ストライプスカート
+        vertical-striped_skirt: 縦縞スカート
+        plaid_skirt: プレイドスカート
+        flared_skirt: フレアスカート
+        floral_skirt: 花柄スカート
+
+    - name: スカートとのインタラクション
+      color: rgba(230, 84, 128, .4)
+      tags:
+        skirt_hold: エレガントにスカートを持つ
+        skirt_tug: スカートの裾を引っ張る
+        dress_tug: ドレスの裾を押さえる
+        skirt_lift: スカートをめくる
+        skirt_around_one_leg: 一本の脚にスカートを掛ける
+        skirt_removed: 脱ぎ捨てられたスカート
+        dress_removed: ドレスを脱ぐ
+        open_skirt: 開いたスカート
+
+    - name: パンツ
+      color: rgba(230, 84, 128, .4)
+      tags:
+        dress_bow: ドレスのリボン
+        dressing_another: 他の人に着せる
+        shorts_under_skirt: スカートの下にショートパンツを穿く
+        side_slit: サイドスリット
+        shorts: ショートパンツ
+        micro_shorts: ミクロショーツ
+        short_shorts: ショートショーツ
+        hot_pants: ホットパンツ
+        cutoffs: カットオフショーツ
+        striped_shorts: ストライプショートパンツ
+        suspender_shorts: サスペンダーショートパンツ
+        denim_shorts: デニムショートパンツ
+        puffy_shorts: パフィーショートパンツ
+        dolphin_shorts: ドルフィンショーツ
+        dolfin_shorts: ドルフィンショーツ
+        tight_pants: タイトパンツ
+        crotchless_pants: クロッチレスパンツ
+        track_pants: トラックパンツ
+        yoga_pants: ヨガパンツ
+        bike_shorts: バイクショーツ
+        gym_shorts: ジムショーツ
+        pants: パンツ
+        puffy_pants: パフィーパンツ
+        pumpkin_pants: パンプキンパンツ
+        hakama_pants: 袴パンツ
+        harem_pants: ハーレムパンツ
+        bloomers: ブルーマー
+        buruma: ブルマ（女子用ブルーマー）
+        jeans: ジーンズ
+        cargo_pants: カーゴパンツ
+        camouflage_pants: 迷彩パンツ
+        capri_pants: カプリパンツ
+        chaps: シャップス（チャップス）
+        jumpsuit: ジャンプスーツ（特に女性用）
+        lowleg_pants: 低ウエストパンツ
+        plaid_pants: プレイドパンツ
+        single_pantsleg: 片方のパンツレッグ
+        striped_pants: ストライプパンツ
+
+    - name: パンツとのインタラクション
+      color: rgba(230, 84, 128, .4)
+      tags:
+        asymmetrical_legwear: アシンメトリーなパンツ
+        leotard_aside: レオタードのクロッチを一側に寄せる
+        open_fly: 開いたファスナーのパンツ
+        pants_down: パンツを脱ぐ
+        pants_rolled_up: パンツをまくり上げる
+        pants_tucked_in: パンツを中に入れる
+        torn_jeans: 破れたジーンズ
+        torn_pants: 破れたパンツ
+        torn_shorts: 破れたショートパンツ
+
+    - name: 靴下
+      color: rgba(230, 84, 128, .4)
+      tags:
+        bodystocking: ボディストッキング
+        pantyhose: パンスト
+        leggings: レギンス
+        legwear: レギンス（一般的な言葉）
+        thighhighs: サイハイソックス（膝上までの長いソックス）
+        kneehighs: ニーハイソックス（膝までのソックス）
+        socks: ソックス
+        bare_legs: 裸足
+        black_bodystocking: 黒いボディストッキング
+        white_bodystocking: 白いボディストッキング
+        stocking_under_clothes: 服の下のストッキング
+        black_pantyhose: 黒いパンスト
+        white_pantyhose: 白いパンスト
+        thighband_pantyhose: レッグバンド付きパンスト
+        pantylines: パンティラインが浮かび上がるパンスト
+        single_leg_pantyhose: 片足だけパンスト
+        panties_under_pantyhose: パンストの下にパンティを履く
+        fishnets: フィッシュネットストッキング
+        stirrup_legwear: スティラップレッグウェア
+        toeless_legwear: つま先開きのレッグウェア
+        mismatched_legwear: ミスマッチのレッグウェア
+        two-tone_legwear: 2トーンのレッグウェア
+        asymmetrical_legwear: アシンメトリーなレッグウェア
+        uneven_legwear: 長さの異なるレッグウェア
+        white_thighhighs: 白いサイハイソックス
+        black_thighhighs: 黒いサイハイソックス
+        pink_thighhighs: ピンクのサイハイソックス
+        suspenders: サスペンダー
+        garter_straps: ガーターストラップ
+        torn_legwear: 破れたレッグウェア
+        torn_thighhighs: 破れたサイハイソックス
+        see-through_legwear_: 透明なレッグウェア
+        frilled_legwear: フリルのついたレッグウェア
+        lace-trimmed_legwear: レーストリムのレッグウェア
+        seamed_legwear: シームのあるレッグウェア
+        back-seamed_legwear: バックシームのあるレッグウェア
+        animal_ear_legwear: 動物の耳のついたサイハイソックス
+        striped_legwear: ストライプのレッグウェア
+        vertical-striped_legwear: 縦縞のレッグウェア
+        polka_dot_legwear: ポルカドットのレッグウェア
+        print_legwear: プリントのレッグウェア
+        legwear_under_shorts: ショートパンツの下にレッグウェアを履く
+        over-kneehighs: オーバーニーソックス
+        bobby_socks: ボビーソックス（白い短いソックス）
+        tabi: 足袋（たび）
+        loose_socks: ルーズソックス
+        ankle_socks: アンクルソックス
+        leg_warmers: レッグウォーマー
+        single_sock: 一つだけのソックス
+        striped_socks: ストライプソックス
+
+    - name: 靴下とのインタラクション
+      color: rgba(230, 84, 128, .4)
+      tags:
+        leg_cutout: 切り抜きのあるソックス
+        thighhighs_under_boots: ブーツの下にサイハイソックスを履く
+        adjusting_legwear: レッグウェアの調整
+        pantyhose_pull: 脱ぎ下ろされたパンスト
+        socks_removed: ソックスを脱ぐ
+        sock_pull: ソックスを引っ張る
+        thighhighs_pull: サイハイソックスを引っ張
+
+    - name: その他
+      color: rgba(230, 84, 128, .4)
+      tags:
+        garters: ガーター
+        leg_garter: レッグガーター
+        garter_straps: ガーターストラップ
+        thigh_strap: 太ももストラップ
+        thigh_ribbon: 太ももリボン
+        leg_ribbon: 脚リボン
+        bandaid_on_leg: 脚に包帯
+        bandaged_leg: 包帯を巻いた脚
+        ankle_lace-up: 足首レースアップ
+        thigh_holster: 太ももホルスター
+        bandaid_on_knee: 膝にバンドエイド
+        argyle_legwear: アーガイル柄のレッグウェア
+        bow_legwear: ボウのついたレッグウェア
+        arm_garter: アームガーター
+
+    - name: 素材
+      color: rgba(230, 84, 128, .4)
+      tags:
+        armored: アーマー付き
+        canvas: キャンバスの
+        denim: デニム
+        fluffy: ふわふわした
+        fur: 毛皮
+        latex: ラテックス
+        leather: 革製
+        see-through: 透明な
+        spandex: スパンデックス
+        tight: タイトな
+
+    - name: 装飾
+      color: rgba(230, 84, 128, .4)
+      tags:
+        frilled: フリルの
+        center_frills: 中央のフリル
+        crease: シワのある
+        layered: レイヤー構造の
+        lace: レース
+        fur_trim: 毛皮のトリム
+        fur-trimmed: 毛皮のトリムのある
+        fine_fabric_emphasis: 細かい生地の強調
+        latex_thighhighs: ラテックス製の太ももハイソックス
+        see-through_thighhighs: 透明な太ももハイソックス
+        ass_cutout: お尻が見える服
+        asymmetrical_clothes: 非対称の服
+        back_bow: 背中に結ぶリボン
+        costume_switch: 衣装の切り替え
+        cross-laced_clothes: クロスレースの服
+        double_vertical_stripe: 服に2本の縦ストライプ
+        halter_top: ハルタートップ
+        multicolored_legwear: 多色のレッグウェア
+        navy_blue_legwear: ネイビーブルーのレッグウェア
+        nontraditional_miko: 伝統的でない巫女服
+        side_cutout: サイドカットアウトの服
+        side_slit: サイドスリットの服
+        sideless_outfit: サイドがない服
+        single_kneehigh: 片方だけ履くニーハイソックス
+        single_vertical_stripe: 1本の縦ストライプが露出した服
+        turtleneck: タートルネックの服
+        two-sided_fabric: 両面の生地を使用した服のデザイン
+        o-ring: Oリング付きの衣類
+        o-ring_top: Oリング付きのトップス
+        fringe_trim: フリンジのトリム
+        loose_belt: ゆるいベルトの服
+        pom_pom_(clothes): ポンポンのついた衣類
+        drawstring: 衣服の紐
+        full-length_zipper: フルレングスのジッパーがついた衣類
+        gathers: ギャザーのある衣類
+        gusset: 衣服に縫い込まれた補強部分
+        breast_pocket: 胸ポケット
+
+    - name: パターン
+      color: rgba(230, 84, 128, .4)
+      tags:
+        argyle: アーガイル柄
+        checkered: チェック柄
+        colored_stripes: カラフルなストライプ
+        diagonal_stripes: 対角線ストライプ
+        horizontal_stripes: 横ストライプ
+        multicolored_stripes: 多色ストライプ
+        polka_dot_: 水玉模様
+        ribbed: リブ編み
+        striped: 横縞模様
+        unmoving_pattern: 静止パターン
+        vertical_stripes: 縦ストライプ
+        plaid: チェック柄
+        animal_print: アニマルプリント
+        cat_print: ネコプリント
+        bear_print: クマプリント
+        bird_print: 鳥プリント
+        bunny_print: ウサギプリント
+        cow_print: ウシプリント
+        dragon_print: ドラゴンプリント
+        fish_print: 魚プリント
+        frog_print: カエルプリント
+        shark_print: サメプリント
+        snake_print: ヘビ柄
+        zebra_print: ゼブラ柄
+        tiger_print: 虎柄
+        leopard_print: レオパード柄
+        jaguar_print: ジャガー柄
+        bat_print: バットプリント
+        aardwolf_print: アードウルフプリント
+        african_wild_dog_print: アフリカ野犬プリント
+        cheetah_print: チータープリント
+        dog_print: 犬プリント
+        fox_print: キツネプリント
+        giraffe_print: キリンプリント
+        panda_print: パンダプリント
+        sand_cat_print: 砂猫プリント
+        whale_print: クジラプリント
+        white_tiger_print: ホワイトタイガープリント
+        goldfish_print: 金魚プリント
+        wing_print: 羽プリント
+        spider_web_print: クモの巣プリント
+        butterfly_print: 蝶々プリント
+        floral_print: 花柄
+        leaf_print: 葉柄
+        clover_print: クローバー柄
+        maple_leaf_print: 紅葉柄
+        rose_print: バラ柄
+        strawberry_print: イチゴ柄
+        cherry_print: チェリー柄
+        bamboo_print: 竹柄
+        carrot_print: ニンジン柄
+        hibiscus_print: ハイビスカス柄
+        jack-o'-lantern_print: ジャックオーランタン柄
+        petal_print: 花びら柄
+        sunflower_print: ひまわり柄
+        watermelon_print: スイカ柄
+        sky_print: 空柄
+        cloud_print: 雲柄
+        lightning_bolt_print: 稲妻柄
+        rainbow_print: 虹柄
+        snowflake_print: 雪の結晶柄
+        starry_sky_print: 星空柄
+        crescent_print: 三日月柄
+        star_print: 星柄
+        star_(symbol): 星の形のシンボル
+        moon_print: 月柄
+        sun_print: 太陽柄
+        character_print: 文字柄
+        clothes_writing_: 衣服に書かれた文字
+        anchor_print: アンカープリント
+        cherry_blossom_print: 桜柄
+        musical_note_print: 音符柄
+        triangle_print: 三角柄
+        arrow_print: 矢印プリント
+        wave_print: 波柄
+        peace_symbol: 平和のシンボル（☮）
+        heart_print: ハート柄
+        flame_print: 炎柄
+        hitodama_print: 人魂柄
+        paw_print: 足跡柄
+        skeleton_print: 骸骨柄
+        skull_print: 髑髏柄
+        sparkle_print: 輝く柄
+        yin_yang_print: 陰陽柄
+        cross_print: 十字架の要素の柄
+        camoflage: 迷彩
+        flag_print: 旗柄
+        bone_print: 骨柄
+        ghost_print: ゴーストプリント
+        mushroom_print: キノコ柄
+        onigiri_print: おにぎり柄
+        cat_ear: 猫耳の形
+        cat_ear_cutout: 猫耳の形のくり抜き
+
+    - name: 靴
+      color: rgba(230, 84, 128, .4)
+      tags:
+        barefoot: 裸足
+        no_shoes: 靴なし
+        shoes_removed: 靴を脱いだ
+        single_shoe: 一つだけの靴
+        the_only_shoe: 一つだけの靴
+        black_loafers: 黒いローファー
+        shoes: 靴
+        uwabaki: 室内履き
+        platform_footwear: プラットフォームシューズ
+        high_heels: ハイヒール
+        stiletto_heels: スティレットヒール
+        strappy_heels: ストラップ付きハイヒール
+        platform_heels_: プラットフォームハイヒール
+        rudder_footwear: 船の舵用の靴
+        sandals: サンダル
+        barefoot_sandals: 裸足サンダル
+        clog_sandals: 木靴サンダル
+        geta: 下駄
+        slippers: スリッパ
+        skates: スケート靴
+        roller_skates: ローラースケート
+        animal_feet: 動物の足
+        animal_slippers: 動物のスリッパ
+        anklet: アンクレット
+        shackles: 手錠
+        brown_footwear: 茶色の靴
+        cross-laced_footwear: クロスレースの靴
+        loafers: ローファー
+        mary_janes: メリージェーンズ
+        mismatched_footwear: ミスマッチの靴
+        pointy_footwear: 先の尖った靴
+        pumps: パンプス
+        sandals_removed: サンダルを脱いだ
+        shoe_soles: 靴底
+        shoelaces: 靴紐
+        sneakers: スニーカー
+        winged_footwear: 羽のついた靴
+        zouri: 草履
+
+    - name: ブーツ
+      color: rgba(230, 84, 128, .4)
+      tags:
+        boots: ブーツ
+        boots_removed: ブーツを脱いだ
+        thigh_boots: 大腿ブーツ
+        knee_boots: ニーブーツ
+        cross-laced_footwear: クロスレースの靴
+        ankle_boots: アンクルブーツ
+        high_heel_boots: ハイヒールブーツ
+        toeless_boots: つま先の露出したブーツ
+        lace-up_boots: レースアップブーツ
+        fur-trimmed_boots: 毛皮トリムのブーツ
+        snow_boots: スノーブーツ
+        anklet: アンクレット
+        rubber_boots: ゴム長靴
+        santa_boots: サンタブーツ
+        leather_boots: 革ブーツ
+        thighhighs_under_boots: ブーツの下の太ももハイソックス
+        combat_boots: コンバットブーツ
+        doc_martens: ドクターマーチン
+        rain_boots: 雨靴
+        belt_boots: ベルトブーツ
+        fur_boots: ファーブーツ
+        single_boot: 一つだけのブーツ
+
+    - name: 靴底
+      color: rgba(230, 84, 128, .4)
+      tags:
+        shoe_soles: 靴底
+        arched_soles: アーチのある靴底
+        paw_print_soles: 足跡のついた靴底
+        horseshoe: 蹄鉄
+
+    - name: 襟元
+      color: rgba(230, 84, 128, .4)
+      tags:
+        sailor_collar: セーラーカラー
+        fur_collar: 毛皮の襟
+        frilled_collar: フリルの襟
+        popped_collar: 立ち襟
+        choker: チョーカー
+        black_choker: 黒いチョーカー
+        belt_collar: ベルト付き襟
+        frilled_choker: フリルのチョーカー
+        neckerchief: ネッカチーフ
+        red_neckerchief: 赤いネッカチーフ
+        necktie: ネクタイ
+        short_necktie: 短いネクタイ
+        white_necktie: 白いネクタイ
+        bowtie: ボウタイ
+        headphones_around_neck: 首にかけたヘッドフォン
+        goggles_around_neck: 首にかけたゴーグル
+        neck_bell: 首につけたベル
+        neck_ruff: 襟巻き
+        v-neck: Vネック
+        towel_around_neck: 首にかけたタオル
+        loose_necktie: ゆるいネクタイ
+        neck_tattoo: 首のタトゥー
+        ascot: アスコット
+        ribbon_choker: リボンのチョーカー
+        maebari/pasties: 前貼り/乳貼り
+        latex: ラテックス
+        torn_clothes: ぼろぼろの服
+        iron_cross: 鉄十字勲章
+        chinese_knot: 中国結び
+        cross_necklace: 十字架のネックレス
+        bead_necklace: ビーズのネックレス
+        pearl_necklace: 真珠のネックレス
+        heart_necklace: ハートのネックレス
+        carrot_necklace: 人参のネックレス
+        chain_necklace: チェーンのネックレス
+        magatama_necklace: 勾玉のネックレス
+        tooth_necklace: 歯のネックレス
+        key_necklace: キーのネックレス
+        anchor_necklace: アンカーのネックレス
+        skull_necklace: 髑髏のネックレス
+        shell_necklace: 貝殻のネックレス
+        gold_necklace: 金のネックレス
+        crescent_necklace: 三日月のネックレス
+        ring_necklace: リングのネックレス
+        feather_necklace: 羽のネックレス
+        bone_necklace: 骨のネックレス
+        ankh_necklace: アンクのネックレス
+        multiple_necklaces: 複数のネックレス
+        bullet_necklace: 弾丸のネックレス
+        holding_necklace: ネックレスを持っている
+        necklace_removed: ネックレスを外した
+        brown_neckwear: 茶色の首飾り
+        checkered_neckwear: チェック柄の襟飾り
+        diagonal-striped_neckwear: 斜めストライプの襟飾り
+        halterneck: ハルターネック
+        mole_on_neck: 首にほくろ
+        neck: 首
+        neck_ribbon: 首にリボンを結ぶ
+        neck_ring: 首輪
+        necklace: ネックレス
+        plaid_neckwear: チェック柄の襟飾り
+        plunging_neckline: V字の切り込み
+        print_neckwear: プリントの襟飾り
+        sleeveless_turtleneck: 袖なしタートルネック
+        star_necklace: 星のネックレス
+        striped_neckwear: ストライプの襟飾り
+        turtleneck_sweater: タートルネックのセーター
+        undone_necktie: 解けたネクタイ
+        whistle_around_neck: 首にかけた笛
+
+    - name: スカーフ
+      color: rgba(230, 84, 128, .4)
+      tags:
+        plaid_scarf: チェック柄のスカーフ
+        striped_scarf: ストライプのスカーフ
+        print_scarf: プリントのスカーフ
+        vertical-striped_scarf: 縦ストライプのスカーフ
+        polka_dot_scarf: 水玉模様のスカーフ
+        argyle_scarf: アーガイル柄のスカーフ
+        beige_scarf: ベージュのスカーフ
+        scarf_bow: スカーフのリボン
+        fur_scarf: 毛皮のスカーフ
+        naked_scarf: 裸のスカーフ
+        multicolored_scarf: 多色のスカーフ
+        floating_scarf: 浮遊するスカーフ
+        long_scarf: 長いスカーフ
+        arm_scarf: 腕のスカーフ
+        scarf_on_head: 頭に巻いたスカーフ
+        scarf_over_mouth: 口にかけたスカーフ
+        scarf_removed: スカーフを外した
+        adjusting_scarf: スカーフを調整中
+        holding_scarf: スカーフを持っている
+        scarf_pull: スカーフを引っ張る
+        brown_scarf: 茶色のスカーフ
+        scarf: スカーフ
+
+    - name: メガネ
+      color: rgba(230, 84, 128, .4)
+      tags:
+        glasses: メガネ
+        eyewear: 眼鏡
+        monocle: モノクル
+        under-rim_eyewear: アンダーリムの眼鏡
+        rimless_eyewear: リムレスの眼鏡
+        semi-rimless_eyewear: セミリムレスの眼鏡
+        red-framed_eyewear: 赤いフレームの眼鏡
+        round_eyewear: 丸いフレームの眼鏡
+        black-framed_eyewear: 黒いフレームの眼鏡
+        tinted_eyewear: 色付きの眼鏡
+        medical_eyepatch: 医療用アイパッチ
+        bandage_over_one_eye: 一つの目に包帯を巻いた
+        crooked_eyewear: 曲がった眼鏡
+        eyewear_removed: 眼鏡を外した
+        sunglasses: サングラス
+        goggles: ゴーグル
+        Blindfold: 目隠し
+        eyepatch: 目帯
+        visor: バイザー
+        bespectacled: メガネをかけた
+        blue-framed_eyewear: 青いフレームの眼鏡
+        brown-framed_eyewear: 茶色のフレームの眼鏡
+        coke-bottle_glasses: 底の厚い丸眼鏡
+        no_eyewear: 眼鏡なし
+        opaque_glasses: 不透明な眼鏡
+        over-rim_eyewear: オーバーリムの眼鏡
+
+    - name: マスク
+      color: rgba(230, 84, 128, .4)
+      tags:
+        mask: マスク
+        half_mask: ハーフマスク
+        masked: マスクをつけた
+        mask_lift: マスクを上げる
+        mask_on_head: 頭にかぶったマスク
+        mask_removed: マスクを外した
+        mouth_mask: 口マスク
+        surgical_mask: 医療用マスク
+        plague_doctor_mask: ペスト医師のマスク
+        gas_mask: ガスマスク
+        visor: バイザー
+        helmet: ヘルメット
+        fox_mask: キツネのマスク
+        diving_mask: ダイビングマスク
+        diving_mask_on_head: 頭につけたダイビングマスク
+        oni_mask: 鬼の面
+        tengu_mask: 天狗の面
+        ninja_mask: 忍者のマスク
+        skull_mask: スカルマスク
+        hockey_mask: アイスホッケーマスク
+        bird_mask: 鳥のマスク
+        stone_mask: 石の鬼の面
+        horse_mask: 馬のマスク
+        masquerade_mask: マスカレードのマスク
+        domino_mask: SMマスク
+
+    - name: 腕
+      color: rgba(230, 84, 128, .4)
+      tags:
+        long_sleeves: 長袖
+        short_sleeves: 半袖
+        wide_sleeves: ワイドスリーブ
+        furisode: 振袖
+        detached_sleeves: 取り外し可能な袖
+        single_sleeve: 一つの袖
+        sleeveless: 袖なし
+        asymmetrical_sleeves: 非対称な袖
+        puffy_sleeves: パフスリーブ
+        puffy_long_sleeves: パフスリーブの長袖
+        puffy_short_sleeves: パフスリーブの半袖
+        frilled_sleeves: フリル付き袖
+        juliet_sleeves: ジュリエットスリーブ
+        bandaged_arm: 包帯巻きの腕
+        raglan_sleeves: ラグランスリーブ
+        vambraces: 前腕防具
+        layered_sleeves: 重ねた袖
+        fur-trimmed_sleeves: 毛皮のトリム付き袖
+        see-through_sleeves: 透ける袖
+        torn_sleeves: 破れた袖
+        sleeves_past_fingers: 指先までの袖
+        sleeves_past_wrists: 手首までの袖
+        sleeves_past_elbows: 肘までの袖
+        sleeves_pushed_up: 押し上げられた袖
+        arm_out_of_sleeve: 袖から出た腕
+        uneven_sleeves: 不均一な袖
+        mismatched_sleeves: 組み合わせの異なる袖
+        sleeve_rolled_up: 袖をまくった
+        sleeves_rolled_up: 一方の袖をまくった
+        feather-trimmed_sleeves: 羽飾りのついた袖
+        hands_in_opposite_sleeves: 両手を逆の袖に入れた
+        lace-trimmed_sleeves: レーストリムのついた袖
+        pinching_sleeves: 袖をつまむ
+        puffy_detached_sleeves: パフスリーブの取り外し可能な袖
+        ribbed_sleeves: リブ編みの袖
+        single_detached_sleeve: 一方の袖が取り外されていない
+        sleeves_folded_up: 折りたたまれた袖
+        striped_sleeves: ストライプの袖
+        wrist_cuffs: 袖口の手首カフス
+        armband: 腕章
+        armlet: 腕輪
+
+    - name: 手
+      color: rgba(230, 84, 128, .4)
+      tags:
+        bandage: 包帯
+        leash: リード
+        arm_tattoo: 腕のタトゥー
+        number_tattoo: 数字のタトゥー
+        bead_bracelet: ビーズのブレスレット
+        bracelet: ブレスレット
+        flower_bracelet: 花のブレスレット
+        spiked_bracelet: スパイクのついたブレスレット
+        wrist_cuffs: 手首カフス
+        wristband: 腕バンド
+        bracer: ブレイサー
+        cuffs: 袖口
+        bound_wrists: 手首を縛られた
+        wrist_scrunchie: 手首のスクランチー
+        handcuffs: 手錠
+        shackles: 手錠
+        chains: チェーン
+        chain_leash: チェーンのリード
+
+    - name: 手袋
+      color: rgba(230, 84, 128, .4)
+      tags:
+        gloves: 手袋
+        gloves_removed: 手袋を脱いだ
+        no_gloves: 手袋なし
+        single_glove: 一つの手袋
+        single_elbow_glove: 肘までの一つの手袋
+        long_gloves: 長手袋
+        elbow_gloves: 肘までの手袋
+        bridal_gauntlets: 花嫁のガントレット
+        half_gloves: 半手袋
+        fingerless_gloves: 指なし手袋
+        partially_fingerless_gloves: 部分的に指なし手袋
+        paw_gloves: パウ手袋
+        mittens: ミトン
+        baseball_mitt: 野球のミット
+        fur-trimmed_gloves: 毛皮のトリム付き手袋
+        latex_gloves: ラテックス手袋
+        lace-trimmed_gloves: レーストリムのついた手袋
+        leather_gloves: 皮の手袋
+        frilled_gloves: フリル付き手袋
+        mismatched_gloves: 組み合わせの異なる手袋
+        multicolored_gloves: 多色の手袋
+        asymmetrical_gloves: 非対称な手袋
+        brown_gloves: 茶色の手袋
+        oven_mitts: オーブンミット
+        print_gloves: プリント手袋
+        striped_gloves: ストライプの手袋
+        torn_gloves: 破れた手袋
+
+    - name: 耳飾り
+      color: rgba(230, 84, 128, .4)
+      tags:
+        cross_earrings: 十字のイヤリング
+        crystal_earrings: クリスタルのイヤリング
+        earrings: イヤリング
+        flower_earrings: 花のイヤリング
+        heart_earrings: ハートのイヤリング
+        hoop_earrings: フープイヤリング
+        multiple_earrings: 複数のイヤリング
+        pill_earrings: 薬の形をしたイヤリング
+        single_earring: 一つのイヤリング
+        skull_earrings: スカルのイヤリング
+        star_earrings: 星のイヤリング
+
+    - name: 頭飾り
+      color: rgba(230, 84, 128, .4)
+      tags:
+        halo: ハロー
+        mechanical_halo: 機械のハロー
+        headwear: 頭飾り
+        headpiece: 頭飾り
+        headwear_removed: 頭飾りを外した
+        head_wreath: 頭の花輪
+        crown: 王冠
+        mini_crown: ミニクラウン
+        tiara: ティアラ
+        diadem: 同上
+        tilted_headwear: 傾けられた頭飾り
+        head_fins: 頭のヒレ
+        maid_headdress: メイドのヘッドドレス
+        bridal_veil: 花嫁のベール
+        headband: ヘッドバンド
+        helmet: ヘルメット
+        alternate_headwear: 異なる頭飾り
+        fur-trimmed_headwear: 毛皮のトリム付き頭飾り
+        goggles_on_headwear: 頭飾りにゴーグル
+        earphones: イヤホン
+        earmuffs: イヤーマフ
+        ears_through_headwear: 頭飾りから耳が出ている
+        xx_on_head: 頭にxx
+        leaf_on_head: 頭に葉
+        topknot: お団子
+        suigintou: 水銀燈
+        triangular_headpiece: 三角形の頭飾り
+        forehead_protector: 額当て
+        radio_antenna: ラジオアンテナ
+        animal_hood: 動物のフード
+        arrow_(symbol): 矢印
+        axe: 斧
+        bald: はげ頭
+        bandana: バンダナ
+        bob_cut: ボブカット
+        bone: 骨
+        bowl_cut: ボウルカット
+        circlet: 円環
+        double_bun: ダブルバン
+        double_dildo: ダブルディルド
+        drill: ドリル
+        faucet: 蛇口
+        hachimaki: 鉢巻
+        hair_behind_ear: 耳の後ろの髪
+        hair_bell: 髪につけたベル
+        hair_bun: 髪の束
+        hair_down: 髪を下ろした
+        hair_flaps: 揺れる髪
+        hair_flip: 髪をかき上げる
+        hair_flower: 髪に花をつけた
+        hair_spread_out: 広がった髪
+        hair_up: 髪を上げた
+        helm: ヘルムをかぶった
+        helmet_removed: ヘルメットを外した
+        horned_helmet: 角のついたヘルメット
+        japari_bun: ジャパリまんじゅう
+        kerchief: ケーフィア
+        mami_mogu_mogu: マミモグモグ
+        mob_cap: モブキャップ
+        one_side_up: 片方の髪を上げた
+        owl: フクロウ
+        pier: ピアス
+        pillow: 枕
+        raised_fist: 上げられた拳
+        skull_and_crossbones: 髑髏と十字骨
+        stone: 石
+        turban: ターバン
+        twin_drills: ツインドリルヘアスタイル
+        updo: アップスタイル
+        wet_hair: 濡れた髪
+        headdress: 頭部装飾品
+        adjusting_headwear: 頭飾りの調整
+        bear_hair_ornament: クマの模様の頭飾り
+        brown_headwear: 茶色の頭飾り
+        horned_headwear: 角状の頭飾り
+        horns_through_headwear: 頭飾りに角の穴がある
+        no_headwear: 頭飾りなし
+        object_on_head: 頭に物体がある
+        print_headwear: プリントの頭飾り
+        bone_hair_ornament: 骨型の装飾品
+        bunny_hair_ornament: ウサギの装飾品
+        horn_ornament: 角に装飾品がある
+        animal_on_head: 頭に動物がいる
+        behind-the-head_headphones: 後頭部にヘッドフォンをつける
+        bird_on_head: 頭に鳥がいる
+        cat_ear_headphones: 猫耳のヘッドフォン
+        cat_on_head: 頭に猫がいる
+        eyewear_on_head: 頭に眼鏡がある
+        forehead: 額
+        forehead_jewel: 額の宝石
+        forehead_kiss: 額にキス
+        forehead_mark: 額に模様
+        forehead-to-forehead: 額同士が触れる
+        goggles_on_head: 頭にゴーグルをつける
+        head: 頭
+        head_bump: 頭にこぶ
+        head_down: 頭を下げる
+        head_mounted_display: 頭に装着したディスプレイ
+        head_out_of_frame: 頭の一部がフレーム外
+        head_rest: 頭を支える
+        head_tilt: 頭を傾ける
+        head_wings: 頭に羽がある
+        headgear: 頭部装飾品（一定のSF要素を含む）
+        headphones: ヘッドフォン
+        heads-up_display: HUD（ゲームやSFのスタイル）
+        headset: ヘッドセット
+        inter_headset: EVAの神経接続器
+        on_head: 頭に乗っている
+        person_on_head: 頭の上に人がいる
+        single_head_wing: 一つの羽のついた頭
+    - name: 帽子
+      color: rgba(230, 84, 128, .4)
+      tags:
+        hat: 帽子
+        no_hat: 帽子なし
+        large_hat: 大きな帽子
+        mini_hat: ミニ帽子
+        witch_hat: 魔女の帽子
+        mini_witch_hat: ミニ魔女帽子
+        wizard_hat: 魔法使いの帽子
+        party_hat: パーティーハット
+        jester_cap: 小丑の帽子
+        tokin_hat: ときん帽
+        top_hat: トップハット
+        mini_top_hat: ミニトップハット
+        bowler_hat: ボウラーハット
+        pillbox_hat: ピルボックスハット
+        cloche_hat: クロッシェハット
+        side_cap: サイドキャップ
+        military_hat: 軍帽
+        beret: ベレー帽
+        garrison_cap: ガリソンキャップ
+        police_hat: 警察帽
+        nurse_cap: ナースキャップ
+        chef_hat: シェフハット
+        school_hat: 学生帽
+        pirate_hat: 海賊の帽子
+        cabbie_hat: キャビーハット
+        bucket_hat: バケットハット
+        hardhat: 安全帽
+        straw_hat: ストローハット
+        sun_hat: 日よけ帽子
+        rice_hat: 米の葉帽子
+        animal_hat: 動物の帽子
+        fur_hat: 毛皮の帽子
+        hat_with_ears: 耳のついた帽子
+        bobblehat: ボブルハット
+        pillow_hat: 枕帽子
+        pumpkin_hat: パンプキンハット
+        baseball_cap: 野球帽
+        flat_cap: フラットキャップ
+        torn_hat: 破れた帽子
+        mob_cap: モブキャップ
+        newsboy_cap: ニュースボーイキャップ
+        bowknot_over_white_beret: 白いベレー帽に結び目
+        backwards_hat: 後ろ向きの帽子
+        bowl_hat: ボウルハット
+        cat_hat: 猫の帽子
+        chat_log: チャットログスタイル
+        cowboy_hat: カウボーイハット
+        dixie_cup_hat: ディキシーカップ帽
+        hat_bow: リボンのついた帽子
+        hat_feather: 羽根のついた帽子
+        hat_flower: 花のついた帽子
+        hat_ornament: 飾りのついた帽子
+        hat_over_one_eye: 一つの目を隠す帽子
+        hat_removed: 帽子を取り外した
+        hat_ribbon: リボンのついた帽子
+        hat_tip: 帽子のつばを持つ
+        hatching_(texture): ハッチング（テクスチャ）
+        hatsune_miku_(cosplay): 初音ミクのコスプレ
+        is_that_so: そうなのか
+        porkpie_hat: ポークパイハット
+        sailor_hat: セーラーハット
+        santa_hat: サンタの帽子
+        sideways_hat: 帽子のつばを横に
+        what: 作者の気まぐれ
+        what_if: 別の世界線
+
+    - name: 髪飾り
+      color: rgba(230, 84, 128, .4)
+      tags:
+        hair_ribbon: 髪リボン
+        hairband: 髪バンド
+        hair_tie: 髪留め
+        lolita_hairband: ロリータヘアバンド
+        frilled_hairband: フリルのついたヘアバンド
+        lace-trimmed_hairband: レーストリムのついたヘアバンド
+        hair_bobbles: 髪ゴム
+        hair_ornament: 髪飾り
+        hair_flower: 髪の花
+        x_hair_ornament: X型の髪飾り
+        hair_bow: ヘアボウ
+        frog_hair_ornament: カエルの髪飾り
+        heart_hair_ornament: ハートの髪飾り
+        butterfly_hair_ornament: 蝶の髪飾り
+        star_hair_ornament: 星の髪飾り
+        food-themed_hair_ornament: 食べ物のテーマの髪飾り
+        anchor_hair_ornament: アンカー型の髪飾り
+        bat_hair_ornament: コウモリの髪飾り
+        carrot_hair_ornament: 人参の髪飾り
+        cat_hair_ornament: 猫の髪飾り
+        clover_hair_ornament: クローバーの髪飾り
+        crescent_hair_ornament: 三日月の髪飾り
+        cross_hair_ornament: 十字の髪飾り
+        d-pad_hair_ornament: 十字キーの髪飾り
+        fish_hair_ornament: 魚の形の髪飾り
+        hairpods: 髪の毛に対になったワイヤレスイヤホンのような髪飾り
+        leaf_hair_ornament: 葉の髪飾り
+        musical_note_hair_ornament: 音符の髪飾り
+        pumpkin_hair_ornament: カボチャの髪飾り
+        skull_hair_ornament: 髑髏の髪飾り
+        snake_hair_ornament: 蛇型の髪飾り
+        snowflake_hair_ornament: 雪の結晶の髪飾り
+        strawberry_hair_ornament: 苺の髪飾り
+        sunflower_hair_ornament: ひまわりの髪飾り
+        hairpin: ヘアピン
+        hairclip: 髪クリップ
+        hair_tubes: 髪の管
+        hair_stick: 髪棒
+        hair_bun: 髪の束
+        single_hair_bun: 一つの髪の束
+        hair_bell: 髪の鈴
+        hair_rings: 髪の輪
+
+    - name: 小装飾品
+      color: rgba(230, 84, 128, .4)
+      tags:
+        ring: 指輪
+        wedding_band: 結婚指輪
+        earrings: イヤリング
+        single_earring: 一つのイヤリング
+        stud_earrings: スタッドイヤリング
+        necklace: ネックレス
+        jewelry: ジュエリー
+        crystal: クリスタル
+        brooch: ブローチ
+        gem: 宝石
+        chest_jewel: 胸の宝石
+        forehead_jewel: 額の宝石
+        tassel: タッセル
+        belly_chain_: ベリーチェーン
+        lace: レース
+        ribbon: リボン
+        stitches: ステッチ
+        scarf: スカーフ
+        bandaid: 絆創膏
+        collar: 襟
+        belt: ベルト
+        steam: 蒸気
+        bell: ベル
+        amulet: 護符
+        emblem: エンブレム
+        flag_print: 旗のプリント
+        anchor_symbol: アンカーのシンボル
+        cross: 十字
+        diffraction_spikes: 衍射スパイク
+        iron_cross: 鉄十字
+        latin_cross: ラテン十字
+        lace-trimmed_hairband: レーストリムのついたヘアバンド
+        ankle_lace-up: 足首のレースアップ
+        st._gloriana's_(emblem): セントグロリアナの紋章
+        heart_lock_(kantai_collection): ハートロック（艦これ）
+        garters: ガーター
+        thigh_strap: 太ももストラップ
+        thigh_ribbon: 太ももリボン
+        leg_garter: 脚のガーター
+        garter_straps: ガーターストラップ
+        leg_ribbon: 脚リボン
+        bandaid_on_leg: 脚に絆創膏
+        bandaged_leg: 包帯巻きの脚
+        arm_garter: 腕のガーター
+        joints: 関節
+        kneepits: 膝の裏
+        knee_pads: ニーパッド
+        thigh_holster: 太ももホルスター
+        bandaid_on_knee: 膝に絆創膏
+
+    - name: 首飾り
+      color: rgba(230, 84, 128, .4)
+      tags:
+        bracelet: ブレスレット
+        choker: チョーカー
+        metal collar: 金属の首輪
+        ring: 指輪
+        wristband: 腕バンド
+        pendant: ペンダント
+        brooch: ブローチ
+        hoop earrings: フープイヤリング
+        bangle: バングル
+        stud earrings: スタッドイヤリング
+        sunburst: 太陽の飾り
+        pearl bracelet: 真珠のブレスレット
+        drop earrings: ドロップイヤリング
+        puppet rings: 人形の指輪
+        corsage: コサージュ
+        sapphire brooch: サファイアのブローチ
+        jewelry: ジュエリー
+        necklace: ネックレス
+
+- name: 表情動作
+  groups:
+    - name: 笑
+      color: rgba(241, 229, 140, .4)
+      tags:
+        smile: 微笑
+        laughing: 大笑
+        kind_smile: 幸せな笑顔
+        :d: 幸せな笑顔_:D😀
+        ;d: 瞬き笑顔_:D
+        grin: 歯を見せて笑う
+        teasing_smile: からかわれて笑う、歯を見せてバカ笑い
+        seductive_smile: 魅惑的な微笑み
+        smirk: ニヤリと笑う、得意げな笑顔
+        giggling: くすくす笑い
+        smug: うぬぼれた
+        naughty_face: いたずらっ子の顔
+        evil smile: 邪悪な笑み
+        crazy_smile: 狂気じみた笑い
+        happy: 幸せ|幸福
+        happy_birthday: 誕生日おめでとう
+        happy_halloween: ハッピーハロウィン
+        happy_new_year: 明けましておめでとう
+        happy_tears: 幸せな涙
+        happy_valentine: ハッピー・バレンタイン
+
+    - name: 泣き
+      color: rgba(241, 229, 140, .4)
+      tags:
+        sad: 悲しい
+        tear: 泣きじゃくる
+        crying: 大泣き
+        crying_with_eyes_open: 目を開けて泣く
+        streaming_tears: 涙を流す
+        teardrop: 涙滴
+        tearing_clothes: 衣服を引き裂く
+        tearing_up: 泣きそうな表情
+        tears: 涙
+        wiping_tears: 涙を拭く
+        badmood: 機嫌が悪い
+
+    - name: 不幸
+      color: rgba(241, 229, 140, .4)
+      tags:
+        frustrated: 意気消沈
+        frustrated_brow: 顔をしかめる
+        annoyed: 苦悩している
+        anguish: 苦悩
+        sigh: ため息
+        gloom: 陰気な
+        disappointed: がっかりした
+        despair: 絶望
+
+    - name: 軽蔑
+      color: rgba(241, 229, 140, .4)
+      tags:
+        disgust: 嫌悪（ゴミのような目）
+        disdain: 軽蔑
+        contempt: 蔑視
+        shaded_face: 顔に陰がある、蔑視に合わせる
+        jitome: 軽蔑の目つき
+        frown: 顔をしかめる
+        wince: 顔をしかめる（性交前）
+        furrowed_brow: 顔の眉をひそめる
+        fear_kubrick: 恐怖で横目
+        laughing: 笑っている
+
+    - name: 怒り
+      color: rgba(241, 229, 140, .4)
+      tags:
+        angry: 怒っている
+        glaring: 怒りのまなざし
+        serious: 真剣な（angryと似ている）
+        kubrick_stare: 横目で睨む
+        evil: 邪悪な
+        sulking: 不機嫌な
+        screaming: 叫び|大声で叫ぶ
+        shouting: 叫ぶ
+
+    - name: その他表情
+      color: rgba(241, 229, 140, .4)
+      tags:
+        expressionless: 無表情
+        sleepy: 眠い
+        drunk: 酔っぱらっている
+        bored: 退屈な
+        confused: 困惑させる
+        thinking: 考える
+        lonely: 孤独な
+        light_blush: 軽い顔紅
+        blush: 顔紅
+        shy: 内気な
+        embarrass: 恥ずかしい（困った）
+        facepalm: 手で顔を覆う
+        flustered: 戸惑った
+        sweat: 汗をかく
+        scared: 怖がっている
+        ahegao: アヘ顔
+        endured_face: 忍耐の表情
+        restrained: 忍耐
+        dark_persona: ダークな
+        crazy: 狂気じみた
+        exhausted: 疲れ切った
+        Tsundere: ツンデレ
+        yandere: 病的な愛情を持つ
+        multiple_persona: 複数の人格
+        Jekyll_and_Hyde: 複数の人格
+        twitching: 痙攣
+        spasm: 痙攣
+        trembling: 震え
+        rape_face: 強姦顔
+        rolling_eyes: 目を回す（絶頂の目）
+        envy: 嫉妬
+        female_orgasm: 絶頂
+        heavy_breathing: 重い呼吸、おそらく使用されない
+        naughty: いたずらっ子
+        expressions: 表情の差分（おおよそ）
+        moaning: 喘ぎ声
+        scowl: 嫌いな目つき
+
+    - name: 基本動作
+      color: rgba(241, 229, 140, .4)
+      tags:
+        standing: 立っている
+        on back: 仰向けになる
+        on stomach: うつ伏せになる
+        kneeling: ひざまずく
+        on_side: 横たわる
+        on_stomach: うつ伏せになる
+        top-down_bottom-up: うつ伏せでお尻を突き出す
+        the_pose: うつ伏せで足を突き出す
+        bent_over: お尻を突き出すポーズ
+        upside-down: 逆さま
+        reversal: 逆転
+        fighting_stance: 戦闘姿勢
+        leaning_to_the_side: 一方に寄りかかる
+        leaning: 寄りかかる|体を傾ける
+        leaning_back: 身体を後ろに傾ける
+        leaning_on_object: 物に寄りかかる
+        arched_back: 背中を反らす
+        leaning_forward: 身体を前に傾ける
+        afloat: 浮かぶ（水上に）
+        lying: 横になる
+        fetal_position: 胎児の姿勢（横になる）
+        lying_on_person: 人の上に横になる
+        lying_on_the_lake: 湖の上に横になる
+        lying_on_water: 水の上に横になる
+        on_back: 仰向けになる
+        prone_bone: 背後から仰向けに
+        reclining: 斜めに倒れた姿勢
+        sleeping_upright: 直立して寝る
+        presenting: 披露（後に部位を追加）
+        spinning: 回転する
+        posing: ポーズをとる
+        stylish_pose: おしゃれなポーズ
+        public_indecency: 公然わいせつ
+        parody: パロディ
+        in_container: 容器の中に
+        against_glass: ガラスに押し付ける（効果なし）
+        aiming: 狙う
+        aiming_at_viewer: 見る人を狙う
+        applying_makeup: 化粧する
+        bathing: 入浴する
+        biting: 噛む
+        bleeding: 出血する
+        blowing: 吹く
+        bowing: お辞儀する
+        breathing_fire: 火を吹く
+        broom_riding: ほうきに乗る
+        brushing_teeth: 歯を磨く
+        bubble_blowing: 泡を吹く
+        bullying: いじめる
+        burning: 燃える
+        cast: 投げる
+        chasing: 追いかける
+        cleaning: 掃除する
+        climbing: 登る
+        comforting: 慰める
+        cooking: 料理する
+        crying: 泣く
+        cuddling: 抱きしめる
+        dancing: 踊る
+        diving: 潜る
+        dragging: 引っ張る
+        drawing: 描く
+        drawing_bow: 弓を引く
+        dreaming: 夢を見る
+        drinking: 飲む
+        driving: 運転する
+        dropping: （意図せずに）落とす
+        drying: 乾かす（入浴後）
+        dual_wielding: 両手持ち
+        exercise: 運動する
+        fighting: 戦闘中の
+        firing: 射撃する
+        fishing: 釣りをする
+        flapping: 手をバタバタと動かす
+        flashing: 露出する
+        fleeing: 逃げる
+        flexing: 筋肉を見せる
+        flying: 飛ぶ
+        flying_kick: 飛び蹴り
+        hair_brushing: 髪をとかす
+        hair_tucking: 髪をかき上げる
+        hanging: 吊るす
+        hitting: 打つ
+        imagining: 想像中の
+        jumping: 跳ぶ
+        kicking: 蹴る
+        licking: 舐める
+        licking_lips: 唇を舐める
+        lip_biting: 唇を噛む
+        meditation: 瞑想する
+        painting: 絵を描く
+        Painting_(Action): 絵を描く
+        playing_card: トランプをする
+        playing_games: ゲームをする
+        playing_instrument: 楽器を演奏する
+        pole_dancing: ポールダンス
+        praying: 祈る
+        punching: パンチをする
+        pushing: 押す
+        railing: 手で手すりをつかむ
+        reading: 読む
+        riding: 乗る
+        running: 走る
+        sewing: 縫う
+        shopping: 買い物をする
+        showering: シャワーを浴びる
+        sing: 歌う
+        singing: 歌う
+        slashing: 斬る
+        sleeping: 眠る
+        smelling: 匂いを嗅ぐ
+        smoking: タバコを吸う
+        sneezing: くしゃみをする
+        snowing: 雪が降る
+        soaking_feet: 足を浸す
+        soccer: サッカー
+        spilling: 容器から液体をこぼす動作
+        spitting: 口から液体を吐く動作
+        splashing: 水しぶきを上げる
+        standing_on_liquid: 液体の上に立つ
+        standing_on_one_leg: 片脚立ち
+        standing_split: 立ち高抬脚
+        steepled_fingers: 指先を交差させる
+        strangling: 絞める
+        sweeping: 掃除する
+        swimming: 泳ぐ
+        swing: 揺れる
+        tail_wagging: 尾を振る
+        taking_picture: 写真を撮る|セルフィー
+        talking: 台詞のある
+        talking_on_phone: 電話をする
+        teasing: からかう
+        thinking: 考える
+        tickling: くすぐる
+        toilet_use: トイレを使う
+        tossing_: 投げる
+        tripping: 転ぶ
+        trolling: いたずら行為
+        twitching: 痙攣
+        tying: 結ぶ（動作）
+        unsheathing: 鞘から抜く
+        untying: 解く
+        unzipping: ファスナーを開ける（動作）
+        wading: 水に足を浸す
+        waking_up: 目を覚ます
+        walking: 歩く
+        walking_on_liquid: 液体の上を歩く
+        washing: 洗う
+        whispering: ささやく
+        wrestling: レスリング（スポーツ）
+        writing: 書く
+        yawning: あくびをする
+        hiding: 隠れる
+
+    - name: 手の動き
+      color: rgba(241, 229, 140, .4)
+      tags:
+        arms_behind_back: 背後で手を組む
+        arm_above_head: 手を頭の上に
+        arm_behind_head: 頭の後ろに手を回す
+        arms_crossed: 腕を交差させる
+        arm_support: 手で支える
+        armpits: 脇を見せる
+        arms_up: 手を上げる
+        hands_on_hips: 両手を腰に当てる
+        arm_around_waist: 一方の手で腰を抱く
+        caramelldansen: 有名な手を伸ばして腰を振る動作
+        hands_in_opposite_sleeves: 両手を反対の袖に入れる
+        waving: 手を振る
+        crossed_arms: 両腕を交差させる
+        outstretched_arms: 両腕を伸ばす
+        v_arms: 両腕をV字に広げる
+        w_arms: 両腕をW字に広げる
+        salute: 敬礼する
+        reaching: （目的を持って）手を伸ばす
+        reaching_out: 絵の外に手を伸ばす
+        stretch: 体を伸ばす
+        hugging_own_legs: 自分の足を抱きしめる
+        arm_blade: 腕の刃
+        arm_grab: 腕を掴む
+        arm_held_back: 手を後ろに引く
+        arm_ribbon: 腕のリボン
+        bandaged_arm: 包帯を巻いた腕
+        bandaid_on_arm: 腕にバンドエイドを貼る
+        bound_arms: 腕を拘束する
+        convenient_arm: 鍵部位を隠す手
+        extra_arms: 追加の腕
+        locked_arms: 両腕を組む
+        outstretched_arm: 腕を伸ばす
+        waving_arms: 腕を振り回す
+        arm_at_side: 一方の手を横に垂らす
+        arm_behind_back: 一方の手を背中に回す
+        shou: 一方の手を頭の後ろに
+        arm_cannon: 腕砲
+        arm_hug: 腕を組む
+        arm_up: 腕を上げる
+        arms_at_sides: 両手を横に垂らす
+        arms_behind_head: 両手で頭を抱える
+        hand_to_mouth: 手を口元に当てる
+        shushing: シュッとするジェスチャー
+        cat_pose: 猫の手のポーズ
+        claw_pose: 爪のポーズ
+        paw_pose: 招き猫のポーズ（手首を下げる）
+        fox_shadow_puppet: キツネの手のポーズ
+        double_fox_shadow_puppet: b
+        finger_gun: 指を銃の形にするジェスチャー
+        v: Vサイン
+        double_v: 二重V
+        thumbs_up: 親指を立てる
+        index_finger_raised: 人差し指を立てる
+        middle_finger: 国際的なフレンドリーなジェスチャー
+        grimace: しかめっ面をする
+        eyelid_pull: しかめっ面をする
+        fingersmile: 指で笑顔を作る
+        wiping_tears: 涙を拭く
+        finger_on_trigger: トリガーに指をかける準備のジェスチャー
+        pointing_at_self: 自分を指さす
+        pointing_at_viewer: 見ている人を指さす
+        pointing_up: 上を指す
+        poking: ツンツンする
+        hand_gesture: 手のジェスチャーをする
+        ok_sign: OKのサイン
+        shading_eyes: 目を遮るジェスチャー
+        finger_biting: 指を噛む
+        finger_in_mouth: 指を口に入れる
+        fingering_through_clothes: 衣服を通して指で触る
+        fingers_together: 指をくっつける
+        hair_twirling: 指で髪を巻く
+        hands_clasped: 両手を組む|両手を握りしめる
+        holding_hair: 髪を握る|指で髪を回す
+        pointing: 指で指す
+        sharp_fingernails: 鋭い爪
+        sleeves_past_fingers: 袖が指を超える
+        spread_fingers: 指を広げる
+        trigger_discipline: トリガーに指を置かない
+        w: 手でWの形を作る
+        balancing: バランスを保つポーズ
+        curvy: 魅力的なポーズ
+        multiple_views: 複数の視点|複数のポーズ
+        pose: ポーズ
+        ready_to_draw: 抜刀の準備をするポーズ
+        trefoil: 尻を見せるポーズ
+        zombie_pose: ゾンビのポーズ
+        beckoning: 手で招く
+        bunching_hair: 髪を束ねる
+        carrying: 抱える
+        carrying_over_shoulder: 肩に担ぐ
+        carrying_under_arm: 脇に挟む
+        cheering: 応援する
+        finger_to_mouth: 口元に手を当てる
+        cheek_pinching: ほっぺたをつねる
+        cheek_poking: ほっぺたを突く
+        chin_stroking: あごを撫でる
+        hair_pull: 髪を引っ張る
+        covering_mouth: 口を覆う
+        covering_xx: xxを覆う
+        self_fondle: 自分を愛撫する
+        adjusting_thighhigh: タイハイを調整する
+        chin_rest: あごを支える
+        head_rest: 頭を支える
+        take: 取る
+        _sheet_grab: シーツを掴む
+        groping: 触り回す
+        skirt_lift: スカートをめくる
+        crotch_grab: 股間を掴む
+        covering_chest_by_hand: 手で胸を隠す
+        bangs_pinned_back: 前髪を留める
+        clothes_lift: 衣類をめくり上げる
+        dress_lift: ドレスをめくり上げる
+        kimono_lift: 着物をめくり上げる
+        lifted_by_another: 他人に衣類をめくられる
+        lifted_by_self: 自分で衣類をめくり上げる
+        shirt_lift: シャツを引き上げる
+        skirt_basket: スカートをめくり上げたときにできるバスケットの形
+        skirt_flip: スカートをめくり上げる（突発的な状況を含む）
+        bikini_lift: 上に引き上げたビキニ
+        leg_lift: 一本足を上げる
+        lifting_person: 人を抱き上げる
+        strap_lift: 衣類のストラップを上に引っ張る
+        wind_lift: 風によるめくれ上がり|上昇気流
+        bikini_pull: ビキニを引っ張る
+        cheek_pull: ほっぺたを引っ張る
+        clothes_pull: 衣類を引っ張る
+        dress_pull: ドレスの胸部分を剥ぎ取る
+        hair_pulled_back: 髪を後ろに引っ張る
+        kimono_pull: 着物を剥ぎ取る
+        leotard_pull: レオタードを剥ぎ取る
+        mask_pull: マスクを引っ張る
+        pants_pull: パンツを引っ張る
+        pulled_by_another: 別の人に引っ張られる（または衣類を引っ張られる）
+        pulled_by_self: 自分で衣類を引っ張り下ろす
+        pulling: 引っ張る
+        shirt_pull: シャツを引っ張る
+        shorts_pull: ショートパンツを脱ぐ
+        skirt_pull: スカートを引っ張る
+        swimsuit_pull: 水着を引っ張る
+        zipper_pull_tab: ファスナーの引き手を引く
+        adjusting_clothes: 服の調整
+        adjusting_eyewear: 眼鏡の調整
+        adjusting_gloves: 手袋の調整
+        adjusting_hair: 髪の調整
+        adjusting_hat: 帽子の整理
+        adjusting_swimsuit: 水着の調整
+
+    - name: 手の動き（何かを持っている）
+      color: rgba(241, 229, 140, .4)
+      tags:
+        holding: 何かを持っている
+        holding_animal: 動物を抱いている
+        holding_arrow: 弓を引いている
+        holding_axe: 斧を握っている
+        holding_bag: バッグを持っている
+        holding_ball: ボールを抱えている
+        holding_basket: バスケットを持っている
+        holding_book: 本を抱えている
+        holding_bottle: ボトルを持っている
+        holding_bouquet: 花束を手に持っている
+        holding_bow_(weapon): 弓を持っている（武器）
+        holding_bowl: 両手でボウルを持っている
+        holding_box: 箱を持っている
+        holding_breath: 息を止めている
+        holding_broom: ほうきを持っている
+        holding_camera: カメラを手に持っている
+        holding_can: 缶を持っている
+        holding_candy: キャンディを手に持っている
+        holding_card: カードを手に持っている
+        holding_cat: 猫を抱いている
+        holding_chopsticks: 箸を持っている
+        holding_cigarette: タバコをくわえている
+        holding_clothes: 衣類を持っている
+        holding_condom: コンドームを手に持っている
+        holding_cup: カップを手に持っている
+        holding_dagger: 短剣を手に持っている
+        holding_doll: 人形を抱いている
+        holding_eyewear: 眼鏡を持っている|眼鏡を外している
+        holding_fan: 扇子を持っている
+        holding_flag: 旗を手に持っている
+        holding_flower: 花を持っている
+        holding_food: 食べ物を持っている
+        holding_fork: フォークを持っている
+        holding_fruit: 果物を持っている
+        holding_gift: ギフトを持っている
+        holding_gun: 銃を持っている
+        holding_hands: 手をつないでいる
+        holding_hat: 帽子を持っている
+        holding_head: 頭を抱えている
+        holding_helmet: ヘルメットを持っている
+        holding_innertube: インナーチューブを持っている
+        holding_instrument: 楽器を持っている
+        holding_knife: ナイフを持っている
+        holding_leaf: 葉を持っている
+        holding_lollipop: ぺろぺろキャンディを持っている
+        holding_mask: マスクを持っている
+        holding_microphone: マイクを持っている
+        holding_needle: 針を持っている
+        holding_own_foot: 自分の足を握っている
+        holding_paintbrush: 絵筆を持っている
+        holding_paper: 紙を持っている
+        holding_pen: ペンを握っている
+        holding_pencil: 鉛筆を手に持っている
+        holding_phone: 携帯電話を持っている
+        holding_pillow: 枕を抱えている
+        holding_pipe: パイプを持っている
+        holding_pizza: ピザを持っている
+        holding_plate: 皿を持っている
+        holding_poke_ball: ポケモンのモンスターボールを持っている
+        holding_pokemon: ポケモンを抱いている
+        holding_polearm: 長柄武器を手に持っている
+        holding_sack: 袋を持っている
+        holding_scythe: 鎌を手に持っている
+        holding_sheath: 刀鞘を握っている
+        holding_shield: 盾を手に持っている
+        holding_shoes: 靴を持っている
+        holding_sign: 看板を手に持っている
+        holding_spear: 槍を手に持っている
+        holding_spoon: スプーンを持っている
+        holding_staff: 杖を手に持っている
+        holding_strap: ストラップを引いている
+        holding_stuffed_animal: ぬいぐるみを抱いている
+        holding_stylus: スタイラスを手に持っている
+        holding_sword: 剣を手に持っている
+        holding_syringe: 注射器を手に持っている
+        holding_towel: タオルを持っている
+        holding_tray: トレイを支えている
+        holding_umbrella: 傘をさしている
+        holding_wand: ステッキを握っている
+        holding_whip: 鞭を握っている
+        arm_around_neck: 片手で首を抱えている
+        arms_around_neck: 両手で首を抱えている
+
+    - name: 手の動き（場所に置いている）
+      color: rgba(241, 229, 140, .4)
+      tags:
+        covering: 覆っている動作
+        covering_face: 顔を覆っている
+        covering_ass: 尻を覆っている
+        covering_crotch: 股間を覆っている
+        covering_eyes: 目を覆っている
+        covering_mouth: 口を覆っている
+        covering_nipples: 乳首を覆っている
+        hands_on_another's_: 両手で他人の顔を触っている
+        hands_on_another's_cheeks: 両手で相手の頬を触っている
+        hands_on_ass: 両手で尻を触っている
+        hands_on_feet: 両手で足を触っている
+        hands_on_headwear: 両手で頭につけたものに触れている
+        hands_on_hilt: 両手で刀の柄に添えている
+        hands_on_lap: 両手を膝の間に置いている
+        hands_on_own_face: 両手で自分の顔を触っている
+        hands_on_own_cheeks: 両手で自分の頬を触っている
+        hands_on_own_chest: 両手で自分の胸を触っている
+        hands_on_own_head: 両手で自分の頭を触っている
+        hands_on_own_knees: 両手で自分の膝を触っている
+        hands_on_own_stomach: 両手で自分のお腹を触っている
+        hands_on_own_thighs: 両手で自分の太ももを触っている
+        hands_on_another's_shoulders: 両手で他人の肩を触っている
+        hands_on_hips: 両手を腰に当てている|両手を腰に置いている
+        hand_on_another's_: 手が相手の顔に触れている
+        hand_on_another's_cheek: 手が相手の頬に触れている
+        hand_on_another's_chest: 手が相手の胸に当たっている
+        hand_on_another's_chin: 手が相手の顎を支えている
+        hand_on_another's_head: 手が相手の頭に当たっている
+        hand_on_another's_shoulder: 手が相手の肩に当たっている
+        hand_on_another's_stomach: 手が相手のお腹に当たっている
+        hand_on_ass: 手が尻に当たっている
+        hand_on_head: 手が頭に当たっている
+        hand_on_headwear: 手が帽子に触れている
+        hand_on_hilt: 手が刀の柄に当たっている
+        hand_on_hip: 手が腰に当たっている|手が腰に置かれている
+        hand_on_own_: 手を自分の顔に当てている
+        hand_on_own_cheek: 手を自分の頬に当てている
+        hand_on_own_chest: 手を自分の胸に当てている
+        hand_on_own_chin: 手が自分の顎に当たっている
+        hand_on_own_stomach: 手を自分のお腹に当てている
+        hand_on_shoulder: 手が肩に当たっている
+        hand_in_another's_hair: 手が相手の髪に当たっている
+        hand_in_hair: 手が髪に埋まっている
+        hand_in_pocket: 手をポケットに入れている
+
+    - name: 手の動き（何かをつかんでいる）
+      color: rgba(241, 229, 140, .4)
+      tags:
+        ass_grab: 尻をつかんでいる
+        flat_chest_grab: 平らな胸をつかんでいる
+        grabbing: つかんでいる
+        grabbing_another's_ass: 相手の尻をつかんでいる
+        grabbing_another's_hair: 相手の髪をつかんでいる
+        grabbing_from_behind: 後ろから胸を揉んでいる|後ろから胸をつかんでいる
+        grabbing_own_ass: 自分の尻をつかんでいる
+        guided_penetration: 男性器をつかんで自分に挿入している
+        hair_grab: 髪をつかんでいる
+        leg_grab: 脚をつかんでいる
+        necktie_grab: ネクタイをつかんでいる
+        neckwear_grab: 首元の衣類をつかんでいる
+        penis_grab: 男性器をつかんでいる
+        pillow_grab: 枕をつかんでいる
+        sheet_grab: シーツをつかんでいる
+        tail_grab: 尾をつかんでいる
+        thigh_grab: 太ももをつかんでいる
+        torso_grab: 胴体をつかんでいる
+        wrist_grab: 手首をつかんでいる
+
+    - name: 脚の動き
+      color: rgba(241, 229, 140, .4)
+      tags:
+        legs_up: 一本の脚を上げている
+        spread legs: 脚を広げている
+        legs_together: 脚を閉じている
+        crossed_legs: 脚を組んでいる
+        m_legs: M字開脚
+        standing_split,_leg_up: M字開脚
+        curtsy: カーテシー（メイドが行うお辞儀）
+        hand_between_legs: 脚の間に手を置いている
+        open_stance: 開脚の姿勢
+        convenient_leg: 股間を隠す脚の位置
+        leg_lock: 両脚で締め付けている
+        legs: 両脚
+        legs_over_head: 両脚を頭の上に上げている
+        squatting,_open_legs: しゃがんで脚を開いている
+        knees_together_feet_apart: 膝をくっつけて足を広げている
+        animal_on_lap: 膝の上に動物がいる
+        hand_on_own_knee: 手を自分の膝に置いている
+        knee_up: 膝を上げている
+        knees: 膝
+        knees_to_chest: 膝を胸に近づけている
+        on_lap: 膝の上に座っている
+        sitting: 座っている
+        wariza: 腰掛け座り
+        straddling: 跨がって座っている
+        yokozuwari: 横座り
+        sitting_backwards: 後ろ向きに座っている
+        sitting_in_tree: 木に座っている
+        sitting_on_xx: 物の上に座っている
+        butterfly_sitting: 胡蝶座り
+        lotus_position: 蓮華座
+        sitting_on_railing: 手すりに座っている
+        sitting_on_rock: 岩の上に座っている
+        sitting_on_stairs: 階段に座っている
+        sitting_on_table: テーブルに座っている
+        sitting_on_water: 水の上に座っている
+        cushion: 座布団
+        indian_style: 脚を組んで座っている
+        sitting_on_chair: 椅子に座っている
+        sidesaddle: サイドサドル
+        sitting_on_bed: ベッドに座っている
+        sitting_on_desk: 机に座っている
+        sitting_on_lap: 大腿の上に座っている
+        sitting_on_person: 人の上に座っている
+        upright_straddle: 対面座位
+        squatting: しゃがんでいる
+        one_knee: 一本の膝
+        kneeling: 跪いている
+        all_fours: 四つん這い
+        gravure_pose: グラビアポーズ
+        kicking: 蹴っている
+        high_kick: ハイキック
+        soaking_feet: 足を浸している
+        reclining: 横になっている
+        hugging_own_legs: 自分の脚を抱えている
+        bare_legs: 裸足
+        between_legs: （強調）両脚の間
+        cropped_legs: 脚の一部のみ描かれている
+        k/da_(league_of_legends): KDA（リーグ・オブ・レジェンド）
+        leg_belt: 脚にベルトを巻いている
+        leg_hair: 脚の毛
+        leg_up: 脚を上げている
+        legs_apart: 脚を開いている
+        lowleg: M字開脚
+        mechanical_legs: 機械の足
+        multiple_legs: 複数の足を持つキャラクター
+        no_legs: 脚が描かれていない
+        no_legwear: 下半身が裸
+        tail_between_legs: 尾を脚の間に挟んでいる
+        barefoot: 裸足
+        foot_out_of_frame: 片足がフレーム外
+        footprints: 足跡
+        dirty_feet: 足の描き方が間違っている
+        feet: 足
+        feet_out_of_frame: 両足がフレーム外
+        feet_up: 足を上げている
+        wrong_feet: 足の描き方が間違っている
+        cameltoe: キャメルトウ
+        pigeon-toed: 内股の脚
+        tiptoes: 足の指先立ち
+        toe-point: 足先
+        amputee: 切断された|片足|肢体が欠損した|切断された少女
+        ankle_strap: 足首のストラップ
+        ankle_wrap: 足首を巻いている
+        crossed_ankles: 足首を交差させている
+        pince-nez: ピンネジ（脚のない眼鏡）
+        folded: 脚を上げて股間を露出している
+        thick_thighs: 太ももが太い
+        thigh_holster: 腿にホルスターまたはツールバッグまたは銃のケースがある
+
+    - name: その他の動作
+      color: rgba(241, 229, 140, .4)
+      tags:
+        asymmetrical_docking: 胸同士が触れている|胸が胸に当たっている
+        back-to-back: 背中合わせ
+        cunnilingus: クンニ
+        eye_contact: 目と目が合う（視線の交差）
+        facing_another: 相手を向いている
+        feeding: 餌を与える
+        finger_in_another's_mouth: 口の中に指を入れる
+        fingering: 手淫
+        french_kiss: フレンチキス
+        giving: 渡す|与える
+        grinding: 股間をすり合わせる|お尻をすり合わせる
+        groping: 乱暴な愛撫
+        holding_hands: 手をつないでいる
+        hug: 抱擁
+        imminent_kiss: キスをする直前
+        incoming_food: 食べ物を受け取る
+        incoming_gift: ギフトを受け取る
+        interlocked_fingers: 手を組んでいる
+        Kabedon: 壁ドン
+        lap_pillow: 膝枕
+        licking_penis: 男性器を舐める
+        long_tongue: 長い舌
+        mimikaki: 耳かき
+        oral_invitation: 射精を迎えるために舌を出す
+        princess_carry: プリンセスキャリー
+        shared_bathing: 共同入浴|鴛鴦浴
+        shared_food: 食べ物を共有する|口移し
+        sitting_on_head: 頭の上に座っている
+        sitting_on_shoulder: 肩に座っている
+        slapping: 打つ
+        spanking: 尻を叩く
+        special_feeling_(meme): 雪の中で傘をさす恋人たちのミーム
+        symmetrical_docking: 胸同士が圧迫されている
+        tongue: 舌
+        tongue_out: 舌を出す
+        uvula: のどちんこ|口蓋垂
+        ear_biting: 耳を噛む
+        mixed_bathing: 混浴
+
+- name: 画面
+  groups:
+    - name: 画質
+      color: rgba(0, 255, 255, .4)
+      tags:
+        checkered: チェック柄
+        lowres: 低解像度
+        highres: 高解像度
+        absurdres: 非現実的な高解像度
+        incredibly absurdres: 非現実的に高い解像度
+        huge filesize: 超高解像度/巨大なファイルサイズ
+        wallpaper: 壁紙
+        pixel art: ピクセルアート
+        monochrome: モノクロ画像
+        colorful: カラフルな
+
+    - name: 芸術スタイル
+      color: rgba(0, 255, 255, .4)
+      tags:
+        artbook: アートブック
+        game cg: ゲームCG
+        comic: コミック
+        4koma: 4コマ漫画
+        animated gif: アニメーションGIF
+        dakimakura: 抱き枕
+        cosplay: コスプレ
+        crossover: クロスオーバー
+        dark: ダークな
+        light: 明るい
+        guro: グロ
+        realistic: リアル
+        photo: 写真
+        real: 真実の
+        landscape/scenery: 風景
+        cityscape: 都市風景
+        science fiction: 科学技術の幻想
+        original: オリジナル
+        parody: パロディ
+        personification: 擬人化
+        optical illusion: 視覚の錯覚
+        fine art parody: 名画のパロディ
+        sketch: スケッチ
+        traditional media: 伝統的なメディア（手描き）
+        watercolor (medium): 水彩画
+        silhouette: シルエット
+        cover: カバー
+        album: アルバム
+        sample: 文字入りの画像
+        back: 背後の画像
+        bust: バストアップ
+        profile: 横顔
+        expressions: 表情
+        everyone: 作品の主要なキャラクターが集まったもの
+        column lineup: 列ごとの小さな画像で構成された大きな画像
+        transparent background: 透明な背景
+        simple background: シンプルな背景
+        gradient background: グラデーションの背景
+        zoom layer: 背景が前景の拡大版
+        8 Bit Game: 8ビットゲーム
+        1980s anime: 1980年代のアニメ
+        disney movie: ディズニー映画
+        goth: ゴスロック
+        80s movie: 1980年代の映画
+        bubble bobble: バブルボブル
+        style of Pixar: ピクサーのスタイル
+        Polaroid art: ポラロイドアート
+        Kaleidoscope Photography: カレイドスコープ写真
+        opal render: オパールレンダリング
+        chemigram: ケミグラム
+        Studio Ghibli: スタジオジブリのスタイル
+        dreamlike: 夢のような
+        (faux traditional media): 模擬伝統的なメディアのスタイル
+        genshin impact: 原神
+        azur lane: アズールレーン
+        kantai collection: 艦隊これくしょん
+        rebecca (cyberpunk): レベッカ（サイバーパンク）
+        chainsaw man: チェンソーマン
+        Magic Vortex: 魔法の渦巻き
+        ((dieselpunk)): ディーゼルパンク
+        magazine scan: 雑誌のスキャン
+        album cover: アルバムのカバー
+        (lineart): 線画
+        synthwave: シンセウェーブ
+        (illustration),(paper figure),(lococo),((impasto)),(shiny skin): ロココ
+
+    - name: 芸術の種類
+      color: rgba(0, 255, 255, .4)
+      tags:
+        monochrome: モノクロ画像
+        Collage: コラージュアート
+        Dalle de verre: ガラスモザイク
+        pixel art: ピクセルアート
+        Encaustic painting: エンカウスティック絵画
+        Ink wash painting: 水墨画
+        Mezzotint: メゾチント
+        silhouette: シルエット
+        illustration: イラスト
+        (((ink))), ((watercolor)): 水彩画
+        illustration,(((ukiyoe))),((sketch)),((japanese_art)): 浮世絵
+        ((wash painting)),((ink s...)): 中国風
+        ((dyeing)),((oil painting)),((impasto)): 油絵
+        (posing sketch), (monochrome): モノクロのポーズスケッチ
+        sketch: スケッチ
+        (monochrome), (gray scale), (pencil sketch lines: 鉛筆スケッチ
+        (watercolor pencil): 水彩鉛筆
+
+    - name: 芸術派
+      color: rgba(0, 255, 255, .4)
+      tags:
+        ((art nouveau)): アール・ヌーヴォー
+        ((classicism)): 古典主義
+        ((futurism)): フューチャリズム
+        ((Dadaism)): ダダイスム
+        ((abstract art)): 抽象芸術
+        ((ASCII art)): ASCIIアート
+
+    - name: アーティストのスタイル
+      color: rgba(0, 255, 255, .4)
+      tags:
+        ((alphonse mucha)): アルフォンス・ミュシャのスタイル
+        ((Monet style)): モネのスタイル
+
+    - name: 照明
+      color: rgba(0, 255, 255, .4)
+      tags:
+        rim light: リムライト
+        Volumetric Lighting: ボリューメトリックライティング
+        glowing neon lights: 発光するネオンライト
+        Cinematic Lighting: シネマティックな照明
+        lens flare: レンズフレア
+        metallic luster: 金属の光沢
+        moody lighting: ムーディな照明
+        Tyndall effect: ティンダル効果
+        light leaks: 光漏れのエフェクト
+        background light: 背景の光
+        available light: 天然光
+
+    - name: リアル
+      color: rgba(0, 255, 255, .4)
+      tags:
+        realistic: リアル
+        highres: 厚塗り（スタイル）
+        photo_(medium): 写真風（スタイル）
+        oil_painting: 油絵
+        reality: 現実
+        polaroid: ポラロイド写真
+
+    - name: スケッチ
+      color: rgba(0, 255, 255, .4)
+      tags:
+        sketch: スケッチ
+        flat_color: フラットカラー
+        monochrome: モノクロ
+        spot_color: スポットカラー
+        halftone: ハーフトーン
+        greyscale: グレースケール
+        high_contrast: 高コントラスト
+        partially_colored: 部分的に着色された
+        chromatic_aberration: 色収差
+        contour_deepening: 輪郭の強調
+        outline: アウトライン
+        silhouette: シルエット
+
+    - name: ペン
+      color: rgba(0, 255, 255, .4)
+      tags:
+        traditional_media: 伝統的なメディア（紙など）
+        faux_traditional_media: 伝統的なメディアの模倣
+        marker_(medium): マーカー
+        copics: コピック
+        pencil_sketch_lines: 鉛筆スケッチ
+        graphite_(medium): グラファイト鉛筆
+        colored_pencil_(medium): カラーペンシル
+        millipen_(medium): ミリペン
+        nib_pen_(medium): ニブペン
+        ballpoint_pen_(medium)_: ボールペン
+        pastel_color: 淡い色彩
+        watercolor_(medium): 水彩
+        acrylic_paint_(medium): アクリル絵の具
+        contour_deepening: 線の太さ
+
+    - name: 色
+      color: rgba(0, 255, 255, .4)
+      tags:
+        orange: オレンジ色
+        blue: 青色
+        red: 赤色
+        light_brown: 明るい茶色
+        dark_pink: 濃いピンク色
+        khaki: カーキ色
+        blonde: 金髪の
+        brown: 茶色
+        black: 黒色
+        gray: 灰色
+        darkgray: 濃い灰色
+        silver: 銀色
+        lightgray: 明るい灰色
+        gainsboro: ゲインズボロ色
+        whitesmoke: ホワイトスモーク色
+        snow: 雪色
+        ghostwhite: ゴーストホワイト色
+        floralwhite: フローラルホワイト色
+        linen: 亜麻色
+        antiquewhite: アンティークホワイト色
+        papayawhip: パパイヤホイップ色
+        blanchedalmond: ブランチドアーモンド色
+        bisque: ビスク色
+        moccasin: モカシン色
+        navajowhite: ナバホホワイト色
+        peachpuff: ピーチパフ色
+        mistyrose: ミスティローズ色
+        lavenderblush: ラベンダーブラッシュ色
+        seashell: シーシェル色
+        oldlace: オールドレース色
+        ivory: アイボリー色
+        honeydew: ハニーデュー色
+        mintcream: ミントクリーム色
+        azure: 空色
+        aliceblue: アリスブルー色
+        lavender: ラベンダー色
+        lightsteelblue: 明るい鋼色
+        lightslategray: 明るいスレートグレー色
+        slategray: スレートグレー色
+        steelblue: 鋼色
+        royalblue: ロイヤルブルー色
+        midnightblue: 真夜中の青色
+        navy: 海軍色
+        darkblue: 濃い青色
+        mediumblue: 中間の青色
+        dodgerblue: ドッジャーブルー色
+        cornflowerblue: コーンフラワーブルー色
+        skyblue: 空色
+        lightblue: 明るい青色
+        powderblue: パウダーブルー色
+        paleturquoise: ペイルターコイズ色
+        lightcyan: 明るいシアン色
+        cyan: シアン色
+        aquamarine: アクアマリン色
+        turquoise: ターコイズ色
+        mediumturquoise: 中間のターコイズ色
+        darkturquoise: 濃い青緑色
+        lightseagreen: 明るいシーグリーン色
+        cadetblue: カデットブルー色
+        darkcyan: 濃いシアン色
+        teal: ティール色
+        darkslategray: 濃いスレートグレー色
+        darkgreen: 濃い緑色
+        green: 緑色
+        forestgreen: 森林緑色
+        seagreen: 海緑色
+        mediumseagreen: 中間の海緑色
+        mediumaquamarine: 中間のアクアマリン色
+        darkseagreen: 濃い緑松石色
+        palegreen: 淡い緑色
+        lightgreen: 明るい緑色
+        springgreen: 春の緑色
+        mediumspringgreen: 中間の春の緑色
+        lawngreen: 芝生の緑色
+        chartreuse: シャルトリューズ色
+        greenyellow: グリーンイエロー色
+        lime: ライム色
+        limegreen: ライムグリーン色
+        yellowgreen: 黄緑色
+        darkolivegreen: 濃いオリーブグリーン色
+        olivedrab: オリーブドラブ色
+        olive: オリーブ色
+        darkkhaki: 濃いカーキ色
+        palegoldenrod: 淡いゴールデンロッド色
+        cornsilk: コーンシルク色
+        beige: ベージュ色
+        lightyellow: 明るい黄色
+        lightgoldenrodyellow: 明るいゴールデンロッドイエロー色
+        lemonchiffon: レモンシフォン色
+        wheat: 小麦色
+        burlywood: バーリーウッド色
+        tan: 茶褐色
+        yellow: 黄色
+        gold: 金色
+        sandybrown: 砂色
+        darkorange: 濃いオレンジ色
+        goldenrod: ゴールデンロッド色
+        peru: ペルー色
+        darkgoldenrod: 濃いゴールデンロッド色
+        chocolate: チョコレート色
+        sienna: シエナ色
+        saddlebrown: サドルブラウン色
+        maroon: マルーン色
+        darkred: 濃い赤色
+        firebrick: ファイアブリック色
+        indianred: インディアンレッド色
+        rosybrown: ロージーブラウン色
+        darksalmon: 濃いサーモン色
+        lightcoral: 明るいコーラル色
+        salmon: サーモン色
+        lightsalmon: 明るいサーモン色
+        coral: コーラル色
+        tomato: トマト色
+        orangered: オレンジレッド色
+        crimson: 深紅色
+        mediumvioletred: 中間の紫罗兰赤色
+        deeppink: 濃いピンク色
+        hotpink: ホットピンク色
+        palevioletred: 淡い紫罗兰赤色
+        pink: ピンク色
+        lightpink: 明るいピンク色
+        thistle: シスル色
+        magenta: マゼンタ色
+        fuchsia: フクシャ色
+        violet: 紫色
+        plum: プラム色
+        orchid: オーキッド色
+        mediumorchid: 中間のオーキッド色
+        darkorchid: 濃いオーキッド色
+        darkviolet: 濃い紫罗兰色
+        darkmagenta: 濃いマゼンタ色
+        purple: 紫色
+        indigo: インディゴ色
+        darkslateblue: 濃いスレートブルー色
+        blueviolet: ブルーバイオレット色
+        mediumpurple: 中間の紫色
+        slateblue: スレートブルー色
+        mediumslateblue: 中間のスレートブルー色
+
+    - name: 背景
+      color: rgba(0, 255, 255, .4)
+      tags:
+        fantasy: ファンタジー風
+        ban: 科学技術の幻想
+        cyberpunk: サイバーパンク
+        depth_of_field: 被写界深度（描写法）
+        blurry: ぼかし背景
+        blurry_foreground: ぼかし前景
+        simple_background: シンプルな背景
+        black_background: 黒い背景
+        white_background: 白い背景
+        transparent_background: 透明な背景
+        beige_background: ベージュの背景
+        brown_background: 茶色の背景
+        tan_background: 褐色の背景
+        grey_background: 灰色の背景
+        two-tone_background: 二色調の背景
+        gradient_background: グラデーションの背景
+        multicolored_background: 多色の背景
+        rainbow_background: 虹の背景
+        abstract_background: 抽象的な背景
+        argyle_background: アーガイル模様の背景
+        checkered_background: チェック柄の背景
+        floral_background: 花のデザインの背景
+        halftone_background: ハーフトーンの背景
+        heart_background: ハート模様の背景
+        honeycomb_background: ハチの巣模様の背景
+        plaid_background: プレイド模様の背景
+        polka_dot: 水玉模様の背景
+        striped_background: 縞模様の背景
+        scenery: 風景
+        landscape: 風景
+        foral_background: 花柄の背景
+        crop_top_overhang: トップ部分がはみ出した作物
+        starry_background: 星空の背景
+        sparkle_background: 輝く星の背景
+        cityscape: 都市の風景
+        city_lights: 都市の灯りの背景
+        clock_background: 時計の背景
+        bubble_background: 泡の背景
+        border: 枠線
+        pillarboxed: 柱状の背景
+        rounded_corners: 角が丸い背景またはフレーム
+        viewfinder: ビューファインダー
+        windowboxed: ウィンドウボックス（背景）
+        outside_border: 一部が背景の枠外に描かれている
+        flashback: フラッシュバックのシーン
+        wall_of_text: テキストの背景
+        background_text: 背景テキスト
+
+- name: 環境
+  groups:
+    - name: 季節
+      color: rgba(31, 144, 255, .4)
+      tags:
+        in spring: 春
+        in summer: 夏
+        in autumn: 秋
+        in winter: 冬
+        (autumn maple forest:1.3),(very few fallen leaves),(path): 秋の風景
+
+    - name: 天気
+      color: rgba(31, 144, 255, .4)
+      tags:
+        day: 昼間
+        dusk: 夕暮れ
+        night: 夜
+        rain: 雨
+        rainy days: 雨の日
+        sunset: 日の入り
+        cloudy: 曇り
+        full moon: 満月
+        sun: 太陽
+        moon: 月
+        full_moon: 満月
+        stars: 星
+        sky: 空
+        universe: 宇宙
+        snow,ice: 雪氷
+        snowflakes: 雪片
+        lighting: 稲妻
+        rainbow: 虹
+        meteor shower: 流星群
+        cumulonimbus: 積乱雲
+
+    - name: 自然
+      color: rgba(31, 144, 255, .4)
+      tags:
+        nature: 自然
+        sea: 海
+        ocean: 海洋
+        beach: 浜辺
+        hills: 丘陵
+        in a meadow: 牧草地で
+        on the beach: 浜辺で
+        underwater: 水中で
+        over the sea: 海上で
+        grove: 森林
+        on a desert: 砂漠で
+        plateau: 高原
+        cliff: 崖
+        canyon: 渓谷
+        oasis: オアシス
+        bamboo forest: 竹林
+        glacier: 氷河
+        floating island: 浮島
+        volcano: 火山
+        savanna: サバンナ
+        waterfall: 滝
+        stream: 小川
+        wasteland: 荒地
+        field: 野原
+        rice paddy: 田んぼ
+        wheat field: 麦畑
+        flower field: 花畑
+        flower sea: 花海
+        space: 宇宙
+        starry sky: 星空
+        lake: 湖
+        river: 川
+        onsen: 温泉
+        flowers meadows: 花の草原
+        Alps: アルプス山脈
+        Dreamy forest: 夢の森（幻想的な感じ、光の粒子が幽玄）
+
+    - name: 水
+      color: rgba(31, 144, 255, .4)
+      tags:
+        ocean: 海
+        dripping: 滴る
+        beach: 浜辺
+        lake: 湖
+        waterfall: 滝
+        ripples: 波紋
+        swirl: 渦巻き
+        waves: 波
+        seashell: 貝殻
+        seaweed: 海藻
+
+    - name: 空
+      color: rgba(31, 144, 255, .4)
+      tags:
+        sky: 空
+        gradient_sky: 傾斜した空
+        night_sky: 夜空
+        starry_sky: 星空
+        hyper_galaxy: 超銀河
+        star_(sky): 星（空にある）
+        star_trail: 星の軌跡
+        sunset: 夕日
+        moon: 月
+        lunar: 月の、月球の
+        crescent: 三日月
+        crescent_moon: 新月
+        full_moon: 満月
+        moonlight: 月光
+        scarlet_moon: 緋色の月
+        universe: 宇宙
+        space: 宇宙
+        planet: 惑星
+        from_space_station: 宇宙ステーションから
+        satellite: 人工衛星
+
+    - name: 雲
+      color: rgba(31, 144, 255, .4)
+      tags:
+        cirrus: ウネリ雲
+        Cirrocumulus: ウネリ積雲
+        Cirrostratus: ウネリ層雲
+        Altocumulus: 中高層積雲
+        Altostratus: 中高層層雲
+        stratus: 層雲
+        Stratocumulus: 層積雲
+        cumulus: 積雲
+        Cumulonimbus: 積乱雲
+        Nimbostratus: 雨層雲
+        cirrus_fibratus: 繊維状ウネリ雲
+        cirrus_uncinus: 鉤状ウネリ雲
+        cirrus_spissatus: 密なウネリ雲
+        cirrus_floccus: 綿毛状ウネリ雲
+        cirrus_castellanus: 城状ウネリ雲
+        cirrus_intortus: もつれたウネリ雲
+        cirrocumulus: ウネリ積雲
+        cirrocumulus_stratiformis: 層状ウネリ積雲
+        cirrocumulus_floccus: 綿毛状ウネリ積雲
+        cirrocumulus_castellanus: 城状ウネリ積雲
+        cirrocumulus_lacunosus: 網状ウネリ積雲
+        cirrostratus: ウネリ層雲
+        cirrostratus_fibratus: 繊維状ウネリ層雲
+        cirrostratus_nebulosus: 霧状ウネリ層雲
+        altocumulus: 中高層積雲
+        altocumulus_strataformis: 層状中高層積雲
+        altocumulus_lenticularis: レンズ状中高層積雲
+        altocumulus_castellanus: 城状中高層積雲
+        altocumulus_floccus: 綿毛状中高層積雲
+        altocumulus_lacunosus: 網状中高層積雲
+        altostratus: 中高層層雲
+        altostratus_undulatus: 波状中高層層雲
+        altostratus_duplicates: 重複中高層層雲
+        altostratus_pannus: 断片中高層層雲
+        altostratus_translucidus: 透明中高層層雲
+        altostratus_opacus: 不透明中高層層雲
+        altostratus_radiatus: 放射状中高層層雲
+        altostratus_mammatus: 乳状中高層層雲
+        stratus_fractus: 断片雲
+        stratus_nebulosus: 霧雲
+        stratus_undulatus: 波状雲
+        stratocumulus: 層積雲
+        stratocumulus_stratiformis: 層状層積雲
+        stratocumulus_cumulogentis: 積雨性層積雲
+        stratocumulus_castellanus: 城状層積雲
+        stratocumulus_lenticularis: レンズ状層積雲
+        stratocumulus_lacunosus: 綿毛状層積雲
+        cumulus_humilis: 低積雲
+        cumulus_mediocris: 中積雲
+        cumulus_congestus: 濃積雲
+        cumulus_fractus: 断片積雲
+        cumulonimbus: 積乱雲
+        cumulonimbus_calvus: はらはら積乱雲
+        cumulonimbus_capillatus: 鬣積乱雲
+        cumulonimbus_incus: 鉄砲積乱雲
+
+    - name: 雰囲気
+      color: rgba(31, 144, 255, .4)
+      tags:
+        new year: 新年
+        year of the rabbit: 兎年
+        valentine: バレンタイン
+        lantern festival: 元宵節
+        summer festival: 夏祭り
+        tanabata: 七夕
+        mid-autumn festival: 中秋節
+        halloween: ハロウィン
+        christmas: クリスマス
+        explosion: 爆発
+        water vapor: 水蒸気
+        fireworks: 花火
+        ceiling window: 天窓
+        colourful glass: カラフルなガラス
+        stain glass: ステンドグラス
+        Graffiti wall: グラフィティの壁
+        mosaic background: モザイクの背景
+        liquid background, Sputtered water: 液体の背景
+        magic circles: 魔法の輪
+        fluorescent mushroom forests background: 蛍光キノコの森の背景
+        (((colorful bubble))): カラフルな泡
+        in the ocean: 海辺の夕焼け
+        against backlight at dusk: 夕暮れの逆光
+        golden hour lighting: ゴールデンアワーの照明
+        strong rim light: 強いリムライト
+        intense shadows: 濃い影
+
+- name: シーン
+  groups:
+    - name: 屋外
+      color: rgba(159, 32, 240, .4)
+      tags:
+        castle: 城
+        city: 街
+        waterpark: 水上公園
+        carousel: カルーセル
+        ferris wheel: 観覧車
+        aquarium: 水族館
+        zoo: 動物園
+        bowling alley: ボウリング場
+        art gallery: 美術館
+        museum: 博物館
+        planetarium: 惑星館
+        swimming pool: プール
+        stadium: スタジアム
+        temple: 寺院
+        bus stop: バス停
+        train station: 駅
+        fountain: 噴水
+        playground: 遊び場
+        market stall: 市場の屋台
+        phone booth: 電話ボックス
+        railroad tracks: 鉄道の線路
+        airport: 空港
+        tunnel: トンネル
+        skyscraper: 超高層ビル
+        cityscape: 都市の景観
+        ruins: 遺跡
+        greco-roman architectur: グレコローマ建築
+        east asian architecture: 東アジアの建築物
+        torii: 鳥居
+        church: 教会
+        shop: 店舗
+        street: 街路
+        cyberpunk city: サイバーパンクの街
+        chinese style architecture: 中国風建築
+        gohei: 御幣
+        Bustling city: 繁華な都市
+        laboratory: 研究室
+        coffee house: コーヒーハウス
+        gym: ジム
+        library: 図書館
+        prison: 刑務所
+        engine room: 機関室
+        handrail: 手すり
+        neon lights: ネオンライト
+        street lamp: 街灯
+        road: 道路
+        shanty town/slum: 貧民街
+        warehouse: 倉庫
+        gothic architecture: ゴシック建築
+        restaurant: レストラン
+        treehouse: 木の家
+        modern,Europe: モダン、ヨーロッパ
+        Industrial wind, Chinese architecture: 工業風、中国建築
+        building_ruins: 建物の廃墟
+        bar: バー
+        izakaya: 居酒屋
+        cafe: カフェ
+        bakery: パン屋
+        convenience store: コンビニ
+        supermarket: スーパーマーケット
+        pharmacy: 薬局
+        theater: 劇場
+        movie theater: 映画館
+        workshop: 作業場
+        courtroom: 法廷
+        park: 公園
+        Trapeze: 鉄棒；ブランコ
+        classroom: 教室
+        botanical garden: 植物園
+        amusement_park: 遊園地
+        Disney_land: ディズニーランド
+        arena: アリーナ
+        wrestling_ring: レスリングリング
+        Auditorium: 講堂
+        concert: コンサート
+        Japanese_hotel: 和風旅館
+        jail_bars: 刑務所のバー
+        in_the_movie_theatre: 映画館で
+        stage: ステージ
+        harbor: 港
+        casino: カジノ
+        billiard: ビリヤード台
+        dungeon: ダンジョン
+        grave: 墓
+        graveyard: 墓地
+        tombstone: 墓石
+        monolith: 巨大な石の物体
+        rappelling: レーベル
+        building: 建物
+        architecture: 建築
+        magnificent_architecture: 壮大な建築
+        Skyscraper: 超高層ビル
+        east_asian_architecture: 東アジアの建築
+        cathedral: 大聖堂
+        chinese_style_loft: 中国風ロフト
+        traditional_chinese_room: 伝統的な中国の部屋
+        turret: タレット
+        tower: タワー
+        mosque: モスク
+        reservoir: 貯水池
+        railroad: 鉄道
+        railway: 鉄道
+        bridge: 橋
+        under_bridge: 橋の下
+        remains: 遺跡
+        rubble_ruins: 廃墟
+
+    - name: 都市
+      color: rgba(159, 32, 240, .4)
+      tags:
+        city: 街
+        cityscape: 都市の景観
+        street: 街路
+        downtown: ダウンタウン
+        crowd: 人混み
+        alley: 小道
+        in_main_street: 大通りで
+        Intersection: 交差点
+        avenue: 大通り
+        lawn: 芝生
+        road: 道
+        path: 小道
+        pavement: 舗装道路
+        road_sign: 道路標識
+        traffic_cone: 交通コーン
+        lamppost: 街灯
+        power_lines: 電線柱と電線
+        fence: フェンス
+        railing: 手すり
+        bench: ベンチ
+        vending_machine: 自動販売機
+
+    - name: 屋内
+      color: rgba(159, 32, 240, .4)
+      tags:
+        indoor: 屋内
+        bathroom: 浴室
+        toilet stall: トイレの個室
+        otaku room: オタクの部屋
+        cafeteria: カフェテリア
+        classroom: 教室
+        clubroom: クラブルーム
+        bedroom: 寝室
+        kitchen: キッチン
+        dormitory: 寮
+        dungeon: 地下室
+        infirmary: 医務室
+        stage: ステージ
+        electrical room: 配電室
+        server room: サーバールーム
+        basement: 地下室
+        art room: 美術室
+        bathing: 浴室
+        stairs: 階段
+        greenhouse: 温室
+
+    - name: 床
+      color: rgba(159, 32, 240, .4)
+      tags:
+        floor: 床
+        tile_floor: タイル床
+
+    - name: 家具
+      color: rgba(159, 32, 240, .4)
+      tags:
+        bedroom: 家具
+        tatami: 畳
+        bed: ベッド
+        couch: ソファ
+        kotatsu: 炬燵
+        fireplace: 暖炉
+        window_: 窓
+        sash: 窓枠
+        curtains: カーテン
+        door: ドア
+        sliding_doors: 引き戸
+        clothes_rack: 洋服掛け
+        air_conditioner: エアコン
+        table: テーブル
+        school_desk: 学校の机
+        chair: 椅子
+        armchair: 肘掛け椅子
+        lounge_chair: リクライニングチェア
+        beach_chair: ビーチチェア
+        folding_chair: 折りたたみ椅子
+        invisible_chair: 目に見えない椅子
+        office_chair: オフィスチェア
+        wheelchair: 車椅子
+
+    - name: 寝具
+      color: rgba(159, 32, 240, .4)
+      tags:
+        bed_sheet: ベッドシーツ
+        mattress: マットレス
+        futon: 布団
+        cushion: クッション
+        carpet: カーペット
+        pillow: 枕
+        dumpling_Hug_Pillow: 餃子型抱き枕
+        pillow_hug: 抱き枕
+        yes-no_pillow: Yes/No枕
+        stuffed_animal: ぬいぐるみ
+        stuffed_bunny: ぬいぐるみのウサギ
+        koakuma: 小悪魔
+
+    - name: 浴室
+      color: rgba(159, 32, 240, .4)
+      tags:
+        bathroom: 浴室
+        bathtub,: 浴槽
+        rubber_duck: ゴムのアヒル
+        shower_head: シャワーヘッド
+        toilet: トイレ
+        squat_toilet: 和式トイレ
+        soap: 石鹸
+        tiles: タイル
+
+- name: アイテム
+  groups:
+    - name: 学習用具
+      color: rgba(189, 182, 107, .4)
+      tags:
+        notebook: ノートブック
+        paintbrush: 絵筆
+        pencil: 鉛筆
+        book: 本
+        open_book: 開いた本
+        book_stack: 本の積み重ね
+        bookshelf: 本棚
+        school_bag: 学校のバッグ（ハンドバッグ）
+        backpack: バックパック
+
+    - name: デジタル機器
+      color: rgba(189, 182, 107, .4)
+      tags:
+        computer: コンピューター
+        mouse: マウス
+        cellphone: 携帯電話
+        Smartphones: スマートフォン
+        handheld_game_console_: 携帯ゲーム機
+        nintendo_3ds: ニンテンドー3DS
+        nintendo_ds: ニンテンドーDS
+        nintendo_switch: ニンテンドースイッチ
+        buttons: ボタン
+        power_lines: 電源コード
+        cable: ケーブル
+
+    - name: 食器
+      color: rgba(189, 182, 107, .4)
+      tags:
+        pot: 鍋
+        teapot: ティーポット
+        ladle: おたま
+        can: 缶
+        soda_can: 缶入り飲料
+        cup: カップ
+        plate: 皿
+        tray: トレイ
+        bowl: ボウル
+        fork: フォーク
+        chopsticks: 箸
+        spoon: スプーン
+        drinking_glass: グラス
+        tumbler: タンブラー
+        beer_mug: ビールジョッキ
+        gift_box: ギフトボックス
+        heart-shaped_box: ハート型のギフトボックス
+        candle: ろうそく
+
+    - name: 楽器
+      color: rgba(189, 182, 107, .4)
+      tags:
+        music: 音楽
+        guitar: ギター
+        piano: ピアノ
+        cello: チェロ
+        playing_instrument: 楽器演奏
+        wind_chime: 風鈴
+
+    - name: その他のアイテム
+      color: rgba(189, 182, 107, .4)
+      tags:
+        wristwatch: 腕時計
+        folding_fan: 扇子
+        paper_fan: 扇子
+        uchiwa: 団扇
+        umbrella: 傘
+        transparent_umbrella: 透明傘
+        closed_umbrella: 閉じた傘
+        oil-paper_umbrella: 和傘
+        Parasol: 遮光傘
+        basket: バスケット
+        bouquet: 花束
+        bucket: バケツ
+        pail: バケツ
+        camera: カメラ
+        gohei: 御幣（邪気除けの布）
+        lantern/lamp: 提灯
+        whip: 鞭
+        riding_crop: 馬鞭
+        ofuda: お札
+        cane: 杖
+        wand: 杖
+        magic: 魔法
+        trading_card: トレーディングカード
+        playing_card: トランプ
+        Cassette: カセット
+        chess_piece: チェスの駒
+        coin: コイン
+        copper: 銅貨
+        hammer: ハンマー
+        microphone: マイクロフォン
+        mimikaki: 耳かき
+        sack: 麻袋
+        scales: スケール
+        chibi_inset: チビ挿絵
+        damaged: 損傷した
+        diamond_(shape): ダイヤモンド（形状）
+        gourd: ひょうたん
+        holding_gift: ギフトを持っている
+        inlet: 入り口
+        key: キー
+        leash: リード
+        Lever: レバー
+        molecule: 分子
+        money: お金
+        Painting_(Object): 絵画（物体）
+        photo_(object): 写真（物体）
+        sand: 砂
+        stubble: ひげそりの剃り残し
+        trophy: トロフィー
+        tube_top: チューブトップ
+        water_bottle: 水筒
+        lotion: 日焼け止めクリーム|ボディローション
+        lotion_bottle: ローションのボトル
+
+    - name: 武器
+      color: rgba(189, 182, 107, .4)
+      tags:
+        weapon: 武器
+        weapon_on_back: 背中の武器
+        weapon_over_shoulder: 肩にかけた武器
+        huge_weapon: 大型武器
+        planted_weapon: 地面に刺さった武器
+        broken_weapon: 壊れた武器
+        planted_sword: 立てかけた剣
+        sword: 剣
+        scabbard: 鞘
+        unsheathing: 鞘から抜く
+        katana: 刀
+        saber_(weapon): サーベル（武器）
+        scythe: 鎌
+        nose_hatchet: 鼻斧
+        dagger: 短剣
+        scissors: ハサミ
+        axe: 斧
+        hatchet: 手斧
+        stake: 杭
+        lance: 槍
+        trident: 三叉槍
+        bow_(weapon): 弓
+        arrow: 矢
+        claw_(weapon): 爪（武器）
+        rifle,: ライフル
+        gun: 銃
+        handgun: ハンドガン
+        thompson_submachine_gun: トンプソンサブマシンガン
+        magazine_(weapon): 弾倉（武器）
+        dynamite: ダイナマイト
+        bomb: 爆弾
+        track missiles: 追尾ミサイル
+        complex Trajectory: 複雑な軌道
+        tank: 戦車
+        cannon: 大砲
+        military_vehicle: 軍用車両
+        motorcycle: オートバイ
+        ship: 船
+        watercraft: 水上船舶
+        car: 車
+        machine: 機械
+        machinery: 機械武装
+        mechanical_arms: メカニカルアーム
+        mechanization: 機械化
+        robot_ears: ロボットの耳
+        robot_joints: ロボットの関節
+        variable_fighter: 可変戦闘機
+        sorcerer's_sutra_scroll: 魔術師の経典
+
+    - name: 食べ物
+      color: rgba(189, 182, 107, .4)
+      tags:
+        A_sushi_roll: 寿司ロール
+        apple: りんご
+        aubergine: ナス
+        burger: バーガー
+        cake: ケーキ
+        candy: キャンディー
+        candy_apple: キャンディーアップル
+        candy_cane: キャンディーケイン
+        carrot: にんじん
+        cigarette: タバコ
+        coffee: コーヒー
+        cookie: クッキー
+        cotton_candy_: 綿菓子
+        cream: クリーム
+        dango: 団子
+        doughnut: ドーナツ
+        drink: 飲み物
+        egg: 卵
+        fruit: 果物
+        Gelatin: ゼリー
+        ice_cream: アイスクリーム
+        kafuu_chino: 香風智乃
+        makizushi: 巻き寿司
+        meat: 肉
+        noodles: 麺類
+        obento: お弁当
+        onigiri: おにぎり
+        pancake: パンケーキ
+        pasties: パイ
+        peach: 桃
+        ramen: ラーメン
+        sake: 日本酒
+        taiyaki: たい焼き
+        tea: お茶
+        teacup: ティーカップ
+        wagashi: 和菓子
+        wine: ワイン
+        jam: ジャム
+        pocky: ポッキー
+        bottled_water: ボトル入り水
+        sweet_potato: さつまいも
+        sweets: お菓子
+        food: 食べ物
+        food_in_mouth: 口に食べ物
+        food_on_: 顔に食べ物
+        food_on_body: 体に食べ物
+        food_print: 食べ物のプリント
+        food_stand: 食品スタンド
+        in_food: 食べ物の中にいる（キャラクター）
+        chips: ポテトチップス
+        potato_chips: ポテトチップス
+        telstar: テルスター
+        sundae: サンデー
+        tempura: 天ぷら
+
+    - name: 動物
+      color: rgba(189, 182, 107, .4)
+      tags:
+        reptile: 爬虫類
+        crow: カラス
+        bird: 鳥
+        penguin: ペンギン
+        chick: ひよこ
+        manjuu_(azur_lane): マンジュウ（アズールレーン）
+        shell: 貝殻
+        wriggle_nightbug: リグル・ナイトバグ
+        dragonfly: トンボ
+        mammal: 哺乳動物
+        wolf: オオカミ
+        扶桑花: 馬
+        whale: クジラ
+        cat: 猫
+        cat_teaser: 猫じゃらし
+        dog: 犬
+        dog_tags: 犬のタグ
+        fox: キツネ
+        bunny: ウサギ
+        snow_bunny: スノーバニー
+        stuffed_bunny: ぬいぐるみのウサギ
+        horse: 馬
+        cow: 牛
+        dragon: ドラゴン
+        loong: 中国の龍
+        eastern_dragon: 東洋の龍
+        snake: 蛇
+        slime: スライム
+        bear: クマ
+        panda: パンダ
+        teddy_bear: テディベア
+        tiger: 虎
+        bat: コウモリ
+        hamster: ハムスター
+        mouse: ネズミ
+        squirrel: リス
+
+    - name: 植物
+      color: rgba(189, 182, 107, .4)
+      tags:
+        plant: 植物
+        flower: 花
+        vase: 花瓶
+        bouquet: 花束
+        flower_bloom: 花が咲く
+        plum_blossom: 梅の花
+        cherry_blossoms: 桜の花
+        wisteria: 藤
+        hibiscus: ハイビスカス
+        hydrangea: 紫陽花
+        rose: バラ
+        spider_lily: 彼岸花
+        lily: ユリ
+        lotus: 蓮の花
+        bamboo: 竹
+        entangled_plants: 絡み合った植物
+        orchid: 蘭
+        chrysanthemum: 菊
+        narcissu: スイセン
+        tree: 木
+        branch: 枝
+        forest: 森
+        pine_tree: 松の木
+        palm_tree: ヤシの木
+        maple_tree: カエデの木
+        bush/shrub,: 低木
+        christmas_tree: クリスマスツリー
+        maple_leaf: カエデの葉
+        pumpkin: カボチャ
+        jack-o'-lantern: ジャックオーランタン
+        spring_onion: ネギ
+
+- name: レンズ
+  groups:
+    - name: レンズ
+      color: rgba(99, 201, 2, .4)
+      tags:
+        panorama: パノラマ
+        landscape: 風景
+        wide_shot: ワイドショット
+        medium_shot: 中景
+        mid_shot: 中景
+        full_shot: 全身像
+        bust: バスト
+        upper_body: 上半身
+        lower_body: 下半身
+        cowboy_shot: 上半身+太もも（カウボーイショット）
+        portrait: 肖像画
+        profile: プロフィール
+
+    - name: クローズアップ
+      color: rgba(99, 201, 2, .4)
+      tags:
+        close-up: クローズアップ
+        macro_shot: マクロ撮影
+        inset: 挿入
+        cross-section: 断面図
+        x-ray: X線
+        solo_focus: 単独の焦点
+        xx_focus: XXに焦点を当てる
+        face_focus: 顔に焦点を当てる
+        eyes_focus: 目に焦点を当てる
+        foot_focus: 足に焦点を当てる
+        hip_focus: 尻に焦点を当てる
+        ass_focus: 尻に焦点を当てる
+        vehicle_focus: 車両に焦点を当てる
+        between_legs: 脚の間（強調）
+        between_breasts: 胸の間（強調）
+        between_fingers: 指の間（強調）
+        peeking: 覗き込む
+        peeking_out: 覗き出す（の姿勢）
+        peeping: 覗き見る（視点を強調）
+        midriff_peek: へそ見せ
+        armpit_peek: 脇見せ
+        pussy_peek: マンコ見せ
+        panty_peek: パンティ見せ
+        pantyshot: パンチラ
+        caught: 逮捕された
+
+    - name: 他の構図
+      color: rgba(99, 201, 2, .4)
+      tags:
+        aerial: 空中
+        turn_one's_back: 背を向ける
+        upskirt: スカートの中
+        phone_screen: 携帯電話の画面
+        multiple_views: 複数の視点
+        mirror selfie: 鏡の自撮り
+        three-quarter view: ３分の４の視点
+
+    - name: カメラの角度
+      color: rgba(99, 201, 2, .4)
+      tags:
+        front view: 正面視点
+        from_side: 横から
+        from_above: 上から↘
+        from_below: 下から↗
+        from_outside: 外から内へ
+        from_back: 背後から
+        from behind: 背後から
+        dynamic_angle: ダイナミックな角度
+        cinematic_angle: 映画的な角度
+        dutch angle: オランダ角度
+        foreshortening: 遠近法
+        fisheye: 魚眼
+
+    - name: 効果
+      color: rgba(99, 201, 2, .4)
+      tags:
+        depth of field: 被写界深度
+        lens_flare: レンズフレア
+        motion_blur: モーションブラー
+        motion_lines: 動きを表す線
+        speed_lines: スピードライン
+        bokeh: ボケ
+        chromatic_aberration: 色収差
+        overexposure: 過曝
+        contour_deepening: 等高線強調
+
+    - name: 主人公の動作
+      color: rgba(99, 201, 2, .4)
+      tags:
+        looking_at_viewer: 視聴者を見る
+        eye-contact: アイコンタクト
+        eyeball: 注視
+        stare: 凝視
+        looking_back: 振り返る
+        gradient: グラデーション
+        looking_down: 下を見る↘
+        looking_up: 上を見る↗
+        facing_away: 向きを変える
+        looking_to_the_side: 横を見る
+        looking_away: 見ない
+        looking_ahead: 先を見る
+        looking_afar: 遠くを見る
+        looking_outside: 外を見る
+        head_tilt: 頭を傾ける
+        head_down: 頭を下げる
+        sideways_glance: 横目でちらっと見る
+        upshirt: シャツの下を覗く
+        upshorts: スカートの下を覗く
+        looking_at_another: 別のものを見る
+        looking_at_phone: 携帯電話を見る
+        looking_at_animal: 動物を見る
+        looking_at_mirror: 鏡を見る
+        looking_at_hand: 手を見る
+        looking_at_hands: 両手を見る
+        looking_at_food: 食べ物を見る
+        looking_at_screen: 画面を見る
+
+- name: 漢服
+  groups:
+    - name: "唐風:"
+      color: rgba(178, 33, 34, .4)
+      tags:
+        hanfu, tang style outfits,<lora:hanfuTang_v32:0.7>: 唐風の衣装
+
+    - name: 上杉
+      color: rgba(178, 33, 34, .4)
+      tags:
+        orange upper shan: オレンジの上杉
+        red upper shan: レッドの上杉
+        green upper shan: グリーンの上杉
+        blue upper shan: ブルーの上杉
+        pink upper shan: ピンクの上杉
+        yellow upper shan: イエローの上杉
+        white upper shan: ホワイトの上杉
+        light blue upper shan: ライトブルーの上杉
+        light green upper shan: ライトグリーンの上杉
+        light red upper shan: ライトレッドの上杉
+        cyan blue upper shan: シアンブルーの上杉
+        light purple upper shan: ライトパープルの上杉
+        black with blue upper shan: ブルーブラックの上杉
+        white with orange upper shan: オレンジホワイトの上杉
+        pink with black upper shan: ピンクブラックの上杉
+
+    - name: 長上杉
+      color: rgba(178, 33, 34, .4)
+      tags:
+        orange long upper shan: オレンジの長い上杉
+        red long upper shan: レッドの長い上杉
+        green long upper shan: グリーンの長い上杉
+        blue long upper shan: ブルーの長い上杉
+        pink long upper shan: ピンクの長い上杉
+        yellow long upper shan: イエローの長い上杉
+        white long upper shan: ホワイトの長い上杉
+        light blue long upper shan: ライトブルーの長い上杉
+        light green long upper shan: ライトグリーンの長い上杉
+        light red long upper shan: ライトレッドの長い上杉
+        cyan blue long upper shan: シアンブルーの長い上杉
+        light purple long upper shan: ライトパープルの長い上杉
+        black with blue long upper shan: ブルーブラックの長い上杉
+        white with orange long upper shan: オレンジホワイトの長い上杉
+        pink with black long upper shan: ピンクブラックの長い上杉
+
+    - name: 齊胸破裙
+      color: rgba(178, 33, 34, .4)
+      tags:
+        white chest po skirt: 白い破れたスカート
+        red chest po skirt: 赤い破れたスカート
+        green chest po skirt: 緑の破れたスカート
+        blue chest po skirt: 青い破れたスカート
+        pink chest po skirt: ピンクの破れたスカート
+        purple chest po skirt: 紫の破れたスカート
+        multicolour chest po skirt: カラフルな破れたスカート
+        purple with white chest po skirt: 紫と白の破れたスカート
+        white with yellow chest po skirt: 白と黄色の破れたスカート
+        blue with white chest po skirt: ライトブルーの破れたスカート
+        orange with white chest po skirt: オレンジと白の破れたスカート
+        green with white chest po skirt: グリーンと白の破れたスカート
+        light orange with white chest po skirt: ライトオレンジと白の破れたスカート
+        pink with white chest po skirt: ピンクと白の破れたスカート
+        white with pink chest po skirt: 白とピンクの破れたスカート
+
+    - name: 齊胸褶裙
+      color: rgba(178, 33, 34, .4)
+      tags:
+        white chest pleated skirt: 白いプリーツスカート
+        red chest pleated skirt: 赤いプリーツスカート
+        green chest pleated skirt: 緑のプリーツスカート
+        blue chest pleated skirt: 青いプリーツスカート
+        pink chest pleated skirt: ピンクのプリーツスカート
+        purple chest pleated skirt: 紫のプリーツスカート
+        multicolour chest pleated skirt: カラフルなプリーツスカート
+        purple with white chest pleated skirt: 紫と白のプリーツスカート
+        white with yellow chest pleated skirt: 白と黄色のプリーツスカート
+        blue with white chest pleated skirt: ライトブルーのプリーツスカート
+        orange with white chest pleated skirt: オレンジと白のプリーツスカート
+        green with white chest pleated skirt: グリーンと白のプリーツスカート
+        light orange with white chest pleated skirt: ライトオレンジと白のプリーツスカート
+        pink with white chest pleated skirt: ピンクと白のプリーツスカート
+        white with pink chest pleated skirt: 白とピンクのプリーツスカート
+
+    - name: 系帶
+      color: rgba(178, 33, 34, .4)
+      tags:
+        green waistband: 緑のベルト
+        yellow waistband: 黄色のベルト
+        red waistband: 赤いベルト
+        pink waistband: ピンクのベルト
+        orange waistband: オレンジのベルト
+        light blue waistband: ライトブルーのベルト
+        light green waistband: ライトグリーンのベルト
+        green with yellow waistband: 黄緑のベルト
+        purple with white waistband: 紫と白のベルト
+        red with white waistband: 赤と白のベルト
+        red with black waistband: 赤と黒のベルト
+        yellow with white waistband: 黄色と白のベルト
+
+    - name: 披帛
+      color: rgba(178, 33, 34, .4)
+      tags:
+        white pibo: 白い披肩
+        orange pibo: オレンジの披肩
+        black pibo: 黒い披肩
+        pink pibo: ピンクの披肩
+        red pibo: 赤い披肩
+        purple pibo: 紫の披肩
+        light green pibo: ライトグリーンの披肩
+        white with yellow pibo: 黄白の披肩
+
+    - type: wrap
+
+    - name: "宋風:"
+      color: rgba(178, 33, 34, .4)
+      tags:
+        hanfu, song style outfits,<lora:hanfuSong_v31:0.7>: 宋風の衣装
+
+    - name: 短衫
+      color: rgba(178, 33, 34, .4)
+      tags:
+        purple short shan: 紫の短い杉
+        red short shan: レッドの短い杉
+        green short shan: グリーンの短い杉
+        blue short shan: ブルーの短い杉
+        pink short shan: ピンクの短い杉
+        yellow short shan: イエローの短い杉
+        white short shan: ホワイトの短い杉
+        light blue short shan: ライトブルーの短い杉
+        light green short shan: ライトグリーンの短い杉
+        light red short shan: ライトレッドの短い杉
+        cyan blue short shan: シアンブルーの短い杉
+        light purple short shan: ライトパープルの短い杉
+        black with blue short shan: ブルーブラックの短い杉
+        white with yellow short shan: 黄白の短い杉
+        light yellow with green with white short shan: ライトイエローグリーン白の短い杉
+
+    - name: 長衫
+      color: rgba(178, 33, 34, .4)
+      tags:
+        purple long shan: 紫の長い杉
+        red long shan: レッドの長い杉
+        green long shan: グリーンの長い杉
+        blue long shan: ブルーの長い杉
+        pink long shan: ピンクの長い杉
+        yellow long shan: イエローの長い杉
+        white long shan: ホワイトの長い杉
+        light blue long shan: ライトブルーの長い杉
+        light green long shan: ライトグリーンの長い杉
+        light red long shan: ライトレッドの長い杉
+        cyan blue long shan: シアンブルーの長い杉
+        light purple long shan: ライトパープルの長い杉
+        black with blue long shan: ブルーブラックの長い杉
+        white with yellow long shan: 黄白の長い杉
+        light yellow with green with white long shan: ライトイエローグリーン白の長い杉
+
+    - name: 百褶裙
+      color: rgba(178, 33, 34, .4)
+      tags:
+        white pleated skirt: 白いプリーツスカート
+        red pleated skirt: 赤いプリーツスカート
+        green pleated skirt: 緑のプリーツスカート
+        blue pleated skirt: 青いプリーツスカート
+        pink pleated skirt: ピンクのプリーツスカート
+        light blue pleated skirt: ライトブルーのプリーツスカート
+        white golden pleated skirt: 白金のプリーツスカート
+        gradient green pleated skirt: グラデーション緑のプリーツスカート
+        translucent white pleated skirt: 半透明白のプリーツスカート
+        red cyan gradient pleated skirt: 赤青グラデーションのプリーツスカート
+        red green gradient pleated skirt: 赤緑グラデーションのプリーツスカート
+        green with white pleated skirt: 白緑のプリーツスカート
+        light yellow with green with white pleated skirt: ライトイエローグリーン白のプリーツスカート
+
+    - name: 宋抹
+      color: rgba(178, 33, 34, .4)
+      tags:
+        orange songmo: オレンジの宋抹
+        red songmo: レッドの宋抹
+        green songmo: グリーンの宋抹
+        blue songmo: ブルーの宋抹
+        pink songmo: ピンクの宋抹
+        yellow songmo: イエローの宋抹
+        white songmo: ホワイトの宋抹
+        purple songmo: 紫の宋抹
+        green floral songmo: グリーンの花柄宋抹
+        purple floral songmo: 紫の花柄宋抹
+        cyan floral songmo: 青の花柄宋抹
+
+    - type: wrap
+
+    - name: "明風:"
+      color: rgba(178, 33, 34, .4)
+      tags:
+        hanfu, ming style outfits,<lora:hanfuMing_v31:0.7>: 明風の衣装
+
+    - name: 上衣
+      color: rgba(178, 33, 34, .4)
+      tags:
+        short coat: ショートコート
+        long coat: ロングコート
+
+    - name: スカート
+      color: rgba(178, 33, 34, .4)
+      tags:
+        mamian skirt: マミアンスカート
+
+    - name: 襟元
+      color: rgba(178, 33, 34, .4)
+      tags:
+        overlapping collar: 重ね襟
+        round collar: ラウンド襟
+        standing collar: 立襟
+        square collar: スクエア襟
+
+    - name: 装飾
+      color: rgba(178, 33, 34, .4)
+      tags:
+        overlapping collar: 雲肩
+        embroidery: 刺繍
+        woven gold: 織り金
+        makeup flower: メイクアップフラワー
+        bufu: 補服
+
+- name: ネガティブなプロンプト
+  groups:
+    - name: 画像
+      color:
+      tags:
+        NSFW: 仕事に適していない
+        logo: ロゴ
+        text: テキスト
+        blurry: ぼやけた
+        low quality: 低品質
+        bad anatomy: 悪い解剖学
+        sketches: スケッチ
+        lowres: 低解像度
+        normal quality: 通常の品質
+        monochrome: モノクローム
+        grayscale: グレースケール
+        worstquality: 最悪の品質
+        signature: 署名
+        watermark: ウォーターマーク
+        cropped: 切り抜かれた
+        bad proportions: 悪い比率
+        out of focus: ピント外れ
+        username: ユーザー名
+
+    - name: 人物
+      color:
+      tags:
+        Multiple people: 複数人
+        (AS-YoungV2-Neg:1.3): 大人を削除
+        (AS-Adult-Neg:1.3): 若者を削除
+        bad body: 体の形が悪い
+        long body: 体が長い
+        (fat:1.2): 肥満
+        long neck: 首が長い
+        deformed: 変形した
+        mutated: 突然変異した
+        mutation: 突然変異
+        ugly: 醜い
+        disfigured: 変形した
+        poorly drawn face: 顔の描き方が下手な
+        skin blemishes: 皮膚の欠点
+        skin spots: 皮膚の斑点
+        acnes: ニキビ
+        missing limb: 欠損した肢体
+        malformed limbs: 異常な形状の肢体
+        floating limbs: 浮遊した肢体
+        disconnected limbs: 切断された肢体
+        extra limb: 追加の肢体
+        extra arms: 追加の腕
+        mutated hands: 突然変異した手
+        poorly drawn hands: 手の描き方が下手な
+        malformed hands: 異常な形状の手
+        mutated hands and fingers: 突然変異した手と指
+        bad hands: 悪い手
+        missing fingers: 指が欠損した
+        fused fingers: 指が融合した
+        too many fingers: 指が多すぎる
+        extra legs: 追加の足
+        bad feet: 悪い足
+        cross-eyed: 斜視
+
+    - name: Embeddings
+      color:
+      tags:
+        AS-YoungV2-neg:
+        BadDream:
+        badhandv4:
+        BadNegAnatomyV1-neg:
+        EasyNegative:
+        FastNegativeV2:

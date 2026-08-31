@@ -1,0 +1,38 @@
+# ============================================================
+# SD WebUI Forge Neo - Root .gitignore
+# 排除大文件包和运行时环境，仅保留基础代码
+# ============================================================
+
+# 系统运行时 (Python, Git, FFmpeg 等)
+system/
+
+# llama.cpp 二进制文件和模型
+llama.cpp/
+
+# 界面使用参考图片 (非代码)
+ui界面使用参考/
+
+# 启动器非代码资源
+launcher/qq群ai交流群.jpg
+launcher/主题壁纸.png
+
+# 启动器构建产物
+launcher/*.spec
+launcher/dist/
+launcher/build/
+launcher/build_tmp/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# ModelScope 部署配置
+ms_deploy.json
+
+# 创空间重复目录
+sd-webui-forge-neo-v3/
+
+# 启动器大文件 (超过 GitHub 100MB 限制)
+*.exe
