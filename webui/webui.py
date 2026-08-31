@@ -123,6 +123,7 @@ def webui_worker():
                 "exception_handlers": {Exception: _handle_exception},
             },
             root_path=f"/{cmd_opts.subpath}" if cmd_opts.subpath else "",
+            mcp_server=True,
         )
 
         startup_timer.record("gradio launch")

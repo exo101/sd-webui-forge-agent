@@ -1,9 +1,9 @@
 """
 Aspect ratio helper module (integrated from aspect-ratio-helper plugin).
 
-Provides quick aspect ratio buttons and a percentage scaler for the
-txt2img / img2img dimension controls. Buttons use Python callbacks that
-preserve total pixel count and snap values to the slider step.
+Provides quick aspect ratio buttons for the txt2img / img2img dimension
+controls. Buttons use Python callbacks that preserve total pixel count
+and snap values to the slider step.
 """
 import gradio as gr
 
@@ -23,9 +23,6 @@ ASPECT_RATIOS = [
     ("9:21", 9, 21),
 ]
 
-# Percentage scale presets for the scaler row
-PERCENTAGES = [50, 75, 100, 125, 150, 200]
-
 # Slider bounds (match ui.py width/height slider min/max)
 _MIN_DIM = 64
 _MAX_DIM = 2048
@@ -40,7 +37,6 @@ def register_settings():
         ("aspect-ratio", "Aspect Ratio", "ui"),
         {
             "arh_show_aspect_buttons": OptionInfo(True, "Show aspect ratio quick buttons").needs_reload_ui(),
-            "arh_show_percentage_scaler": OptionInfo(True, "Show percentage scaler buttons").needs_reload_ui(),
         },
     )
     for key, info in items.items():
@@ -73,14 +69,6 @@ def _apply_ratio(width, height, w_ratio, h_ratio, step=8):
     return _snap(new_w, step), _snap(new_h, step)
 
 
-def _apply_percentage(width, height, pct, step=8):
-    """Scale both dimensions by *pct* percent and return (new_w, new_h)."""
-    if not width or not height:
-        width = height = 1024
-    factor = pct / 100.0
-    return _snap(float(width) * factor, step), _snap(float(height) * factor, step)
-
-
 def create_aspect_ratio_buttons(tabname, width, height):
     """Render a row of aspect ratio quick buttons bound to *width* / *height* sliders."""
     with gr.Row(
@@ -93,25 +81,6 @@ def create_aspect_ratio_buttons(tabname, width, height):
             btn = gr.Button(value=label, elem_id=elem_id, size="sm")
             btn.click(
                 fn=lambda w, h, wr=wr, hr=hr: _apply_ratio(w, h, wr, hr),
-                inputs=[width, height],
-                outputs=[width, height],
-                show_progress=False,
-                queue=False,
-            )
-
-
-def create_percentage_scaler(tabname, width, height):
-    """Render a row of percentage scale buttons bound to *width* / *height* sliders."""
-    with gr.Row(
-        elem_id=f"{tabname}_pct_buttons",
-        elem_classes=["percentage-scaler-buttons"],
-        equal_height=True,
-    ):
-        for pct in PERCENTAGES:
-            elem_id = f"{tabname}_pct_{pct}"
-            btn = gr.Button(value=f"{pct}%", elem_id=elem_id, size="sm")
-            btn.click(
-                fn=lambda w, h, pct=pct: _apply_percentage(w, h, pct),
                 inputs=[width, height],
                 outputs=[width, height],
                 show_progress=False,

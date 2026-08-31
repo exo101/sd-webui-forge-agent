@@ -1,6 +1,8 @@
 // mouseover tooltips for various UI elements
 
-const titles = {
+// Use `let` instead of `const` so extensions can merge into titles object.
+// Gradio 6.x stricter JS evaluation made `const` re-assignment throw.
+let titles = {
     "Sampling Method": "The algorithm used to refine each step of the image",
     "Schedule Type": "The algorithm used to adjust the magnitude of refinement",
     "Sampling Steps": "The number of times the image is iteratively refined",
