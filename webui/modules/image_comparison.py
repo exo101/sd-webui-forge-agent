@@ -55,7 +55,10 @@ def img2info(image_a, image_b):
 
 def _gjs(js_code):
     """Return kwargs for a Gradio click that runs *js_code* client-side only."""
-    return {"fn": None, "_js": js_code, "show_progress": False, "queue": False}
+    # NOTE: call sites already pass fn=None explicitly, so we must NOT include
+    # "fn" here — otherwise Gradio raises "got multiple values for keyword
+    # argument 'fn'".
+    return {"_js": js_code, "show_progress": False, "queue": False}
 
 
 def register_settings():
