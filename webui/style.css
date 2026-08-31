@@ -1,6 +1,658 @@
 /* temporary fix to load default gradio font in frontend instead of backend */
 
-@import url("webui-assets/css/sourcesanspro.css");
+@import url("/webui-assets/css/sourcesanspro.css");
+
+/* ============================================================
+   Apple-Style Design System & Theme Variables
+   参考电商助手主题系统，适配 SD WebUI / Gradio
+   ============================================================ */
+
+:root {
+    /* 基础设计令牌 - 圆角体系 */
+    --sd-radius-sm: 8px;
+    --sd-radius-md: 12px;
+    --sd-radius-lg: 16px;
+    --sd-radius-xl: 20px;
+    --sd-radius-pill: 999px;
+
+    /* 过渡曲线 - 苹果流线型 */
+    --sd-transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --sd-transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* 字体 */
+    --sd-font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Microsoft YaHei', sans-serif;
+
+    /* 侧边栏宽度 */
+    --sd-sidebar-w: 220px;
+    --sd-sidebar-w-collapsed: 72px;
+}
+
+/* ---------- Apple Light (默认) ---------- */
+body,
+body.theme-apple-light {
+    --sd-bg-page: #e8e8ed;
+    --sd-bg-sidebar: #f5f5f7;
+    --sd-bg-card: #ffffff;
+    --sd-bg-elevated: #f0f0f2;
+    --sd-bg-hover: rgba(0, 0, 0, 0.04);
+    --sd-bg-active: rgba(0, 113, 227, 0.1);
+    --sd-text-primary: #1d1d1f;
+    --sd-text-secondary: #6e6e73;
+    --sd-text-tertiary: #86868b;
+    --sd-text-on-accent: #ffffff;
+    --sd-accent: #0071e3;
+    --sd-accent-hover: #0077ed;
+    --sd-accent-soft: rgba(0, 113, 227, 0.08);
+    --sd-border: rgba(0, 0, 0, 0.08);
+    --sd-border-strong: rgba(0, 0, 0, 0.12);
+    --sd-divider: rgba(0, 0, 0, 0.06);
+    --sd-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --sd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+    --sd-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.12);
+    --sd-success: #34c759;
+    --sd-warning: #ff9500;
+    --sd-error: #ff3b30;
+
+    /* 覆盖 Gradio 变量 */
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+/* ---------- Dark Green ---------- */
+body.theme-dark-green {
+    --sd-bg-page: #0d0d10;
+    --sd-bg-sidebar: #16161a;
+    --sd-bg-card: #1c1c20;
+    --sd-bg-elevated: #25252a;
+    --sd-bg-hover: rgba(255, 255, 255, 0.06);
+    --sd-bg-active: rgba(48, 209, 88, 0.15);
+    --sd-text-primary: #f5f5f7;
+    --sd-text-secondary: #98989d;
+    --sd-text-tertiary: #6e6e73;
+    --sd-text-on-accent: #000000;
+    --sd-accent: #30d158;
+    --sd-accent-hover: #28bd46;
+    --sd-accent-soft: rgba(48, 209, 88, 0.1);
+    --sd-border: rgba(255, 255, 255, 0.08);
+    --sd-border-strong: rgba(255, 255, 255, 0.14);
+    --sd-divider: rgba(255, 255, 255, 0.06);
+    --sd-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --sd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --sd-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+    --sd-success: #30d158;
+    --sd-warning: #ff9f0a;
+    --sd-error: #ff453a;
+
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+/* ---------- Dark Blue ---------- */
+body.theme-dark-blue {
+    --sd-bg-page: #0d0d12;
+    --sd-bg-sidebar: #16161f;
+    --sd-bg-card: #1c1c28;
+    --sd-bg-elevated: #252532;
+    --sd-bg-hover: rgba(255, 255, 255, 0.06);
+    --sd-bg-active: rgba(10, 132, 255, 0.15);
+    --sd-text-primary: #f5f5f7;
+    --sd-text-secondary: #9898a5;
+    --sd-text-tertiary: #6e6e7e;
+    --sd-text-on-accent: #ffffff;
+    --sd-accent: #0a84ff;
+    --sd-accent-hover: #007aff;
+    --sd-accent-soft: rgba(10, 132, 255, 0.1);
+    --sd-border: rgba(255, 255, 255, 0.08);
+    --sd-border-strong: rgba(255, 255, 255, 0.14);
+    --sd-divider: rgba(255, 255, 255, 0.06);
+    --sd-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --sd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --sd-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+    --sd-success: #30d158;
+    --sd-warning: #ff9f0a;
+    --sd-error: #ff453a;
+
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+/* ---------- Dark Purple ---------- */
+body.theme-dark-purple {
+    --sd-bg-page: #0f0d14;
+    --sd-bg-sidebar: #1a1722;
+    --sd-bg-card: #221f2e;
+    --sd-bg-elevated: #2d2938;
+    --sd-bg-hover: rgba(255, 255, 255, 0.06);
+    --sd-bg-active: rgba(191, 90, 242, 0.15);
+    --sd-text-primary: #f5f5f7;
+    --sd-text-secondary: #a098a8;
+    --sd-text-tertiary: #736e7e;
+    --sd-text-on-accent: #ffffff;
+    --sd-accent: #bf5af2;
+    --sd-accent-hover: #af52de;
+    --sd-accent-soft: rgba(191, 90, 242, 0.1);
+    --sd-border: rgba(255, 255, 255, 0.08);
+    --sd-border-strong: rgba(255, 255, 255, 0.14);
+    --sd-divider: rgba(255, 255, 255, 0.06);
+    --sd-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --sd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --sd-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+    --sd-success: #30d158;
+    --sd-warning: #ff9f0a;
+    --sd-error: #ff453a;
+
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+/* ---------- Light Green ---------- */
+body.theme-light-green {
+    --sd-bg-page: #eaf5eb;
+    --sd-bg-sidebar: #f0faf0;
+    --sd-bg-card: #ffffff;
+    --sd-bg-elevated: #f0f8f0;
+    --sd-bg-hover: rgba(52, 199, 89, 0.06);
+    --sd-bg-active: rgba(52, 199, 89, 0.12);
+    --sd-text-primary: #1a2e1c;
+    --sd-text-secondary: #5a7a5e;
+    --sd-text-tertiary: #869988;
+    --sd-text-on-accent: #ffffff;
+    --sd-accent: #34c759;
+    --sd-accent-hover: #2db84e;
+    --sd-accent-soft: rgba(52, 199, 89, 0.08);
+    --sd-border: rgba(52, 199, 89, 0.1);
+    --sd-border-strong: rgba(52, 199, 89, 0.18);
+    --sd-divider: rgba(0, 0, 0, 0.05);
+    --sd-shadow-sm: 0 1px 3px rgba(52, 199, 89, 0.08);
+    --sd-shadow-md: 0 4px 16px rgba(52, 199, 89, 0.12);
+    --sd-shadow-lg: 0 8px 40px rgba(52, 199, 89, 0.15);
+    --sd-success: #34c759;
+    --sd-warning: #ff9500;
+    --sd-error: #ff3b30;
+
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+/* ---------- Light Blue ---------- */
+body.theme-light-blue {
+    --sd-bg-page: #e8f0fe;
+    --sd-bg-sidebar: #f0f5ff;
+    --sd-bg-card: #ffffff;
+    --sd-bg-elevated: #f0f5ff;
+    --sd-bg-hover: rgba(10, 132, 255, 0.06);
+    --sd-bg-active: rgba(10, 132, 255, 0.12);
+    --sd-text-primary: #121a2e;
+    --sd-text-secondary: #5a6a88;
+    --sd-text-tertiary: #8690a8;
+    --sd-text-on-accent: #ffffff;
+    --sd-accent: #0a84ff;
+    --sd-accent-hover: #007aff;
+    --sd-accent-soft: rgba(10, 132, 255, 0.08);
+    --sd-border: rgba(10, 132, 255, 0.1);
+    --sd-border-strong: rgba(10, 132, 255, 0.18);
+    --sd-divider: rgba(0, 0, 0, 0.05);
+    --sd-shadow-sm: 0 1px 3px rgba(10, 132, 255, 0.08);
+    --sd-shadow-md: 0 4px 16px rgba(10, 132, 255, 0.12);
+    --sd-shadow-lg: 0 8px 40px rgba(10, 132, 255, 0.15);
+    --sd-success: #34c759;
+    --sd-warning: #ff9500;
+    --sd-error: #ff3b30;
+
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+/* ---------- Warm Orange ---------- */
+body.theme-warm-orange {
+    --sd-bg-page: #f5ede0;
+    --sd-bg-sidebar: #fdf6f0;
+    --sd-bg-card: #fffcf8;
+    --sd-bg-elevated: #fff8f0;
+    --sd-bg-hover: rgba(255, 149, 0, 0.06);
+    --sd-bg-active: rgba(255, 149, 0, 0.12);
+    --sd-text-primary: #2e1e0e;
+    --sd-text-secondary: #8b7355;
+    --sd-text-tertiary: #b09977;
+    --sd-text-on-accent: #ffffff;
+    --sd-accent: #ff9500;
+    --sd-accent-hover: #ff8800;
+    --sd-accent-soft: rgba(255, 149, 0, 0.08);
+    --sd-border: rgba(255, 149, 0, 0.12);
+    --sd-border-strong: rgba(255, 149, 0, 0.2);
+    --sd-divider: rgba(0, 0, 0, 0.05);
+    --sd-shadow-sm: 0 1px 3px rgba(255, 149, 0, 0.08);
+    --sd-shadow-md: 0 4px 16px rgba(255, 149, 0, 0.12);
+    --sd-shadow-lg: 0 8px 40px rgba(255, 149, 0, 0.15);
+    --sd-success: #34c759;
+    --sd-warning: #ff9500;
+    --sd-error: #ff3b30;
+
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+/* ---------- Sakura Pink ---------- */
+body.theme-sakura-pink {
+    --sd-bg-page: #f5e8ee;
+    --sd-bg-sidebar: #fef5f7;
+    --sd-bg-card: #fffafa;
+    --sd-bg-elevated: #fef0f4;
+    --sd-bg-hover: rgba(232, 67, 147, 0.06);
+    --sd-bg-active: rgba(232, 67, 147, 0.12);
+    --sd-text-primary: #3a1a28;
+    --sd-text-secondary: #8b5a6e;
+    --sd-text-tertiary: #b0808e;
+    --sd-text-on-accent: #ffffff;
+    --sd-accent: #e84393;
+    --sd-accent-hover: #d63384;
+    --sd-accent-soft: rgba(232, 67, 147, 0.08);
+    --sd-border: rgba(232, 67, 147, 0.12);
+    --sd-border-strong: rgba(232, 67, 147, 0.2);
+    --sd-divider: rgba(0, 0, 0, 0.05);
+    --sd-shadow-sm: 0 1px 3px rgba(232, 67, 147, 0.08);
+    --sd-shadow-md: 0 4px 16px rgba(232, 67, 147, 0.12);
+    --sd-shadow-lg: 0 8px 40px rgba(232, 67, 147, 0.15);
+    --sd-success: #34c759;
+    --sd-warning: #ff9500;
+    --sd-error: #ff3b30;
+
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+/* ---------- Obsidian Black ---------- */
+body.theme-obsidian {
+    --sd-bg-page: #000000;
+    --sd-bg-sidebar: #0a0a0a;
+    --sd-bg-card: #111111;
+    --sd-bg-elevated: #1a1a1a;
+    --sd-bg-hover: rgba(255, 255, 255, 0.05);
+    --sd-bg-active: rgba(255, 255, 255, 0.1);
+    --sd-text-primary: #f5f5f7;
+    --sd-text-secondary: #98989d;
+    --sd-text-tertiary: #6e6e73;
+    --sd-text-on-accent: #000000;
+    --sd-accent: #f5f5f7;
+    --sd-accent-hover: #e8e8ed;
+    --sd-accent-soft: rgba(255, 255, 255, 0.08);
+    --sd-border: rgba(255, 255, 255, 0.08);
+    --sd-border-strong: rgba(255, 255, 255, 0.14);
+    --sd-divider: rgba(255, 255, 255, 0.06);
+    --sd-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --sd-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.6);
+    --sd-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.7);
+    --sd-success: #30d158;
+    --sd-warning: #ff9f0a;
+    --sd-error: #ff453a;
+
+    --body-background-fill: var(--sd-bg-page);
+    --background-fill-primary: var(--sd-bg-card);
+    --background-fill-secondary: var(--sd-bg-elevated);
+    --background-fill-tertiary: var(--sd-bg-sidebar);
+    --block-background-fill: var(--sd-bg-card);
+    --input-background-fill: var(--sd-bg-elevated);
+    --input-background-fill-hover: var(--sd-bg-hover);
+    --button-primary-background-fill: var(--sd-accent);
+    --button-primary-background-fill-hover: var(--sd-accent-hover);
+    --button-primary-text-color: var(--sd-text-on-accent);
+    --button-secondary-background-fill: var(--sd-bg-elevated);
+    --button-secondary-background-fill-hover: var(--sd-bg-hover);
+    --button-secondary-text-color: var(--sd-text-primary);
+    --border-color-primary: var(--sd-border);
+    --border-color-secondary: var(--sd-border-strong);
+    --color-accent: var(--sd-accent);
+    --color-accent-soft: var(--sd-accent-soft);
+    --body-text-color: var(--sd-text-primary);
+    --body-text-color-subdued: var(--sd-text-secondary);
+    --section-header-text-color: var(--sd-text-secondary);
+    --input-border-color: var(--sd-border);
+    --input-border-color-focus: var(--sd-accent);
+    --slider-color: var(--sd-accent);
+    --shadow-drop: var(--sd-shadow-md);
+    --radius-sm: var(--sd-radius-sm);
+    --radius-md: var(--sd-radius-md);
+    --radius-lg: var(--sd-radius-lg);
+}
+
+/* ============================================================
+   Apple-Style Component Overrides
+   全局苹果风格覆盖：圆角、过渡、阴影
+   ============================================================ */
+
+body {
+    font-family: var(--sd-font) !important;
+    transition: var(--sd-transition);
+}
+
+/* 全局圆角覆盖 */
+button,
+input,
+textarea,
+select,
+.gradio-container .block,
+.gradio-container .form,
+.gradio-container .panel,
+.gradio-container .group,
+.gradio-container .tabs,
+.gradio-container .tab,
+.gradio-container .input-accordion,
+.gradio-container .accordion,
+.gradio-container .dropdown,
+.gradio-container .slider,
+.gradio-container .number,
+.gradio-container .textbox,
+.gradio-container .checkbox,
+.gradio-container .radio {
+    border-radius: var(--sd-radius-md) !important;
+    transition: var(--sd-transition) !important;
+}
+
+/* 按钮特殊圆角 - 更大更圆润 */
+button.primary,
+button.secondary,
+.gradio-container button {
+    border-radius: var(--sd-radius-pill) !important;
+}
+
+/* 排除：Gallery 缩略图按钮保持正常圆角，pill(999px) 会把缩略图裁成圆形 */
+.gradio-gallery button,
+.gallery button,
+.thumbnail-item,
+.thumbnail-item button {
+    border-radius: var(--sd-radius-md) !important;
+}
+
+button.primary {
+    box-shadow: var(--sd-shadow-sm);
+    font-weight: 500;
+}
+
+button.primary:hover {
+    box-shadow: var(--sd-shadow-md);
+    transform: translateY(-1px);
+}
+
+button.primary:active {
+    transform: translateY(0);
+    box-shadow: var(--sd-shadow-sm);
+}
+
+/* 输入框 */
+input[type="text"],
+input[type="number"],
+textarea,
+select {
+    border-radius: var(--sd-radius-md) !important;
+    transition: var(--sd-transition-fast) !important;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+textarea:focus,
+select:focus {
+    box-shadow: 0 0 0 3px var(--sd-accent-soft);
+    border-color: var(--sd-accent) !important;
+}
+
+/* 滑块轨道圆角 */
+.gradio-slider input[type="range"] {
+    border-radius: var(--sd-radius-pill) !important;
+}
+
+.gradio-slider input[type="range"]::-webkit-slider-thumb {
+    border-radius: 50% !important;
+    box-shadow: var(--sd-shadow-sm);
+    transition: var(--sd-transition-fast);
+}
+
+.gradio-slider input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: var(--sd-shadow-md);
+}
+
+/* 卡片/面板阴影 */
+.gradio-container .block,
+.gradio-container .form {
+    box-shadow: var(--sd-shadow-sm);
+    border-radius: var(--sd-radius-lg) !important;
+}
+
+/* 标签页圆角 */
+.gradio-container .tabs {
+    border-radius: var(--sd-radius-lg) !important;
+    overflow: hidden;
+}
+
+.gradio-container .tab {
+    border-radius: var(--sd-radius-md) var(--sd-radius-md) 0 0 !important;
+}
+
+/* 复选框/单选 */
+.gradio-checkbox input[type="checkbox"],
+.gradio-radio input[type="radio"] {
+    border-radius: 6px !important;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--sd-border-strong);
+    border-radius: var(--sd-radius-pill);
+    transition: var(--sd-transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--sd-text-tertiary);
+}
 
 /* general gradio fixes */
 
@@ -129,6 +781,27 @@ div.gradio-html.min {
 
 .block.gradio-gallery {
     background: var(--input-background-fill);
+}
+
+/* Minimum height for gallery containers. Gradio 5 Gallery with height=None
+   and no pre-loaded content renders at 0 height, which triggers Chrome's
+   lazy-load intervention: images inside a 0-height container never load.
+   min-height does NOT change display mode (unlike display:block !important),
+   so it preserves Gradio's flexbox/grid layout. */
+#txt2img_gallery,
+#img2img_gallery,
+#txt2img_gallery_container,
+#img2img_gallery_container {
+    min-height: 450px;
+}
+
+/* Same 0-height issue affects the img2img upload preview component.
+   Gradio 5's gr.Image with no initial image renders at 0 height, and after
+   upload the preview may stay collapsed. Give it a safe minimum height. */
+#img2img_image,
+#img2img_image_container,
+.gradio-image {
+    min-height: 200px;
 }
 
 .gradio-gallery>button.preview {
@@ -794,7 +1467,7 @@ table.popup-table .link {
 #lightboxModal {
     display: none;
     position: fixed;
-    z-index: 1001;
+    z-index: 2147483647 !important;
     left: 0;
     top: 0;
     width: 100%;
@@ -804,6 +1477,38 @@ table.popup-table .link {
     user-select: none;
     -webkit-user-select: none;
     flex-direction: column;
+    isolation: isolate;
+}
+
+/* When the lightbox modal is open, hide ALL competing UI elements so they
+   cannot appear above the full-screen image. This uses a deterministic body
+   class toggled by JavaScript (not fragile inline-style matching), and
+   covers fixed/sticky positioned elements as well as Gradio containers that
+   may create independent stacking contexts. */
+body.lightbox-open #sd_sidebar,
+body.lightbox-open #sd_topbar,
+body.lightbox-open #quicksettings,
+body.lightbox-open .gradio-dropdown ul.options,
+body.lightbox-open [style*="position: fixed"],
+body.lightbox-open [style*="position: sticky"] {
+    visibility: hidden !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
+}
+
+/* Hide ALL direct children of body except the lightbox modal.
+   This is the nuclear option — guarantees nothing can appear above
+   the full-screen image, regardless of stacking context tricks. */
+body.lightbox-open > *:not(#lightboxModal) {
+    display: none !important;
+}
+
+/* The lightbox itself must remain visible and on top */
+body.lightbox-open #lightboxModal {
+    display: flex !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    z-index: 2147483647 !important;
 }
 
 .modalControls {
@@ -848,10 +1553,10 @@ table.popup-table .link {
 }
 
 #lightboxModal>img.modalImageFullscreen {
-    object-fit: contain;
-    height: 100%;
-    width: 100%;
+    flex: 1;
     min-height: 0;
+    object-fit: contain;
+    width: 100%;
 }
 
 .modalPrev,
@@ -2232,24 +2937,392 @@ body.sd-sidebar-active.sd-sidebar-collapsed .gradio-container {
    Sidebar-Controlled Tab Panel Visibility
    ============================================================ */
 
-/* Hide the Gradio main tab navigation bar (the row of tab buttons) */
+/* Show the Gradio main tab navigation bar */
 #tabs > div.tab-nav,
 #tabs > div[role="tablist"],
-#tabs > .tab-nav {
+#tabs > .tab-nav,
+#tabs > div.tab-wrapper {
+    display: flex !important;
+}
+
+/* Top bar: show ALL tab buttons by default.
+   Previously a CSS whitelist hid all non-essential tabs, but that broke
+   newly installed plugin tabs — they would never appear in the top bar.
+   Now every tab is visible; the sidebar merely provides additional
+   navigation for plugins, it does NOT replace the native tab bar. */
+
+/* Sidebar panel visibility: only hide elements explicitly marked by sidebar.js
+   with .sd-panel-hidden class. Do NOT force display:block on active panels —
+   Gradio 5 uses flexbox/grid internally, and forcing block collapses gallery
+   heights to 0, making all images invisible. */
+.sd-panel-hidden {
     display: none !important;
 }
 
-/* Hide all tab panels by default */
-[id^="tab_"] {
+/* Tab management: hide top-bar tab buttons that user turned off */
+button.sd-tab-hidden {
     display: none !important;
 }
 
-/* Show the active panel */
-[id^="tab_"].sd-panel-active {
-    display: block !important;
+/* ============================================================
+   Sidebar eye-toggle (inline tab visibility control)
+   ============================================================ */
+.sd-sidebar-item.has-eye-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.sd-sidebar-eye-toggle {
+    flex-shrink: 0;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    opacity: 0.7;
+    transition: opacity 0.2s, background-color 0.2s;
+    user-select: none;
+}
+
+.sd-sidebar-eye-toggle:hover {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sd-sidebar-eye-toggle.hidden {
+    opacity: 0.4;
+    filter: grayscale(1);
+}
+
+.sd-sidebar-item.has-eye-toggle .sd-sidebar-item-label {
+    flex: 1;
+    min-width: 0;
 }
 
 /* Keep settings internal tab navigation visible */
 #settings > div.tab-nav {
     display: block !important;
+}
+
+/* ============================================================
+   Image Comparison (merged from sd-webui-image-comparison)
+   ============================================================ */
+
+#tab_pnginfo {
+    --img-comp-width: 640px;
+}
+
+#img_comp_row:focus {
+    outline: none;
+}
+
+#img_comp_row {
+    width: 100%;
+    max-width: 640px;
+    aspect-ratio: 1 / 1;
+    height: auto;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+}
+
+#img_comp_row img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    /* img NEVER moves — only overlay clips it */
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+#img_comp_row img.drag:hover {
+    cursor: move !important;
+}
+
+/* Overlay clipping wrapper: absolute inset:0, only width/height changes */
+#img_comp_overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 200;
+    pointer-events: none; /* let drag events pass through to #img_comp_row */
+}
+
+#img_comp_row .comp-block {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    border-radius: 0px;
+    overflow: hidden;
+    background: transparent;
+}
+
+/* 注意：不要用 `> *:not(img)` 隐藏子元素！
+   Gradio 5 的 img 嵌套在 Svelte wrapper div 内，隐藏 wrapper 会连带隐藏 img。
+   依赖 .comp-block 的 overflow:hidden 裁剪视觉噪音即可。 */
+#img_comp_row .comp-block div {
+    background: transparent !important;
+}
+
+#img_comp_row .bar {
+    display: block;
+    position: absolute;
+    background-color: white;
+    z-index: 500;
+    min-width: 0px;
+    min-height: 0px;
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+#img_comp_btn {
+    margin-top: auto;
+}
+
+#img_comp_horizontal {
+    margin: 1em;
+}
+
+#img_comp_utils {
+    user-select: none;
+}
+
+#img_comp_info p {
+    background: var(--panel-background-fill);
+    padding: 1em;
+    border-radius: 1em;
+}
+
+#img_comp_info p .comp-diff {
+    color: red;
+}
+
+#img_comp_row_container {
+    height: auto;
+    width: 100%;
+    max-width: 640px;
+    overflow: hidden;
+}
+
+#icomp_in {
+    cursor: zoom-in;
+}
+
+#icomp_out {
+    cursor: zoom-out;
+}
+
+#tab_pnginfo .img_comp_buttons {
+    min-width: 0px !important;
+    display: block;
+    position: absolute;
+    left: 1em;
+    top: 25%;
+    width: 2.4em;
+}
+
+/* ============================================================
+   Aspect Ratio (merged from sd-webui-aspect-ratio-helper)
+   ============================================================ */
+
+.aspect-ratio-row {
+    gap: 4px;
+    margin-top: 4px;
+    margin-bottom: 2px;
+    flex-wrap: wrap;
+}
+
+.aspect-ratio-row button {
+    min-width: 48px !important;
+    padding: 4px 10px !important;
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+    border-radius: var(--sd-radius-pill) !important;
+    transition: var(--sd-transition-fast) !important;
+}
+
+.aspect-ratio-row button:hover {
+    background: var(--sd-accent-soft) !important;
+    color: var(--sd-accent) !important;
+}
+
+.aspect-pct-row {
+    gap: 6px;
+    margin-top: 2px;
+    margin-bottom: 4px;
+    align-items: center;
+}
+
+.aspect-pct-row .gr-slider {
+    min-width: 0;
+}
+
+/* Keep dimensions row compact when aspect controls are present */
+#txt2img_column_size, #img2img_column_size {
+    gap: 2px;
+}
+
+/* ============================================================
+   右侧重复UI隐藏 - 只保留核心tab（txt2img/img2img/extras）
+   ============================================================ */
+
+/* 隐藏 Gradio tab 溢出菜单按钮（"..."更多按钮） */
+#tabs button[aria-label*="more"],
+#tabs button[aria-label*="overflow"],
+#tabs .tab-more,
+#tabs .tab-overflow,
+#tabs button[class*="more"],
+#tabs button[class*="overflow"] {
+    display: none !important;
+}
+
+/* Hide plugin tabs from the top bar — only keep essential built-in tabs.
+   Plugin tabs are still accessible via the sidebar dropdown and "插件" section.
+   Using chained :not() selectors for broad browser compatibility. */
+#tabs button[role="tab"]:not([aria-controls="tab_txt2img"]):not([aria-controls="tab_img2img"]):not([aria-controls="tab_extras"]):not([aria-controls="tab_pnginfo"]):not([aria-controls="tab_tutorial_center"]):not([aria-controls="tab_settings"]):not([aria-controls="tab_extensions"]):not([aria-controls="tab_modelmerger"]) {
+    display: none !important;
+}
+
+/* 隐藏扩展注册的顶部工具栏（美学提升、模型下载器等） */
+.gradio-container > .panel:has(> #aesthetic_enhancement_tab),
+.gradio-container > .panel:has(> #model-downloader),
+.gradio-container > .panel:has(> #multimodal_media_tab) {
+    display: none !important;
+}
+
+/* ============================================================
+   主题切换弹窗样式
+   ============================================================ */
+
+#sd-theme-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+#sd-theme-overlay.sd-theme-visible {
+    display: flex;
+    opacity: 1;
+}
+
+#sd-theme-modal {
+    background: var(--sd-bg-card);
+    border-radius: var(--sd-radius-xl);
+    box-shadow: var(--sd-shadow-lg);
+    padding: 28px;
+    max-width: 420px;
+    width: 90%;
+    transform: scale(0.95);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#sd-theme-overlay.sd-theme-visible #sd-theme-modal {
+    transform: scale(1);
+}
+
+#sd-theme-modal h3 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--sd-text-primary);
+}
+
+#sd-theme-modal .sd-theme-subtitle {
+    margin: 0 0 20px 0;
+    font-size: 13px;
+    color: var(--sd-text-secondary);
+}
+
+.sd-theme-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.sd-theme-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 6px;
+    border: 2px solid var(--sd-border);
+    border-radius: var(--sd-radius-lg);
+    background: var(--sd-bg-elevated);
+    cursor: pointer;
+    transition: var(--sd-transition-fast);
+}
+
+.sd-theme-option:hover {
+    border-color: var(--sd-accent);
+    background: var(--sd-accent-soft);
+    transform: translateY(-2px);
+}
+
+.sd-theme-option.sd-theme-active {
+    border-color: var(--sd-accent);
+    background: var(--sd-accent-soft);
+}
+
+.sd-theme-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--sd-border-strong);
+    box-shadow: var(--sd-shadow-sm);
+}
+
+.sd-theme-option span {
+    font-size: 11px;
+    color: var(--sd-text-secondary);
+    text-align: center;
+    white-space: nowrap;
+}
+
+.sd-theme-option.sd-theme-active span {
+    color: var(--sd-accent);
+    font-weight: 600;
+}
+
+#sd-theme-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: var(--sd-text-tertiary);
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--sd-transition-fast);
+}
+
+#sd-theme-close:hover {
+    background: var(--sd-bg-hover);
+    color: var(--sd-text-primary);
 }

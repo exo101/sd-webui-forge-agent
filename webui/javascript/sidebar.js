@@ -5,6 +5,107 @@
  * Clicking a sidebar item shows the corresponding panel.
  */
 
+// Wrap entire file in IIFE so the global guard's `return` is valid
+(function() {
+    'use strict';
+
+// Source guard: Gradio auto-loads javascript/*.js via <script src> with mtime.
+// Those can be browser-cached. Only execute when loaded via fetch+eval
+// (document.currentScript is null in that case), which always gets latest version.
+if (document.currentScript && document.currentScript.src && document.currentScript.src.indexOf('v=') === -1) {
+    console.log('[SD] Skipping Gradio auto-loaded sidebar.js (cached script tag)');
+    return;
+}
+
+// Global guard: prevent double execution when both Gradio auto-load
+// and ui.py dynamic injection load this file
+// NOTE: Do NOT return here - always let the latest version run to apply new features.
+// injectSidebar and moveControlsToSidebar have their own guards to prevent duplicates.
+if (window.__sdSidebarLoaded) {
+    // Re-inject latest theme CSS even if already loaded (handles version updates)
+    fetch('/gradio_api/file=theme.css?v=81&t=' + Date.now(), { cache: 'no-store' })
+        .then(function(r) { return r.text(); })
+        .then(function(css) {
+            var old = document.getElementById('sd-theme-style');
+            if (old) old.remove();
+            var style = document.createElement('style');
+            style.id = 'sd-theme-style';
+            style.textContent = css;
+            document.head.appendChild(style);
+        })
+        .catch(function(e) { console.error('[SD] theme.css refresh failed:', e); });
+    // Fall through to execute latest version (don't return!)
+}
+window.__sdSidebarLoaded = true;
+
+// ============================================================
+//  Clean up legacy v18-v21 duplicate "控制辅助" section
+//  (Old cached sidebar.js created an extra sd-sidebar-controls-section;
+//   remove it while preserving any real Gradio controls inside it)
+// ============================================================
+(function cleanupLegacyControls() {
+    // 1. Remove old legacy controls sections
+    var legacySections = document.querySelectorAll('.sd-sidebar-controls-section');
+    legacySections.forEach(function(sec) { sec.remove(); });
+    var orphan = document.getElementById('sd-controls-body');
+    if (orphan && !orphan.closest('.sd-sidebar-section')) orphan.remove();
+
+    // 2. Rescue seed/styles elements that old cached sidebar.js moved into .sd-control-group wrappers
+    var popupIds = ['txt2img_seed_row', 'img2img_seed_row', 'txt2img_styles_row', 'img2img_styles_row'];
+    popupIds.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var wrapper = el.closest('.sd-control-group');
+        if (wrapper) {
+            // Remove the wrapper, keep the element in place where it is
+            var parent = wrapper.parentNode;
+            if (parent) parent.insertBefore(el, wrapper);
+            wrapper.remove();
+            delete el.dataset.sdMoved;
+            delete el.dataset.sdUpgraded;
+            delete el.dataset.sdCollapseInit;
+        }
+    });
+
+    // 3. Remove any orphan .sd-control-group wrappers left in sidebar
+    document.querySelectorAll('.sd-sidebar .sd-control-group').forEach(function(g) { g.remove(); });
+
+    // 4. Strip sd-popup-target / sd-popup-visible classes from any elements.
+    //    The seed popup feature was removed — seed rows now live in their native
+    //    Gradio positions. Old cached sidebar.js may have added these classes,
+    //    which would keep seed rows hidden via CSS. Remove them to restore visibility.
+    document.querySelectorAll('.sd-popup-target, .sd-popup-visible').forEach(function(el) {
+        el.classList.remove('sd-popup-target');
+        el.classList.remove('sd-popup-visible');
+    });
+    // Remove any orphan popup close buttons
+    document.querySelectorAll('.sd-popup-close').forEach(function(btn) { btn.remove(); });
+    document.body.classList.remove('sd-popup-seed-open', 'sd-popup-styles-open');
+})();
+
+// ============================================================
+//  Inject Theme CSS dynamically (avoids Gradio URL rewriting)
+// ============================================================
+(function() {
+    'use strict';
+    var STYLE_ID = 'sd-theme-style';
+
+    fetch('/gradio_api/file=theme.css?v=81&t=' + Date.now(), { cache: 'no-store' })
+        .then(function(r) { return r.text(); })
+        .then(function(css) {
+            var old = document.getElementById(STYLE_ID);
+            if (old) old.remove();
+            var style = document.createElement('style');
+            style.id = STYLE_ID;
+            style.textContent = css;
+            document.head.appendChild(style);
+            console.log('[SD] theme.css injected, length:', css.length);
+        })
+        .catch(function(e) {
+            console.error('[SD] Failed to load theme.css:', e);
+        });
+})();
+
 (function() {
     'use strict';
 
@@ -12,149 +113,256 @@
     //  Sidebar Configuration (User-defined modules)
     // ============================================================
 
-    // Map: custom label -> Gradio tab ID
-    // 经过实际检查各扩展注册的 tab ID
-    // 注意: tabId 为 'txt2img' 的项是 webui 内置页面, 始终存在
-    //       其他 tabId 对应扩展插件, 插件未安装时标签页不存在, 侧边栏应自动隐藏
+    // Custom sidebar sections.
+    // Only "控制辅助" remains — it manages embedded accordions on the
+    // txt2img/img2img pages (ControlNet, ADetailer, 高清修复, etc.),
+    // which are NOT separate plugin tabs. All external plugin tabs are
+    // now listed in the unified "插件" section with inline eye-toggles.
     var sidebarModules = [
-        {
-            name: '主页面',
-            icon: '🏠',
-            items: [
-                { label: '文生图', tabId: 'txt2img' },
-                { label: '图生图', tabId: 'img2img' },
-            ]
-        },
-        {
-            name: '海报设计',
-            icon: '🎨',
-            items: [
-                { label: '海报设计工作台', tabId: 'poster_design_tab' },
-            ]
-        },
-        {
-            name: '图层处理',
-            icon: '◈',
-            items: [
-                { label: '点选分割', tabId: 'Segmentation_Tab', subTabLabel: '点选分割' },
-                { label: '智能抠图', tabId: 'Segmentation_Tab', subTabLabel: '智能抠图' },
-                { label: '图层分离', tabId: 'Segmentation_Tab', subTabLabel: '图层分离' },
-                { label: '图像清理', tabId: 'Segmentation_Tab', subTabLabel: '图像清理' },
-            ]
-        },
-        {
-            name: '视觉分析',
-            icon: '◉',
-            items: [
-                { label: '图像识别', tabId: 'aesthetic_enhancement_tab', subTabLabel: '🖼 图像识别' },
-                { label: '打光辅助', tabId: 'aesthetic_enhancement_tab', subTabLabel: '💡 打光辅助' },
-                { label: '人物与场景分析', tabId: 'aesthetic_enhancement_tab', subTabLabel: '人物与场景分析' },
-                { label: '构图技巧', tabId: 'aesthetic_enhancement_tab', subTabLabel: '📐 构图技巧' },
-                { label: '画师百科', tabId: 'aesthetic_enhancement_tab', subTabLabel: '🎨 画师百科' },
-                { label: '标签器', tabId: 'tagger' },
-            ]
-        },
-        {
-            name: '多媒体视频生成',
-            icon: '▶',
-            items: [
-                { label: '音乐生成', tabId: 'multimodal_media_tab' },
-                { label: '视频关键帧', tabId: 'multimodal_media_tab', subTabLabel: '2. 视频关键帧提取' },
-                { label: 'MiniMax H3工作台', tabId: 'forge_h3_studio' },
-                { label: 'Kling可灵视频生成', tabId: 'multimodal_media_tab', subTabLabel: '3. Kling 可灵视频生成' },
-                { label: 'ACE-Step音乐生成', tabId: 'multimodal_media_tab', subTabLabel: '5. ACE-Step 音乐生成' },
-                { label: 'Qwen3-TTS 语音合成', tabId: 'multimodal_media_tab', subTabLabel: '1. Qwen3-TTS 语音合成' },
-            ]
-        },
-        {
-            name: '参数设置',
-            icon: '⚙',
-            items: [
-                { label: '采样器', tabId: 'txt2img', containerIds: ['sampler_selection_txt2img', 'txt2img_scheduler', 'txt2img_cfg_scale', 'txt2img_distilled_cfg_scale'] },
-                { label: '随机种子', tabId: 'txt2img', containerIds: ['txt2img_seed_row'] },
-                { label: '关键词预设', tabId: 'txt2img', containerIds: ['txt2img_styles_row', 'txt2img_tools'] },
-            ]
-        },
         {
             name: '控制辅助',
             icon: '🎯',
             items: [
-                { label: '区域控制', tabId: 'txt2img', accordionId: 'RP_maint2i', subTabLabel: '🎯 区域提示' },
+                { label: '通配符', tabId: 'txt2img', accordionId: 'sddp-dynamic-prompting' },
                 { label: 'ControlNet', tabId: 'txt2img', accordionId: 'controlnet' },
-                { label: '多图参考', tabId: 'txt2img', accordionId: 'label:多图参考' },
-                { label: '纵横比助手', tabId: 'txt2img', accordionId: 'aspect-ratio-helper-accordion' },
-                { label: '通配符', tabId: 'sddp-wildcard-manager' },
-                { label: '脚本', tabId: 'txt2img' },
-            ]
-        },
-        {
-            name: '模型管理',
-            icon: '📦',
-            items: [
-                { label: '模型下载器', tabId: 'model-downloader' },
-                { label: 'Civitai 浏览器', tabId: 'civitai_interface_neo' },
-                { label: '模型合并', tabId: 'supermerger' },
-            ]
-        },
-        {
-            name: '后期处理',
-            icon: '🔧',
-            items: [
-                { label: '无边图像浏览', tabId: 'infinite-image-browsing' },
-                { label: 'SeedVR2 高清放大', tabId: 'extras' },
+                { label: '场景编辑器', tabId: 'txt2img', accordionId: 'RP_maint2i', subTabLabel: '🎯 区域提示' },
                 { label: 'ADetailer 面部修复', tabId: 'txt2img', accordionId: 'script_txt2img_adetailer_ad_main_accordion' },
-                { label: '图像对比', tabId: 'sd-webui-image-comparison' },
-                { label: '高清修复 (Hires. fix)', tabId: 'txt2img', accordionId: 'txt2img_hr' },
-                { label: '通配符', tabId: 'sddp-wildcard-manager' },
-                { label: '图生3D', tabId: 'trellis2_3d_generator' },
+                { label: '高清修复', tabId: 'txt2img', accordionId: 'txt2img_hr' },
+                { label: '多图拼接参考', tabId: 'txt2img', accordionId: 'label:多图参考' },
+                { label: '脚本', tabId: 'txt2img' },
             ]
         }
     ];
 
     // ============================================================
-    //  动态检测: 检查标签页是否存在 (插件是否已安装)
+    //  Chinese display name mapping for tab IDs
     // ============================================================
 
-    // 内置标签页始终存在, 不需要检测
-    var builtinTabs = {
-        'txt2img': true,
-        'img2img': true,
-        'extras': true,
-        'settings': true,
-        'extensions': true,
-        'checkpoint': true,
+    var tabChineseNames = {
+        'txt2img': '文生图',
+        'img2img': '图生图',
+        'extras': '后期处理',
+        'pnginfo': 'PNG信息',
+        'settings': '设置',
+        'extensions': '扩展',
+        'modelmerger': '模型合并',
+        'tutorial_center': '教程中心',
+        'forge_h3_studio': 'MiniMax H3 工作台',
+        'aesthetic_enhancement_tab': '视觉分析',
+        'multimodal_media_tab': '多媒体处理',
+        'Segmentation_Tab': '智能抠图',
+        'trellis2_3d_generator': 'TRELLIS 图生3D',
+        'tagger': '标签器',
+        'sddp-wildcard-manager': '通配符管理',
+        'sd_forge_image_stitch': '多图拼接参考'
     };
 
-    function tabExists(tabId) {
-        // 内置标签页直接返回 true
-        if (builtinTabs[tabId]) return true;
-        // 检查标签页面板是否存在
-        var panel = document.getElementById('tab_' + tabId);
-        if (panel) return true;
-        // 检查标签按钮是否存在
-        var btn = document.querySelector('button[aria-controls="tab_' + tabId + '"]');
-        return !!btn;
+    function getChineseName(tabId, fallbackLabel) {
+        if (tabChineseNames[tabId]) return tabChineseNames[tabId];
+        // If the label is mostly English/ID-like, return Chinese name or id
+        if (fallbackLabel && /[\u4e00-\u9fa5]/.test(fallbackLabel)) return fallbackLabel;
+        return tabChineseNames[tabId] || fallbackLabel || tabId;
     }
 
     // ============================================================
     //  Collect all Gradio tabs dynamically
     // ============================================================
 
-    var allTabPanels = []; // {id, label, elem}
+    var allTabPanels = []; // {id, label, elem, buttonText}
+
+    // Native Forge tabs — matched by both tab ID AND button text to be
+    // robust against Gradio version changes in DOM ID format.
+    var builtinTabIds = [
+        'txt2img', 'img2img', 'extras', 'pnginfo', 'settings', 'extensions',
+        'modelmerger', 'sd_forge_image_stitch'
+    ];
+    var builtinTabTexts = [
+        // Chinese (current localization)
+        '文生图', '图生图', '后期处理', 'PNG信息', '设置', '扩展',
+        '模型合并', '多图拼接参考',
+        // English fallbacks (for other localizations)
+        'txt2img', 'img2img', 'Extras', 'PNG Info', 'Settings', 'Extensions',
+        'Model Merger', 'Multi-image Reference'
+    ];
 
     function collectTabs() {
         allTabPanels = [];
-        var panels = document.querySelectorAll('[id^="tab_"]');
-        panels.forEach(function(panel) {
-            var id = panel.id.replace('tab_', '');
-            var label = id; // fallback
-            // Try to find the tab label text
-            var btn = document.querySelector('button[aria-controls="tab_' + id + '"]');
-            if (btn) {
-                label = btn.textContent.trim();
-            }
-            allTabPanels.push({ id: id, label: label, elem: panel });
+        // Only collect TOP-LEVEL main tab buttons inside #tabs (the main
+        // Gradio tab bar). Must use :scope > to scope to DIRECT children of
+        // the main tablist — querySelectorAll at any depth would also match
+        // nested sub-tablists inside txt2img/img2img panels (ControlNet units,
+        // LoRA tabs, Regional Prompter sub-tabs, etc.).
+        var tabBar = document.getElementById('tabs');
+        if (!tabBar) return;
+        var seenPanelIds = {};
+        var tablist = tabBar.querySelector(':scope > [role="tablist"]') || tabBar.querySelector('[role="tablist"]');
+        var tabButtons = tablist ? tablist.querySelectorAll(':scope > button[role="tab"]') : [];
+        // Fallback: direct button children of #tabs (Gradio 4 style)
+        if (tabButtons.length === 0) {
+            tabButtons = tabBar.querySelectorAll(':scope > button[role="tab"]');
+        }
+        tabButtons.forEach(function(btn) {
+            var panelId = btn.getAttribute('aria-controls') || '';
+            if (!panelId || seenPanelIds[panelId]) return;
+            var panel = document.getElementById(panelId);
+            if (!panel) return;
+            seenPanelIds[panelId] = true;
+            // Skip panels that are nested inside another tab (not direct children of main content)
+            // Check if panel is a direct child of the main tab content area
+            var id = panelId.replace(/^tabs?_/, '').replace(/^tab_/, '');
+            var buttonText = btn.textContent.trim();
+            var label = getChineseName(id, buttonText || id);
+            allTabPanels.push({ id: id, label: label, elem: panel, buttonText: buttonText });
         });
+    }
+
+    function isBuiltinTab(panel) {
+        if (builtinTabIds.indexOf(panel.id) !== -1) return true;
+        if (panel.buttonText && builtinTabTexts.indexOf(panel.buttonText) !== -1) return true;
+        if (panel.label && builtinTabTexts.indexOf(panel.label) !== -1) return true;
+        return false;
+    }
+
+    // ============================================================
+    //  Tab visibility management (localStorage persistence)
+    // ============================================================
+
+    function isTabHidden(tabId) {
+        // Built-in/native tabs are ALWAYS visible (never hidden)
+        if (builtinTabIds.indexOf(tabId) !== -1) return false;
+        // External plugins: default to HIDDEN from top bar.
+        // Only shown if user explicitly opted in via eye-toggle.
+        var visiblePlugins = getVisiblePlugins();
+        return visiblePlugins.indexOf(tabId) === -1;
+    }
+
+    function getVisiblePlugins() {
+        try {
+            var raw = localStorage.getItem('sd-visible-plugins');
+            if (!raw) return [];
+            var arr = JSON.parse(raw);
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function setVisiblePlugins(ids) {
+        try {
+            localStorage.setItem('sd-visible-plugins', JSON.stringify(ids));
+        } catch (e) {
+            // localStorage unavailable; ignore
+        }
+    }
+
+    function setTabHidden(tabId, hidden) {
+        // For built-in tabs, do nothing (they're always visible)
+        if (builtinTabIds.indexOf(tabId) !== -1) return;
+
+        // Manage the "explicitly visible" set for external plugins.
+        // hidden=true  → remove from visible set (hide from top bar)
+        // hidden=false → add to visible set (show in top bar)
+        var visiblePlugins = getVisiblePlugins();
+        var vidx = visiblePlugins.indexOf(tabId);
+        if (!hidden && vidx === -1) {
+            visiblePlugins.push(tabId);
+        } else if (hidden && vidx !== -1) {
+            visiblePlugins.splice(vidx, 1);
+        }
+        setVisiblePlugins(visiblePlugins);
+        applyTabVisibility(tabId);
+    }
+
+    function applyTabVisibility(tabId) {
+        // Find real panel ID from allTabPanels, fallback to "tab_" + id
+        var panelId = null;
+        for (var i = 0; i < allTabPanels.length; i++) {
+            if (allTabPanels[i].id === tabId) {
+                panelId = allTabPanels[i].elem.id;
+                break;
+            }
+        }
+        if (!panelId) panelId = 'tab_' + tabId;
+        var btn = document.querySelector('button[aria-controls="' + panelId + '"]');
+        if (!btn) {
+            // Fallback: partial match
+            btn = document.querySelector('button[aria-controls*="' + tabId + '"]');
+        }
+        if (!btn) return;
+        if (isTabHidden(tabId)) {
+            btn.classList.add('sd-tab-hidden');
+        } else {
+            btn.classList.remove('sd-tab-hidden');
+        }
+    }
+
+    function applyAllTabVisibility() {
+        // Safety: ensure allTabPanels is populated before iterating.
+        if (allTabPanels.length === 0) collectTabs();
+        // Use allTabPanels (collected with robust ID extraction) to find
+        // buttons by their real panel ID — avoids hardcoding "tab_" prefix.
+        allTabPanels.forEach(function(panel) {
+            var btn = document.querySelector('button[aria-controls="' + panel.elem.id + '"]');
+            if (!btn) {
+                // Fallback: try matching by partial panel ID
+                btn = document.querySelector('button[aria-controls*="' + panel.id + '"]');
+            }
+            if (btn) applyTabVisibility(panel.id);
+        });
+    }
+
+    // ============================================================
+    //  Item availability check (hide items whose extension/tab isn't installed)
+    // ============================================================
+
+    function itemAvailable(item) {
+        // Popup items (seed/styles): available if target elements exist in DOM
+        if (item.popup) {
+            if (item.popup === 'seed') {
+                return document.getElementById('txt2img_seed_row') !== null ||
+                       document.getElementById('img2img_seed_row') !== null;
+            }
+            if (item.popup === 'styles') {
+                return document.getElementById('txt2img_styles_row') !== null ||
+                       document.getElementById('img2img_styles_row') !== null;
+            }
+            return false;
+        }
+
+        // The target tab must exist in the DOM
+        var tabExists = allTabPanels.some(function(t) { return t.id === item.tabId; });
+        if (!tabExists) return false;
+
+        // Container-based items (sampler, seed, styles): at least one container must exist
+        if (item.containerIds && item.containerIds.length > 0) {
+            return item.containerIds.some(function(id) { return document.getElementById(id); });
+        }
+
+        // Accordion-based items: the accordion element must exist
+        if (item.accordionId) {
+            if (item.accordionId.indexOf('label:') === 0) {
+                var labelText = item.accordionId.substring(6);
+                var spans = document.querySelectorAll('.input-accordion .label-wrap span');
+                for (var i = 0; i < spans.length; i++) {
+                    if (spans[i].textContent.trim() === labelText) return true;
+                }
+                return false;
+            }
+            return document.getElementById(item.accordionId) !== null;
+        }
+
+        // Sub-tab items: a matching button must exist inside the panel
+        if (item.subTabLabel) {
+            var panel = document.getElementById('tab_' + item.tabId);
+            if (!panel) return false;
+            var buttons = panel.querySelectorAll('button');
+            for (var i = 0; i < buttons.length; i++) {
+                if (buttons[i].textContent.trim() === item.subTabLabel) return true;
+            }
+            return false;
+        }
+
+        return true;
     }
 
     // ============================================================
@@ -164,195 +372,141 @@
     function showOnlyPanel(panelId) {
         allTabPanels.forEach(function(panel) {
             var isActive = panel.id === panelId;
-            // Use CSS class to toggle visibility
             panel.elem.classList.toggle('sd-panel-active', isActive);
             panel.elem.classList.toggle('sd-panel-hidden', !isActive);
-            // Also set display style directly for reliability
-            panel.elem.style.display = isActive ? '' : 'none';
         });
     }
 
     // ============================================================
     //  Embedded plugin accordion visibility control
-    //  These accordions are embedded in txt2img/img2img pages
-    //  and should be hidden by default, only shown when clicked
-    //  from the sidebar.
+    //  These accordions are embedded in txt2img/img2img pages.
+    //  Hidden by default; shown when clicked from the sidebar.
     // ============================================================
 
-    // IDs of parameter containers that can be shown/hidden individually
-    // These are standard Gradio components (sampler, seed, scheduler, styles)
-    // that are always visible in txt2img but can be isolated when clicked from sidebar
-    var parameterContainerIds = [
-        'sampler_selection_txt2img',
-        'txt2img_scheduler',
-        'txt2img_seed_row',
-        'txt2img_styles_row',
-        'txt2img_tools',
-    ];
-
-    function hideAllParameterContainers() {
-        parameterContainerIds.forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) {
-                el.style.display = 'none';
-            }
-        });
-    }
-
-    function showParameterContainers(ids) {
-        // First hide all parameter containers
-        hideAllParameterContainers();
-        // Then show only the specified ones
-        ids.forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) {
-                el.style.display = '';
-            }
-        });
-    }
-
-    // IDs of embedded accordions that should be hidden by default
-    // These are rendered as AlwaysVisible scripts inside txt2img/img2img pages
     var embeddedAccordionIds = [
-        'aspect-ratio-helper-accordion',   // 纵横比助手
-        'txt2img_hr',                      // Hires. fix 高分辨率修复
-        'sddp-dynamic-prompting',          // Dynamic Prompts
-        // ADetailer - different IDs for txt2img and img2img
+        'txt2img_hr',
+        'sddp-dynamic-prompting',
         'script_txt2img_adetailer_ad_main_accordion',
         'script_img2img_adetailer_ad_main_accordion',
-        // Regional Prompter - different IDs for txt2img and img2img
-        'RP_maint2i',
-        'RP_maini2i',
-        // ControlNet integrated
+        // RP_maint2i / RP_maini2i removed from hidden list — the user expects
+        // the "场景编辑器" accordion (containing the camera angle selector) to
+        // be directly visible on the txt2img/img2img pages.
         'controlnet',
     ];
 
-    // Also hide the entire script containers (built-in scripts like ControlNet, 多图参考, Torch编译集成, 脚本)
-    // These are part of the core UI and contain AlwaysVisible scripts
     var scriptContainerIds = [
         'txt2img_script_container',
         'img2img_script_container',
     ];
 
     function hideEmbeddedAccordions() {
-        // Hide individual accordions by element ID
+        // Only hide accordions explicitly listed by ID.
+        // Do NOT use document.querySelectorAll('.input-accordion') — it can
+        // match accordions inside gallery groups or other containers, and
+        // el.closest('.group') would hide the ENTIRE parent group including
+        // the gallery, making all images invisible.
         embeddedAccordionIds.forEach(function(id) {
             var el = document.getElementById(id);
-            if (el) {
-                var container = el.closest('.group') || el.parentElement;
-                if (container) {
-                    container.style.display = 'none';
-                } else {
-                    el.style.display = 'none';
-                }
-            }
-        });
-        // Hide input-accordion based scripts (多图参考, soft-inpainting, radial, pid, etc.)
-        // These use InputAccordion which generates auto-increment element IDs
-        document.querySelectorAll('.input-accordion').forEach(function(el) {
+            if (!el) return;
             var container = el.closest('.group') || el.parentElement;
-            if (container) {
-                container.style.display = 'none';
-            } else {
-                el.style.display = 'none';
-            }
+            if (container) container.style.display = 'none';
+            else el.style.display = 'none';
         });
-        // Hide script containers (core built-in features)
         scriptContainerIds.forEach(function(id) {
             var el = document.getElementById(id);
-            if (el) {
-                el.style.display = 'none';
-            }
+            if (el) el.style.display = 'none';
         });
     }
 
     function showEmbeddedAccordion(id) {
-        // First hide all embedded accordions
-        hideEmbeddedAccordions();
-        // Show the script container (txt2img/img2img)
-        // The accordion is inside one of the script containers
         var el = document.getElementById(id);
-        // If not found by ID, try searching by label text (e.g. "label:多图参考")
-        if (!el && id && id.startsWith('label:')) {
+        if (!el && id && id.indexOf('label:') === 0) {
             var labelText = id.substring(6);
-            el = document.querySelector('.input-accordion .label-wrap span')?.closest('.input-accordion');
-            if (el) {
-                var allAccordions = document.querySelectorAll('.input-accordion');
-                for (var i = 0; i < allAccordions.length; i++) {
-                    var labelEl = allAccordions[i].querySelector('.label-wrap span');
-                    if (labelEl && labelEl.textContent.trim() === labelText) {
-                        el = allAccordions[i];
-                        break;
-                    }
+            var allAccordions = document.querySelectorAll('.input-accordion');
+            for (var i = 0; i < allAccordions.length; i++) {
+                var labelEl = allAccordions[i].querySelector('.label-wrap span');
+                if (labelEl && labelEl.textContent.trim() === labelText) {
+                    el = allAccordions[i];
+                    break;
                 }
             }
         }
-        if (el) {
-            // Find the nearest script container and show it
-            var scriptContainer = el.closest('#txt2img_script_container, #img2img_script_container');
-            if (scriptContainer) {
-                scriptContainer.style.display = '';
-            }
-            // Show the accordion container
-            var container = el.closest('.group') || el.parentElement;
-            if (container) {
-                container.style.display = '';
-            } else {
-                el.style.display = '';
-            }
-            // Click the label-wrap to expand the accordion (important for InputAccordion)
-            var labelWrap = el.querySelector('.label-wrap');
-            if (labelWrap) {
+        if (!el) return;
+
+        // 找到实际需要控制可见性的容器
+        var scriptContainer = el.closest('#txt2img_script_container, #img2img_script_container');
+        var container = el.closest('.group') || el.parentElement;
+        var target = container || el;
+
+        // 独立切换当前 accordion：已显示则隐藏，已隐藏则显示
+        var isVisible = target.style.display !== 'none';
+        if (isVisible) {
+            target.style.display = 'none';
+            return;
+        }
+
+        // 显示当前 accordion（不影响其他已打开的 accordion）
+        if (scriptContainer) scriptContainer.style.display = '';
+        target.style.display = '';
+
+        // 展开 accordion 内容（如果还没展开）
+        var labelWrap = el.querySelector('.label-wrap');
+        if (labelWrap) {
+            // 检查 accordion 是否已经展开（Gradio 5 的 accordion 有 open 属性/aria-expanded）
+            var isOpen = el.classList.contains('open') || el.hasAttribute('open') || el.getAttribute('aria-expanded') === 'true';
+            if (!isOpen) {
                 labelWrap.dispatchEvent(new MouseEvent('click', {
-                    bubbles: true,
-                    cancelable: true,
-                    view: window
+                    bubbles: true, cancelable: true, view: window
                 }));
             }
         }
     }
 
     // ============================================================
-    //  Switch to a tab
+    //  Switch to a tab (sidebar manages only non-main tabs)
     // ============================================================
+
+    // Tabs managed by Gradio's native top bar (no sidebar panel manipulation)
+    var nativeTabIds = ['txt2img', 'img2img', 'extras', 'pnginfo', 'tutorial_center', 'settings', 'extensions'];
 
     function switchTab(tabId, showAccordionId, subTabLabel, containerIds) {
         if (!tabId) return;
 
-        // Click the Gradio tab button to ensure Gradio internal state is updated
-        var tabButton = document.querySelector('button[aria-controls="tab_' + tabId + '"]');
+        // Find the actual panel in allTabPanels to get its real DOM ID.
+        // This is robust against Gradio version changes in ID format
+        // (e.g. tab_<id> vs tabs_<id> vs hashed IDs).
+        var panelId = null;
+        for (var i = 0; i < allTabPanels.length; i++) {
+            if (allTabPanels[i].id === tabId) {
+                panelId = allTabPanels[i].elem.id;
+                break;
+            }
+        }
+        if (!panelId) panelId = 'tab_' + tabId; // fallback
+
+        // Just click the native Gradio tab button — let Gradio handle
+        // panel visibility natively. Do NOT manually add/remove
+        // sd-panel-hidden classes, because that can break nested content
+        // inside Settings/Extensions pages (accordion blocks, sub-tabs,
+        // extension management UI, etc.).
+        var tabButton = document.querySelector('button[aria-controls="' + panelId + '"]');
         if (tabButton) {
             tabButton.click();
-        }
-
-        // Show the selected panel, hide all others
-        showOnlyPanel(tabId);
-
-        // Show/hide parameter containers (sampler, scheduler, seed, styles)
-        // These are hidden by default; only shown when a specific containerIds is provided
-        if (containerIds && containerIds.length > 0) {
-            showParameterContainers(containerIds);
         } else {
-            hideAllParameterContainers();
+            // Fallback: try matching by button text or partial aria-controls
+            var fallbackBtn = document.querySelector('button[aria-controls*="' + tabId + '"]');
+            if (fallbackBtn) fallbackBtn.click();
         }
 
-        // Show/hide embedded accordions
+        // Only manage embedded accordions on txt2img/img2img pages
         if (showAccordionId) {
             showEmbeddedAccordion(showAccordionId);
         } else if (tabId === 'txt2img' || tabId === 'img2img') {
-            // First hide all embedded accordions (ControlNet, 多图参考, 纵横比助手, etc.)
-            hideEmbeddedAccordions();
-            // Then show the script containers (so 脚本 section is visible)
-            var mainContainers = ['txt2img_script_container', 'img2img_script_container'];
-            mainContainers.forEach(function(id) {
-                var el = document.getElementById(id);
-                if (el) el.style.display = '';
-            });
-        } else {
-            hideEmbeddedAccordions();
+            // For "脚本" item (no accordionId), show the script container
+            var sc = document.getElementById(tabId + '_script_container');
+            if (sc) sc.style.display = '';
         }
 
-        // Click sub-tab inside the panel if specified
         if (subTabLabel) {
             switchSubTab(tabId, subTabLabel);
         }
@@ -371,68 +525,19 @@
     }
 
     // ============================================================
-//  Hide/Show item state (localStorage)
-// ============================================================
-
-function getHideKey(modName, itemLabel) {
-    return 'sd_hide_' + modName + '_' + itemLabel;
-}
-
-function loadHiddenItems() {
-    var hidden = {};
-    try {
-        for (var key in localStorage) {
-            if (key.startsWith('sd_hide_') && localStorage.getItem(key) === 'true') {
-                hidden[key] = true;
-            }
-        }
-    } catch (e) {}
-    return hidden;
-}
-
-function saveHideState(key, hidden) {
-    try {
-        localStorage.setItem(key, hidden ? 'true' : 'false');
-    } catch (e) {}
-}
-
-// ============================================================
 //  Inject Sidebar HTML
 // ============================================================
 
 function injectSidebar() {
     if (document.getElementById('sd-sidebar')) return;
 
-    // Hide Gradio tab buttons via JavaScript for reliability
-    var tabsContainer = document.querySelector('#tabs');
-    if (tabsContainer) {
-        // Find and hide tab navigation buttons
-        var tabNav = tabsContainer.querySelector(':scope > .tab-nav, :scope > div[role="tablist"]');
-        if (tabNav) {
-            tabNav.style.display = 'none';
-        } else {
-            // Fallback: hide all buttons that are direct children of #tabs
-            // (excluding buttons inside tab panels)
-            var children = tabsContainer.children;
-            for (var i = 0; i < children.length; i++) {
-                var child = children[i];
-                if (child.tagName === 'BUTTON' || (child.tagName === 'DIV' && child.querySelector('button'))) {
-                    // Check if this is a tab nav (has buttons, no id starting with "tab_")
-                    if (child.tagName === 'BUTTON' || !child.id || !child.id.startsWith('tab_')) {
-                        if (child.tagName === 'BUTTON' || child.querySelector('button')) {
-                            child.style.display = 'none';
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // Tab button visibility is managed by CSS (style.css):
+    //   - #tabs tab-nav bar is shown
+    //   - only txt2img and img2img tab buttons are visible
+    //   - all other tab buttons are hidden
 
     // Collect all tabs first
     collectTabs();
-
-    // Load hidden items state
-    var hiddenItems = loadHiddenItems();
 
     // Build sidebar
     var sidebar = document.createElement('aside');
@@ -449,55 +554,72 @@ function injectSidebar() {
     html += '</div>';
     html += '<nav class="sd-sidebar-nav">';
 
-    // Custom modules - 动态过滤: 只渲染已安装插件的标签页
+    // Custom modules (currently only "控制辅助" for embedded accordions)
     sidebarModules.forEach(function(mod, mi) {
-        // 过滤掉 tabId 不存在 (插件未安装) 的项
-        var visibleItems = mod.items.filter(function(item) {
-            return tabExists(item.tabId);
-        });
-        // 如果整组都没有安装, 跳过整个分区
-        if (visibleItems.length === 0) return;
+        var availableItems = mod.items.filter(function(item) { return itemAvailable(item); });
+        if (availableItems.length === 0) return;
 
-        var expanded = '';
-        html += '<div class="sd-sidebar-section' + expanded + '">';
+        html += '<div class="sd-sidebar-section">';
         html += '  <div class="sd-sidebar-section-header" data-section="' + mi + '">';
         html += '    <span class="sd-sidebar-section-icon">' + mod.icon + '</span>';
         html += '    <span class="sd-sidebar-section-label">' + mod.name + '</span>';
         html += '    <span class="sd-sidebar-chevron">▾</span>';
         html += '  </div>';
         html += '  <div class="sd-sidebar-section-body">';
-        visibleItems.forEach(function(item) {
-            var hideKey = getHideKey(mod.name, item.label);
-            var isHidden = hiddenItems[hideKey] === true;
-            html += '    <div class="sd-sidebar-item' + (isHidden ? ' sd-item-hidden' : '') + '" data-tab="' + item.tabId + '" data-accordion="' + (item.accordionId || '') + '" data-subtab="' + (item.subTabLabel || '') + '" data-containers="' + (item.containerIds ? item.containerIds.join(',') : '') + '" data-hide-key="' + hideKey + '">';
+        availableItems.forEach(function(item) {
+            var popupAttr = item.popup ? ' data-popup="' + item.popup + '"' : '';
+            html += '    <div class="sd-sidebar-item" data-tab="' + (item.tabId || '') + '"' + popupAttr + ' data-accordion="' + (item.accordionId || '') + '" data-subtab="' + (item.subTabLabel || '') + '" data-containers="' + (item.containerIds ? item.containerIds.join(',') : '') + '">';
             html += '      <span class="sd-sidebar-item-label">' + item.label + '</span>';
-            html += '      <span class="sd-sidebar-item-eye" title="点击隐藏/显示">👁</span>';
             html += '    </div>';
         });
         html += '  </div>';
         html += '</div>';
     });
 
+    // Unified "插件" section: ALL external plugin tabs with eye-toggles
+    // "绘梦智能体助手" is excluded — it gets its own dedicated section below.
+    var externalPlugins = allTabPanels.filter(function(panel) {
+        return !isBuiltinTab(panel) && panel.id !== 'sd_webui_agent';
+    });
+    if (externalPlugins.length > 0) {
+        html += '<div class="sd-sidebar-section">';
+        html += '  <div class="sd-sidebar-section-header" data-section="plugins">';
+        html += '    <span class="sd-sidebar-section-icon">🧩</span>';
+        html += '    <span class="sd-sidebar-section-label">插件</span>';
+        html += '    <span class="sd-sidebar-chevron">▾</span>';
+        html += '  </div>';
+        html += '  <div class="sd-sidebar-section-body">';
+        // Eye-toggle items for each plugin
+        externalPlugins.forEach(function(panel) {
+            var isHidden = isTabHidden(panel.id);
+            var eyeIcon = isHidden ? '🚫' : '👁';
+            html += '    <div class="sd-sidebar-item has-eye-toggle" data-tab="' + panel.id + '">';
+            html += '      <span class="sd-sidebar-item-label">' + panel.label + '</span>';
+            html += '      <span class="sd-sidebar-eye-toggle' + (isHidden ? ' hidden' : '') + '" data-tab-id="' + panel.id + '" title="' + (isHidden ? '显示标签页' : '隐藏标签页') + '">' + eyeIcon + '</span>';
+            html += '    </div>';
+        });
+        html += '  </div>';
+        html += '</div>';
+    }
+
+    // Dedicated "绘梦智能体助手" — standalone nav item below plugins
+    var agentPanel = null;
+    for (var i = 0; i < allTabPanels.length; i++) {
+        if (allTabPanels[i].id === 'sd_webui_agent') {
+            agentPanel = allTabPanels[i];
+            break;
+        }
+    }
+    if (agentPanel) {
+        html += '<div class="sd-sidebar-item" data-tab="sd_webui_agent" style="margin:4px 8px;">';
+        html += '  <span class="sd-sidebar-item-label">' + agentPanel.label + '</span>';
+        html += '</div>';
+    }
+
     html += '</nav>';
 
-    // Footer
+    // Footer: 设置和扩展已移至主页标签页，侧边栏不再显示
         html += '<div class="sd-sidebar-footer">';
-        html += '  <div class="sd-sidebar-footer-item" data-tab="txt2img" title="返回主页">';
-        html += '    <span class="sd-sidebar-footer-icon">🏠</span>';
-        html += '    <span>主页</span>';
-        html += '  </div>';
-        html += '  <div class="sd-sidebar-footer-item" id="sd-restore-btn" title="恢复隐藏的模块">';
-        html += '    <span class="sd-sidebar-footer-icon">👁</span>';
-        html += '    <span>恢复隐藏项</span>';
-        html += '  </div>';
-        html += '  <div class="sd-sidebar-footer-item" data-tab="settings">';
-        html += '    <span class="sd-sidebar-footer-icon">⚙</span>';
-        html += '    <span>设置</span>';
-        html += '  </div>';
-        html += '  <div class="sd-sidebar-footer-item" data-tab="extensions">';
-        html += '    <span class="sd-sidebar-footer-icon">🧩</span>';
-        html += '    <span>扩展</span>';
-        html += '  </div>';
         html += '</div>';
 
     sidebar.innerHTML = html;
@@ -530,12 +652,41 @@ function injectSidebar() {
             });
         });
 
-        // Sidebar item click -> switch tab
+        // Eye-toggle: click to show/hide the tab button in top bar.
+        // Stops propagation so it doesn't trigger the parent item's tab switch.
+        sidebar.querySelectorAll('.sd-sidebar-eye-toggle').forEach(function(eye) {
+            eye.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var tabId = this.dataset.tabId;
+                if (!tabId) return;
+                var nowHidden = !isTabHidden(tabId);
+                setTabHidden(tabId, nowHidden);
+                // Update this eye icon
+                this.classList.toggle('hidden', nowHidden);
+                this.textContent = nowHidden ? '🚫' : '👁';
+                this.title = nowHidden ? '显示标签页' : '隐藏标签页';
+                // Also update any duplicate eye toggles for the same tabId
+                sidebar.querySelectorAll('.sd-sidebar-eye-toggle[data-tab-id="' + tabId + '"]').forEach(function(other) {
+                    if (other !== eye) {
+                        other.classList.toggle('hidden', nowHidden);
+                        other.textContent = nowHidden ? '🚫' : '👁';
+                        other.title = nowHidden ? '显示标签页' : '隐藏标签页';
+                    }
+                });
+            });
+        });
+
+        // Sidebar item click -> switch tab OR toggle popup
         sidebar.querySelectorAll('.sd-sidebar-item, .sd-sidebar-footer-item').forEach(function(item) {
             item.addEventListener('click', function(e) {
-                // Ignore click on the eye icon
-                if (e.target.classList.contains('sd-sidebar-item-eye')) return;
                 e.stopPropagation();
+
+                // Popup items (seed/styles): toggle floating panel, don't switch tabs
+                var popup = this.dataset.popup;
+                if (popup) {
+                    togglePopup(popup, this);
+                    return;
+                }
 
                 var tab = this.dataset.tab;
                 var accordionId = this.dataset.accordion;
@@ -554,43 +705,6 @@ function injectSidebar() {
                 switchTab(tab, accordionId, subTabLabel, containerIds);
             });
         });
-
-        // Eye icon click -> toggle hide/show item
-        sidebar.querySelectorAll('.sd-sidebar-item-eye').forEach(function(eye) {
-            eye.addEventListener('click', function(e) {
-                e.stopPropagation();
-                var item = this.closest('.sd-sidebar-item');
-                if (!item) return;
-                var hideKey = item.dataset.hideKey;
-                var isHidden = item.classList.toggle('sd-item-hidden');
-                saveHideState(hideKey, isHidden);
-                // If we're in restore mode and an item is restored, exit restore mode
-                if (!isHidden && sidebar.classList.contains('sd-restore-mode')) {
-                    // Check if any hidden items remain
-                    var remaining = sidebar.querySelectorAll('.sd-sidebar-item.sd-item-hidden');
-                    if (remaining.length === 0) {
-                        sidebar.classList.remove('sd-restore-mode');
-                    }
-                }
-            });
-        });
-
-        // Restore button - show/hide restore mode
-        var restoreBtn = document.getElementById('sd-restore-btn');
-        if (restoreBtn) {
-            restoreBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                var sidebar = document.getElementById('sd-sidebar');
-                if (!sidebar) return;
-                sidebar.classList.toggle('sd-restore-mode');
-                // Update button text
-                if (sidebar.classList.contains('sd-restore-mode')) {
-                    this.querySelector('span:last-child').textContent = '退出管理';
-                } else {
-                    this.querySelector('span:last-child').textContent = '恢复隐藏项';
-                }
-            });
-        }
 
         // Toggle sidebar
         var toggle = document.getElementById('sd-sidebar-toggle');
@@ -614,6 +728,7 @@ function injectSidebar() {
                         var tabContainer = target.closest('[id^="tab_"]');
                         if (tabContainer) {
                             var tabId = tabContainer.id.replace('tab_', '');
+
                             // Update sidebar highlight to match the first item with this tabId
                             var sidebar = document.getElementById('sd-sidebar');
                             if (sidebar) {
@@ -637,8 +752,11 @@ function injectSidebar() {
             }
         });
 
-        // Observe new tabs
-        var bodyObserver = new MutationObserver(function() {
+        // Observe new tabs and Svelte re-renders
+        // When Gradio 5 re-renders tab buttons (Svelte), new DOM elements
+        // are created without the sd-tab-hidden class. We must re-apply
+        // visibility to keep user's toggle preferences in effect.
+        var bodyObserver = new MutationObserver(function(mutations) {
             var newTabs = document.querySelectorAll('[id^="tab_"]:not([data-sidebar-observed])');
             newTabs.forEach(function(container) {
                 container.setAttribute('data-sidebar-observed', 'true');
@@ -647,87 +765,360 @@ function injectSidebar() {
                     observer.observe(btn, { attributes: true, attributeFilter: ['aria-selected'] });
                 }
             });
+            // Re-apply tab visibility on any DOM mutation inside #tabs
+            // to handle Svelte re-rendering of tab buttons.
+            applyAllTabVisibility();
         });
         bodyObserver.observe(document.body, { childList: true, subtree: true });
+    }
+
+    // ============================================================
+    //  Fix overflow tabs (PNG Info, Settings, Extensions, Extras)
+    //  Gradio 5 collapses tabs that don't fit into .overflow-menu /
+    //  .overflow-dropdown. Our theme CSS hides .overflow-menu entirely,
+    //  which also hides its child tab buttons (children cannot override
+    //  a parent's display:none via CSS). Solution: move the tab buttons
+    //  out of the overflow area into the main .tab-container as siblings
+    //  of txt2img/img2img buttons, then hide the overflow trigger.
+    // ============================================================
+
+    function fixOverflowTabs() {
+        var tabs = document.getElementById('tabs');
+        if (!tabs) return false;
+        var tabWrapper = tabs.querySelector('.tab-wrapper');
+        if (!tabWrapper) return false;
+
+        // Find the VISIBLE tab-container (Gradio has a .visually-hidden one for measurement)
+        var visibleContainer = null;
+        var containers = tabWrapper.querySelectorAll(':scope > div.tab-container');
+        containers.forEach(function(c) {
+            if (!c.classList.contains('visually-hidden') && !visibleContainer) {
+                visibleContainer = c;
+            }
+        });
+        if (!visibleContainer) return false;
+
+        // Whitelist of essential tabs that must be visible in the main bar.
+        // Other plugin tabs stay hidden per existing theme CSS L1392.
+        var whitelist = ['tab_txt2img', 'tab_img2img', 'tab_extras', 'tab_pnginfo', 'tab_tutorial_center', 'tab_settings', 'tab_extensions'];
+
+        // Collect whitelisted buttons from visible container + overflow dropdown + overflow menu
+        var overflowMenu = tabWrapper.querySelector(':scope > .overflow-menu');
+        var overflowDropdown = tabWrapper.querySelector(':scope > .overflow-dropdown');
+        var sources = [visibleContainer];
+        if (overflowDropdown) sources.push(overflowDropdown);
+        if (overflowMenu) sources.push(overflowMenu);
+
+        var essentialBtns = {};
+        sources.forEach(function(src) {
+            if (!src) return;
+            src.querySelectorAll('button[aria-controls^="tab_"]').forEach(function(btn) {
+                var controls = btn.getAttribute('aria-controls') || '';
+                if (whitelist.indexOf(controls) !== -1 && !essentialBtns[controls]) {
+                    essentialBtns[controls] = btn;
+                }
+            });
+        });
+
+        // Force essential buttons visible (override Gradio's responsive display:none)
+        function forceVisible(btn) {
+            btn.style.setProperty('display', 'inline-flex', 'important');
+            btn.style.setProperty('visibility', 'visible', 'important');
+            btn.style.setProperty('opacity', '1', 'important');
+        }
+
+        // Move essential buttons into the visible container in whitelist order
+        var movedAny = false;
+        var fragment = document.createDocumentFragment();
+        whitelist.forEach(function(tabId) {
+            var btn = essentialBtns[tabId];
+            if (!btn) return;
+            forceVisible(btn);
+            if (btn.parentNode !== visibleContainer) movedAny = true;
+            fragment.appendChild(btn);
+        });
+        if (movedAny) {
+            visibleContainer.appendChild(fragment);
+        } else {
+            // Even if already in place, force visible (Gradio may hide them responsively)
+            whitelist.forEach(function(tabId) {
+                var btn = essentialBtns[tabId];
+                if (btn) forceVisible(btn);
+            });
+        }
+
+        // Hide the overflow trigger (three-dots) now that essential buttons are visible
+        if (overflowMenu) {
+            overflowMenu.style.setProperty('display', 'none', 'important');
+        }
+        return Object.keys(essentialBtns).length > 0;
+    }
+
+    // Poll repeatedly to catch late-rendered overflow buttons (Svelte async)
+    function ensureOverflowTabsFixed() {
+        var attempts = 0;
+        var maxAttempts = 30;
+        function tick() {
+            attempts++;
+            var ok = fixOverflowTabs();
+            if (ok) return; // moved at least one, done
+            if (attempts >= maxAttempts) return;
+            setTimeout(tick, 200);
+        }
+        tick();
+        // Also re-run on window resize (Gradio may re-collapse tabs)
+        window.addEventListener('resize', function() {
+            setTimeout(fixOverflowTabs, 150);
+        });
     }
 
     // ============================================================
     //  Initialize
     // ============================================================
 
-    // 重新构建侧边栏: 当 Gradio 稍晚渲染扩展标签页时, 补上之前隐藏的入口
-    function rebuildSidebarIfNeeded() {
-        var sidebar = document.getElementById('sd-sidebar');
-        if (!sidebar) return;
-
-        // 检查是否有之前不存在但现在已加载的标签页
-        var needsRebuild = false;
-        sidebarModules.forEach(function(mod) {
-            mod.items.forEach(function(item) {
-                if (tabExists(item.tabId)) {
-                    // 该标签页已存在, 检查侧边栏中是否已有对应项
-                    var subtab = item.subTabLabel || '';
-                    var existing = sidebar.querySelector(
-                        '.sd-sidebar-item[data-tab="' + item.tabId + '"]' +
-                        '[data-subtab="' + subtab + '"]'
-                    );
-                    if (!existing) {
-                        needsRebuild = true;
-                    }
-                }
-            });
-        });
-
-        if (!needsRebuild) return;
-
-        // 移除旧侧边栏并重新注入
-        sidebar.remove();
-        var oldToggle = document.getElementById('sd-sidebar-toggle');
-        if (oldToggle) oldToggle.remove();
-        document.body.classList.remove('sd-sidebar-active');
-
-        if (document.querySelector('#tabs')) {
-            injectSidebar();
-            setupSidebarEvents();
-            observeTabChanges();
-            collectTabs();
-            hideEmbeddedAccordions();
-            hideAllParameterContainers();
-            var newSidebar = document.getElementById('sd-sidebar');
-            if (newSidebar) {
-                var homeBtn = newSidebar.querySelector('.sd-sidebar-footer-item[data-tab="txt2img"]');
-                if (homeBtn) homeBtn.classList.add('active');
-            }
-        }
-    }
-
     function tryInit() {
-        if (document.getElementById('sd-sidebar')) return true;
-        if (document.querySelector('#tabs')) {
+        // Migrate: remove old localStorage key from previous implementation
+        try { localStorage.removeItem('sd-hidden-tabs'); } catch (e) { /* ignore */ }
+
+        var initialized = false;
+        if (document.getElementById('sd-sidebar')) {
+            // Sidebar already exists, just re-run setup for new elements
+            initialized = true;
+        } else if (document.querySelector('#tabs')) {
             injectSidebar();
             setupSidebarEvents();
             observeTabChanges();
-            // Show home page (txt2img) by default, but hide all embedded accordions
             collectTabs();
-            showOnlyPanel('txt2img');
+            // Hide embedded accordions (ControlNet, ADetailer, etc.) by default
             hideEmbeddedAccordions();
-            hideAllParameterContainers();
-            // Activate home button
-            var sidebar = document.getElementById('sd-sidebar');
-            if (sidebar) {
-                var homeBtn = sidebar.querySelector('.sd-sidebar-footer-item[data-tab="txt2img"]');
-                if (homeBtn) homeBtn.classList.add('active');
-            }
-            // 延迟重新检查: Gradio 可能稍晚渲染扩展标签页 (如异步加载的扩展)
-            setTimeout(rebuildSidebarIfNeeded, 2000);
-            setTimeout(rebuildSidebarIfNeeded, 5000);
+            // FAILSAFE: remove sd-panel-hidden from ALL tab panels.
+            // Previously only 7 native IDs were cleared, but with the new
+            // "show all tabs" approach every panel must be unhidden in case
+            // a previous session left stale sd-panel-hidden classes.
+            document.querySelectorAll('[id^="tab_"]').forEach(function(panel) {
+                panel.classList.remove('sd-panel-hidden');
+            });
+            // Apply user's saved tab visibility preferences from localStorage
+            applyAllTabVisibility();
+            // NOTE: setupPopupControls() removed — seed rows restored to native
+            // Gradio positions in the main UI, no longer shown via sidebar popup.
+            initialized = true;
+        }
+        // Always enhance seed dice buttons (function has guard for single execution)
+        if (initialized) {
+            // NOTE: ensureOverflowTabsFixed() removed — moving Svelte-managed tab buttons
+            // causes Svelte to re-render and drop them. Tab visibility is now CSS-only.
+            enhanceSeedDiceButtons();
+            relabelControls();
+            // Re-apply tab visibility in case Gradio re-rendered tab buttons
+            applyAllTabVisibility();
             return true;
         }
         return false;
     }
 
+    // ============================================================
+    //  PS-style floating popup for seed row & prompt presets
+    //  Elements stay in their original Gradio DOM positions.
+    //  CSS toggles display:none / position:fixed floating.
+    //  Click sidebar item -> toggle popup. Click outside -> close.
+    // ============================================================
+
+    var activePopup = null;
+    var documentClickBound = false;
+
+    // Detect which Gradio tab is currently active (txt2img or img2img)
+    function getActiveTab() {
+        var activeBtn = document.querySelector('#tabs button[aria-selected="true"]');
+        if (activeBtn) {
+            var controls = activeBtn.getAttribute('aria-controls') || '';
+            if (controls.indexOf('img2img') !== -1) return 'img2img';
+            if (controls.indexOf('txt2img') !== -1) return 'txt2img';
+        }
+        var txtPanel = document.getElementById('tab_txt2img');
+        var imgPanel = document.getElementById('tab_img2img');
+        if (imgPanel && getComputedStyle(imgPanel).display !== 'none') return 'img2img';
+        return 'txt2img';
+    }
+
+    // Get the popup target element for a given popup type and active tab.
+    // Only seed uses PS-style popup now; styles restored to original position.
+    function getPopupTarget(popupType, activeTab) {
+        if (popupType === 'seed') {
+            return document.getElementById(activeTab + '_seed_row');
+        }
+        return null;
+    }
+
+    function setupPopupControls() {
+        // Only seed rows use PS-style popup now. Styles row restored to original position.
+        ['txt2img', 'img2img'].forEach(function(tab) {
+            var seedEl = document.getElementById(tab + '_seed_row');
+            if (seedEl) seedEl.classList.add('sd-popup-target');
+        });
+        // Bind document click for click-away-to-close (once)
+        if (!documentClickBound) {
+            documentClickBound = true;
+            document.addEventListener('click', function(e) {
+                if (!activePopup) return;
+                if (e.target.closest('[data-popup]')) return;
+                // Don't close if click is inside an active popup panel
+                var visibleEl = document.querySelector('.sd-popup-target.sd-popup-visible');
+                if (visibleEl && visibleEl.contains(e.target)) return;
+                closePopup();
+            });
+        }
+    }
+
+    // Relabel common controls to shorter Chinese names to save UI space.
+    // Uses elem_id-based targeting to avoid affecting other CFG-related labels.
+    // A MutationObserver re-applies labels if Svelte re-renders the components.
+    function relabelControls() {
+        var labelMap = {
+            'txt2img_cfg_scale': 'CFG',
+            'img2img_cfg_scale': 'CFG',
+            'txt2img_sampling': '采样器',
+            'img2img_sampling': '采样器',
+            'txt2img_scheduler': '调度器',
+            'img2img_scheduler': '调度器'
+        };
+
+        function applyLabels() {
+            Object.keys(labelMap).forEach(function(id) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                var span = el.querySelector('label span') || el.querySelector('span[data-testid="block-info"]');
+                if (span && span.textContent.trim() !== labelMap[id]) {
+                    span.textContent = labelMap[id];
+                }
+            });
+        }
+
+        applyLabels();
+
+        // Re-apply on Svelte re-renders
+        if (!window.sdRelabelObserver) {
+            var observer = new MutationObserver(function(mutations) {
+                for (var i = 0; i < mutations.length; i++) {
+                    if (mutations[i].type === 'childList' && mutations[i].addedNodes.length > 0) {
+                        applyLabels();
+                        break;
+                    }
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+            window.sdRelabelObserver = observer;
+        }
+    }
+
+    // Enhance seed dice button: instead of setting -1 (Gradio default),
+    // generate and display an actual random number immediately.
+    // Uses document-level event delegation + polling to reliably override
+    // Gradio/Svelte's reactive -1 set.
+    function enhanceSeedDiceButtons() {
+        if (window.sdDiceEnhanced) return;
+        window.sdDiceEnhanced = true;
+
+        function setRandomSeed(tab) {
+            var row = document.getElementById(tab + '_seed_row');
+            if (!row) return;
+            var input = row.querySelector('input[type="number"]');
+            if (!input) return;
+            var randomSeed = Math.floor(Math.random() * 4294967295) + 1;
+            var seedStr = String(randomSeed);
+            var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+            setter.call(input, seedStr);
+            // Use InputEvent with data property — Svelte listens to this for state updates
+            input.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, data: seedStr, inputType: 'insertText' }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        function overrideWhenMinusOne(tab) {
+            // Poll multiple times to fight Svelte's reactive overrides
+            var attempts = 0;
+            var maxAttempts = 20;
+            var interval = setInterval(function() {
+                attempts++;
+                var row = document.getElementById(tab + '_seed_row');
+                if (!row) { clearInterval(interval); return; }
+                var input = row.querySelector('input[type="number"]');
+                if (!input) { clearInterval(interval); return; }
+                if (input.value === '-1') {
+                    setRandomSeed(tab);
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(interval);
+                }
+                if (attempts >= maxAttempts) clearInterval(interval);
+            }, 100);
+        }
+
+        document.addEventListener('click', function(e) {
+            var dice = e.target.closest('#txt2img_random_seed, #img2img_random_seed');
+            if (!dice) return;
+            var tab = dice.id.indexOf('txt2img') !== -1 ? 'txt2img' : 'img2img';
+            // Let Gradio's handler run first (sets -1), then poll to override
+            setTimeout(function() { overrideWhenMinusOne(tab); }, 50);
+        });
+    }
+
+    function togglePopup(popupType, sidebarItem) {
+        if (activePopup === popupType) {
+            closePopup();
+            return;
+        }
+        closePopup();
+        activePopup = popupType;
+        document.body.classList.add('sd-popup-' + popupType + '-open');
+        sidebarItem.classList.add('popup-active');
+
+        var activeTab = getActiveTab();
+        var el = getPopupTarget(popupType, activeTab);
+        if (el) {
+            el.classList.add('sd-popup-visible');
+            if (!el.querySelector('.sd-popup-close')) {
+                var closeBtn = document.createElement('button');
+                closeBtn.className = 'sd-popup-close';
+                closeBtn.innerHTML = '✕';
+                closeBtn.title = '关闭';
+                closeBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closePopup();
+                });
+                el.style.position = 'relative';
+                el.appendChild(closeBtn);
+            }
+
+        }
+    }
+
+    function closePopup() {
+        if (!activePopup) return;
+        document.body.classList.remove('sd-popup-' + activePopup + '-open');
+        // Hide all visible popup elements
+        document.querySelectorAll('.sd-popup-target.sd-popup-visible').forEach(function(el) {
+            el.classList.remove('sd-popup-visible');
+        });
+        var sidebar = document.getElementById('sd-sidebar');
+        if (sidebar) {
+            sidebar.querySelectorAll('.sd-sidebar-item.popup-active').forEach(function(el) {
+                el.classList.remove('popup-active');
+            });
+        }
+        activePopup = null;
+    }
+
     function init() {
-        if (tryInit()) return;
+        if (tryInit()) {
+            // Light periodic: re-mark popup targets after Gradio re-renders
+            var markCount = 0;
+            var markInterval = setInterval(function() {
+                markCount++;
+                setupPopupControls();
+                if (markCount >= 15) clearInterval(markInterval);
+            }, 1000);
+            return;
+        }
         var retries = 0;
         var maxRetries = 30;
         var checkInterval = setInterval(function() {
@@ -744,4 +1135,239 @@ function injectSidebar() {
         document.addEventListener('DOMContentLoaded', init);
     }
 
+})();
+
+// ============================================================
+//  Theme Manager - Apple-style multi-theme system
+//  参考电商助手的主题切换实现
+// ============================================================
+(function() {
+    'use strict';
+
+    var THEMES = [
+        { id: 'theme-apple-light', name: '苹果浅色', swatch: 'linear-gradient(135deg, #0071e3 50%, #f5f5f7 50%)' },
+        { id: 'theme-dark-blue', name: '暗夜蓝', swatch: 'linear-gradient(135deg, #0a84ff 50%, #1c1c28 50%)' },
+        { id: 'theme-dark-green', name: '暗夜绿', swatch: 'linear-gradient(135deg, #30d158 50%, #1c1c20 50%)' },
+        { id: 'theme-dark-purple', name: '暗夜紫', swatch: 'linear-gradient(135deg, #bf5af2 50%, #221f2e 50%)' },
+        { id: 'theme-dark-orange', name: '暗夜橙', swatch: 'linear-gradient(135deg, #ff9500 50%, #1c1c1e 50%)' },
+        { id: 'theme-obsidian', name: '黑曜石', swatch: 'linear-gradient(135deg, #f5f5f7 50%, #111111 50%)' },
+        { id: 'theme-light-blue', name: '纯净蓝', swatch: 'linear-gradient(135deg, #0a84ff 50%, #e8f0fe 50%)' },
+        { id: 'theme-light-green', name: '纯净绿', swatch: 'linear-gradient(135deg, #34c759 50%, #eaf5eb 50%)' },
+        { id: 'theme-warm-orange', name: '暖阳橙', swatch: 'linear-gradient(135deg, #ff9500 50%, #f5ede0 50%)' },
+        { id: 'theme-sakura-pink', name: '樱花粉', swatch: 'linear-gradient(135deg, #e84393 50%, #f5e8ee 50%)' },
+    ];
+
+    var STORAGE_KEY = 'sd-webui-theme';
+    var DEFAULT_THEME = 'theme-apple-light';
+
+    function getCurrentTheme() {
+        try {
+            var saved = localStorage.getItem(STORAGE_KEY);
+            if (saved && THEMES.some(function(t) { return t.id === saved; })) {
+                return saved;
+            }
+        } catch (e) {}
+        return DEFAULT_THEME;
+    }
+
+    function applyTheme(themeId) {
+        THEMES.forEach(function(t) {
+            document.body.classList.remove(t.id);
+            document.documentElement.classList.remove(t.id);
+        });
+        document.body.classList.add(themeId);
+        document.documentElement.classList.add(themeId);
+        try { localStorage.setItem(STORAGE_KEY, themeId); } catch (e) {}
+        updateThemeModalActive(themeId);
+    }
+
+    // Gradio's Svelte app may overwrite body classList on mount/re-render,
+    // which strips our theme class and causes the theme to revert on restart.
+    // This guard re-applies the saved theme whenever the class is removed.
+    function ensureThemePersisted() {
+        var current = getCurrentTheme();
+        if (!document.body.classList.contains(current)) {
+            document.body.classList.add(current);
+        }
+        if (!document.documentElement.classList.contains(current)) {
+            document.documentElement.classList.add(current);
+        }
+    }
+
+    function setupThemePersistenceGuard() {
+        if (window.__sdThemeGuardSet) return;
+        window.__sdThemeGuardSet = true;
+        ensureThemePersisted();
+
+        // Watch body class changes and restore theme if stripped by Svelte
+        var observer = new MutationObserver(function(mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+                if (mutations[i].attributeName === 'class') {
+                    ensureThemePersisted();
+                    break;
+                }
+            }
+        });
+        observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+        // Poll briefly during startup to fight Svelte's initial mount overwrite
+        var polls = 0;
+        var interval = setInterval(function() {
+            ensureThemePersisted();
+            polls++;
+            if (polls >= 20) clearInterval(interval);
+        }, 500);
+    }
+
+    function createThemeModal() {
+        if (document.getElementById('sd-theme-overlay')) return;
+
+        var overlay = document.createElement('div');
+        overlay.id = 'sd-theme-overlay';
+
+        var modal = document.createElement('div');
+        modal.id = 'sd-theme-modal';
+
+        var html = '';
+        html += '<button id="sd-theme-close" title="关闭">✕</button>';
+        html += '<h3>🎨 主题切换</h3>';
+        html += '<p class="sd-theme-subtitle">选择你喜欢的 UI 主题风格</p>';
+        html += '<div class="sd-theme-grid">';
+
+        THEMES.forEach(function(theme) {
+            html += '<div class="sd-theme-option" data-theme="' + theme.id + '">';
+            html += '  <div class="sd-theme-swatch" style="background: ' + theme.swatch + ';"></div>';
+            html += '  <span>' + theme.name + '</span>';
+            html += '</div>';
+        });
+
+        html += '</div>';
+        modal.innerHTML = html;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        var closeBtn = document.getElementById('sd-theme-close');
+        if (closeBtn) closeBtn.addEventListener('click', hideThemeModal);
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) hideThemeModal();
+        });
+
+        modal.querySelectorAll('.sd-theme-option').forEach(function(opt) {
+            opt.addEventListener('click', function() {
+                var themeId = this.dataset.theme;
+                applyTheme(themeId);
+                setTimeout(hideThemeModal, 200);
+            });
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') hideThemeModal();
+        });
+    }
+
+    function updateThemeModalActive(themeId) {
+        var options = document.querySelectorAll('.sd-theme-option');
+        options.forEach(function(opt) {
+            opt.classList.toggle('sd-theme-active', opt.dataset.theme === themeId);
+        });
+    }
+
+    function showThemeModal() {
+        createThemeModal();
+        var overlay = document.getElementById('sd-theme-overlay');
+        if (overlay) {
+            overlay.classList.add('sd-theme-visible');
+            updateThemeModalActive(getCurrentTheme());
+        }
+    }
+
+    function hideThemeModal() {
+        var overlay = document.getElementById('sd-theme-overlay');
+        if (overlay) overlay.classList.remove('sd-theme-visible');
+    }
+
+    function addThemeButtonToSidebar() {
+        var footer = document.querySelector('.sd-sidebar-footer');
+        if (!footer) return;
+
+        // Add "主页" (Home) button above theme button — switches to txt2img tab
+        if (!document.getElementById('sd-home-btn')) {
+            var homeBtn = document.createElement('div');
+            homeBtn.className = 'sd-sidebar-footer-item';
+            homeBtn.id = 'sd-home-btn';
+            homeBtn.innerHTML = '<span class="sd-sidebar-footer-icon">🏠</span><span>主页</span>';
+            homeBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                // Inline switch logic (self-contained — switchTab is in a
+                // different IIFE scope and inaccessible here)
+                var txt2imgBtn = document.querySelector('button[aria-controls="tab_txt2img"]');
+                if (txt2imgBtn) txt2imgBtn.click();
+                // Restore native panels, hide non-native ones
+                var nativeIds = ['txt2img', 'img2img', 'extras', 'pnginfo', 'tutorial_center', 'settings', 'extensions'];
+                document.querySelectorAll('[id^="tab_"]').forEach(function(panel) {
+                    var id = panel.id.replace('tab_', '');
+                    if (nativeIds.indexOf(id) === -1) {
+                        panel.classList.add('sd-panel-hidden');
+                        panel.classList.remove('sd-panel-active');
+                    } else {
+                        panel.classList.remove('sd-panel-hidden');
+                        panel.classList.remove('sd-panel-active');
+                    }
+                });
+                // Update sidebar highlight
+                document.querySelectorAll('.sd-sidebar-item, .sd-sidebar-footer-item').forEach(function(el) {
+                    el.classList.remove('active');
+                });
+                homeBtn.classList.add('active');
+            });
+            footer.appendChild(homeBtn);
+        }
+
+        // Add theme button
+        if (!document.getElementById('sd-theme-btn')) {
+            var themeBtn = document.createElement('div');
+            themeBtn.className = 'sd-sidebar-footer-item';
+            themeBtn.id = 'sd-theme-btn';
+            themeBtn.innerHTML = '<span class="sd-sidebar-footer-icon">🎨</span><span>主题</span>';
+            themeBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                showThemeModal();
+            });
+            footer.appendChild(themeBtn);
+        }
+    }
+
+    function initThemeManager() {
+        applyTheme(getCurrentTheme());
+        setupThemePersistenceGuard();
+
+        var retries = 0;
+        var maxRetries = 40;
+        var checkInterval = setInterval(function() {
+            retries++;
+            if (document.querySelector('.sd-sidebar-footer') || retries >= maxRetries) {
+                clearInterval(checkInterval);
+                addThemeButtonToSidebar();
+            }
+        }, 500);
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        initThemeManager();
+    } else {
+        document.addEventListener('DOMContentLoaded', initThemeManager);
+    }
+
+    window.SDThemeManager = {
+        apply: applyTheme,
+        current: getCurrentTheme,
+        show: showThemeModal,
+        hide: hideThemeModal,
+        themes: THEMES
+    };
+
+})();
+
+// Close outer IIFE
 })();
