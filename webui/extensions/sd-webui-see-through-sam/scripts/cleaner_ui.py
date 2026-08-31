@@ -448,8 +448,6 @@ def create_cleaner_ui():
                 container=True,
                 height=600,
                 brush=gr.Brush(default_size=32, default_color="#FFFFFF"),
-                show_share_button=False,
-                show_download_button=False
             )
             
             with gr.Column(elem_id="xykc_cleanup_gallery_container"):

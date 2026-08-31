@@ -333,8 +333,6 @@ class ImageStitch(scripts.Script):
                 interactive=False,
                 show_label=False,
                 container=False,
-                show_download_button=False,
-                show_share_button=False,
                 label="参考潜空间",
                 min_width=384,
                 height=384,
@@ -367,8 +365,6 @@ class ImageStitch(scripts.Script):
                     interactive=False,
                     show_label=True,
                     container=True,
-                    show_download_button=False,
-                    show_share_button=False,
                     min_width=384,
                     height=400,
                     columns=6,
@@ -441,8 +437,6 @@ class ImageStitch(scripts.Script):
                             type="pil",
                             height=200,
                             interactive=False,
-                            show_download_button=False,
-                            show_share_button=False,
                         )
 
                     with gr.Column(scale=2):
@@ -480,8 +474,7 @@ class ImageStitch(scripts.Script):
                     height=400,
                     object_fit="contain",
                     interactive=False,
-                    show_download_button=True,
-                    show_share_button=False,
+
                 )
 
                 # 用于存储任务结果的 State
