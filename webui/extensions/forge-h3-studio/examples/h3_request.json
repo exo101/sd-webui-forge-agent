@@ -1,0 +1,37 @@
+{
+  "mode": "t2v",
+  "model": "minimax_h3_fl2va_fp8.safetensors",
+  "text_encoder": "qwen3vl_32b_minimax_h3_fp8.safetensors",
+  "video_vae": "minimax_h3_video_vae_fp16.safetensors",
+  "audio_vae": "minimax_h3_audio_vae_fp32.safetensors",
+  "prompt": "A cinematic slow dolly shot through a rainy neon street, distant traffic and soft rain audio.",
+  "width": 1344,
+  "height": 768,
+  "aspect_ratio": "16:9",
+  "megapixels": 0.98,
+  "rounding_multiple": 32,
+  "frames": 124,
+  "steps": 30,
+  "seed": 123456,
+  "sampler": "euler",
+  "scheduler": "simple",
+  "shift_video": 12,
+  "shift_audio": 3,
+  "denoise": 1,
+  "loras": [
+    {
+      "name": "minimax_h3_fl2v_turbo_4step.safetensors",
+      "enabled": false,
+      "model_strength": 1,
+      "clip_strength": 0,
+      "apply_to_clip": false
+    }
+  ],
+  "output": {
+    "filename_prefix": "video/Forge_H3_Studio",
+    "format": "auto",
+    "codec": "auto",
+    "fps": 24,
+    "bit_depth": 8
+  }
+}

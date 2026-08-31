@@ -1,0 +1,3 @@
+__creatures/mtg/dog/dog_archer__
+__creatures/mtg/dog/dog_general__
+__creatures/mtg/dog/dog_scout__

@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+data/config.json
+data/lora_presets.json

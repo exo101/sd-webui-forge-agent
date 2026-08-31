@@ -1,0 +1,6 @@
+__creatures/mtg/dragon/dragon__
+__creatures/mtg/dragon/dragon_avatar__
+__creatures/mtg/dragon/dragon_spirit__
+__creatures/mtg/dragon/dragon_warrior__
+__creatures/mtg/dragon/dragon_wizard__
+__creatures/mtg/dragon/elder_dragon__

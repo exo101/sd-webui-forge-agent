@@ -1,0 +1,5 @@
+__creatures/mtg/ogre/ogre_berserker__
+__creatures/mtg/ogre/ogre_general__
+__creatures/mtg/ogre/ogre_mutant__
+__creatures/mtg/ogre/ogre_rogue__
+__creatures/mtg/ogre/ogre_warrior__

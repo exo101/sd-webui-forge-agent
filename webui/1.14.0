@@ -1,0 +1,12 @@
+Looking in indexes: https://mirrors.aliyun.com/pypi/simple/
+Requirement already satisfied: modelscope in D:\ai\sd-webui-forge-neo-v3.2\system\python\Lib\site-packages (1.37.1)
+Requirement already satisfied: filelock in D:\ai\sd-webui-forge-neo-v3.2\system\python\Lib\site-packages (from modelscope) (3.25.2)
+Requirement already satisfied: packaging in D:\ai\sd-webui-forge-neo-v3.2\system\python\Lib\site-packages (from modelscope) (26.0)
+Requirement already satisfied: requests>=2.25 in D:\ai\sd-webui-forge-neo-v3.2\system\python\Lib\site-packages (from modelscope) (2.33.0)
+Requirement already satisfied: setuptools in D:\ai\sd-webui-forge-neo-v3.2\system\python\Lib\site-packages (from modelscope) (69.5.1)
+Requirement already satisfied: tqdm>=4.64.0 in D:\ai\sd-webui-forge-neo-v3.2\system\python\Lib\site-packages (from modelscope) (4.67.3)
+Requirement already satisfied: urllib3>=1.26 in D:\ai\sd-webui-forge-neo-v3.2\system\python\Lib\site-packages (from modelscope) (2.6.3)
+Requirement already satisfied: charset_normalizer<4,>=2 in D:\ai\sd-webui-forge-neo-v3.2\system\python\Lib\site-packages (from requests>=2.25->modelscope) (3.4.6)
+Requirement already satisfied: idna<4,>=2.5 in D:\ai\sd-webui-forge-neo-v3.2\system\python\Lib\site-packages (from requests>=2.25->modelscope) (3.11)
+Requirement already satisfied: certifi>=2023.5.7 in D:\ai\sd-webui-forge-neo-v3.2\system\python\Lib\site-packages (from requests>=2.25->modelscope) (2026.2.25)
+Requirement already satisfied: colorama in D:\ai\sd-webui-forge-neo-v3.2\system\python\Lib\site-packages (from tqdm>=4.64.0->modelscope) (0.4.6)

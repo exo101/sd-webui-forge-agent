@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Update Mode Banner — Mockup</title>
+<style>
+  body {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    font-family: system-ui, sans-serif;
+    padding: 24px;
+    margin: 0;
+  }
+
+  h3 {
+    color: #aaa;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0 0 10px;
+  }
+
+  /* ── Update Mode Banner ── */
+  .civupdate-banner {
+    background: rgba(255, 140, 0, 0.12);
+    border: 1px solid #e07b00;
+    border-radius: 10px;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .civupdate-banner .banner-icon {
+    font-size: 20px;
+  }
+
+  .civupdate-banner .banner-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #ffb347;
+    white-space: nowrap;
+  }
+
+  .civupdate-banner .banner-count {
+    font-size: 13px;
+    color: #ccc;
+  }
+
+  .civupdate-banner .spacer {
+    flex: 1;
+  }
+
+  .civupdate-banner .retention-pill {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: #bbb;
+    white-space: nowrap;
+  }
+
+  .civupdate-banner .btn-update-all {
+    background: #e07b00;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+  .civupdate-banner .btn-update-all:hover {
+    background: #ff9520;
+  }
+
+  .civupdate-banner .btn-exit {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    color: #aaa;
+    font-size: 12px;
+    padding: 6px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .civupdate-banner .btn-exit:hover {
+    border-color: #ff5555;
+    color: #ff5555;
+  }
+
+  /* ── Mini card grid (simulated) ── */
+  .card-grid {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  .card {
+    width: 160px;
+    background: #252540;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    font-size: 12px;
+  }
+
+  .card.update { border-color: #e07b00; }
+  .card.installed { border-color: #2db5ac; }
+
+  .card-thumb {
+    width: 100%;
+    height: 90px;
+    background: linear-gradient(135deg, #3a3a5c, #2a2a44);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: rgba(255,255,255,0.15);
+  }
+
+  .card-body {
+    padding: 7px 8px 9px;
+  }
+
+  .card-name {
+    font-weight: 600;
+    font-size: 11.5px;
+    color: #ddd;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-badge {
+    display: inline-block;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+    margin-top: 4px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+
+  .badge-lora { background: rgba(99,179,237,0.2); color: #63b3ed; }
+  .badge-pony { background: rgba(236,153,75,0.2); color: #ec994b; }
+  .badge-il   { background: rgba(160,130,240,0.2); color: #b896ff; }
+  .badge-sdxl { background: rgba(72,199,142,0.2); color: #48c78e; }
+
+  .card-checkbox {
+    float: right;
+    margin-top: -18px;
+  }
+
+  /* ── Update mode indicator chip ── */
+  .mode-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 140, 0, 0.18);
+    border: 1px solid #c96e00;
+    border-radius: 20px;
+    padding: 3px 12px 3px 8px;
+    font-size: 11.5px;
+    color: #ffb347;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .mode-chip .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #ff8c00;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+
+  /* layout helpers */
+  .section { margin-bottom: 32px; }
+  .label   { font-size: 11px; color: #777; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<h2 style="color:#ffb347; margin-bottom:28px">Update Mode — Visual Mockup</h2>
+
+<!-- ──────────────────── BANNER FULL ──────────────────── -->
+<div class="section">
+  <div class="label">Banner (top of Browser tab)</div>
+
+  <div class="civupdate-banner">
+    <span class="banner-icon">🔄</span>
+    <span class="banner-title">Update Mode</span>
+    <span class="banner-count">23 updates available across 18 models</span>
+    <span class="spacer"></span>
+    <span class="retention-pill">Retention: replace</span>
+    <button class="btn-update-all">⬆️ Update All (23)</button>
+    <button class="btn-exit">✕ Exit</button>
+  </div>
+</div>
+
+<!-- ──────────────────── MODE CHIP ──────────────────── -->
+<div class="section">
+  <div class="label">Animated mode indicator (alternative — inside filter bar)</div>
+  <div class="mode-chip"><span class="dot"></span> Update Mode active — 23 outdated</div>
+</div>
+
+<!-- ──────────────────── CARD EXAMPLES ──────────────────── -->
+<div class="section">
+  <div class="label">Cards — same browser grid, orange border = outdated. Multi-family = 2 separate cards.</div>
+  <div class="card-grid">
+
+    <!-- Doll Face PONY card -->
+    <div class="card update">
+      <div class="card-thumb">🖼</div>
+      <div class="card-body">
+        <div class="card-name">Doll Face <span class="card-badge badge-pony">PONY</span></div>
+        <div style="margin-top:4px">
+          <span class="card-badge badge-lora">LORA</span>
+        </div>
+        <label style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:11px;color:#ccc;cursor:pointer">
+          <input type="checkbox" checked> select
+        </label>
+      </div>
+    </div>
+
+    <!-- Doll Face IL card (same model, different family = separate card) -->
+    <div class="card update">
+      <div class="card-thumb">🖼</div>
+      <div class="card-body">
+        <div class="card-name">Doll Face <span class="card-badge badge-il">IL</span></div>
+        <div style="margin-top:4px">
+          <span class="card-badge badge-lora">LORA</span>
+        </div>
+        <label style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:11px;color:#ccc;cursor:pointer">
+          <input type="checkbox" checked> select
+        </label>
+      </div>
+    </div>
+
+    <!-- Another model -->
+    <div class="card update">
+      <div class="card-thumb">🖼</div>
+      <div class="card-body">
+        <div class="card-name">Aesthetic XL</div>
+        <div style="margin-top:4px">
+          <span class="card-badge badge-lora">LORA</span>
+          <span class="card-badge badge-sdxl">SDXL</span>
+        </div>
+        <label style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:11px;color:#ccc;cursor:pointer">
+          <input type="checkbox"> select
+        </label>
+      </div>
+    </div>
+
+    <!-- Up to date card (no orange border) -->
+    <div class="card installed">
+      <div class="card-thumb" style="opacity:.5">🖼</div>
+      <div class="card-body" style="opacity:.5">
+        <div class="card-name">My SDXL Model</div>
+        <div style="margin-top:4px">
+          <span class="card-badge badge-sdxl">SDXL</span>
+        </div>
+        <div style="font-size:10px;color:#777;margin-top:6px">✔ up to date</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────────── FILTER INTERACTION ──────────────────── -->
+<div class="section">
+  <div class="label">With base model filter "Illustrious" active → only IL cards visible → Update All targets only IL</div>
+  <div class="civupdate-banner">
+    <span class="banner-icon">🔄</span>
+    <span class="banner-title">Update Mode</span>
+    <span class="banner-count">
+      <strong style="color:#ffb347">Illustrious</strong> filter active — showing 8 of 23 updates
+    </span>
+    <span class="spacer"></span>
+    <span class="retention-pill">Retention: replace</span>
+    <button class="btn-update-all">⬆️ Update All (8)</button>
+    <button class="btn-exit">✕ Exit</button>
+  </div>
+</div>
+
+</body>
+</html>

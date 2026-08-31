@@ -1,0 +1,172 @@
+$primary-color: #d03f0a;
+$danger-color: #fa114f;
+$info-color: #17a2b8;
+$success-color: #28a745;
+:root {
+  // ganymede的
+  --grey-13: #000000;
+  --grey-12: #141414;
+  --grey-11: #1f1f1f;
+  --grey-10: #262626;
+  --grey-9: #434343;
+  --grey-8: #595959;
+  --grey-7: #8c8c8c;
+  --grey-6: #bfbfbf;
+  --grey-5: #d9d9d9;
+  --grey-4: #f0f0f0;
+  --grey-3: #f5f5f5;
+  --grey-2: #fafafa;
+  --grey-1: #fff;
+  --primary-color: #{$primary-color};
+  --danger-color: #{$danger-color};
+  --info-color: #{$info-color};
+  --success-color: #{$success-color};
+  // css变量尝试了没办法直接for
+  --primary-color-1: #{$primary-color}11;
+  --primary-color-2: #{$primary-color}22;
+  --primary-color-3: #{$primary-color}33;
+  --primary-color-4: #{$primary-color}44;
+  --primary-color-5: #{$primary-color}55;
+  --primary-color-6: #{$primary-color}66;
+  --primary-color-7: #{$primary-color}77;
+  --primary-color-8: #{$primary-color}88;
+  --primary-color-9: #{$primary-color}99;
+  --primary-color-a: #{$primary-color}aa;
+  --primary-color-b: #{$primary-color}bb;
+  --primary-color-c: #{$primary-color}cc;
+  --primary-color-d: #{$primary-color}dd;
+  --primary-color-e: #{$primary-color}ee;
+  --primary-color-f: #{$primary-color}ff;
+  --light-border-color: var(--grey-5);
+  --main-text-color: var(--grey-11);
+  --main-bg-color: var(--grey-3);
+  --zp-black: #222222;
+  --zp-grey96: #2b2b2b;
+  --zp-grey90: #383838;
+  --zp-grey80: #4e4e4e;
+  --zp-grey70: #646464;
+  --zp-grey60: #7a7a7a;
+  --zp-grey50: #909090;
+  --zp-grey40: #a7a7a7;
+  --zp-grey30: #bdbdbd;
+  --zp-grey20: #d3d3d3;
+  --zp-grey10: #e9e9e9;
+  --zp-grey7: #f0f0f0;
+  --zp-grey4: #f6f6f6;
+  --zp-white: #ffffff;
+  --zp-primary: var(--zp-black);
+  --zp-secondary: var(--zp-grey50);
+  --zp-tertiary: var(--zp-grey30);
+  --zp-primary-background: var(--zp-white);
+  --zp-secondary-background: var(--zp-grey4);
+  --zp-tertiary-background: var(--zp-white);
+  --zp-secondary-variant-background: var(--zp-grey7);
+  // 边框颜色
+  --zp-border: var(--zp-grey20);
+  --zp-icon-bg: #0004;
+  @media (prefers-color-scheme: dark) {
+    .body:not(.dark) {
+      --zp-primary: var(--zp-grey20);
+      --zp-secondary: var(--zp-grey60);
+      --zp-tertiary: var(--zp-grey70);
+      --zp-primary-background: var(--zp-black);
+      --zp-secondary-background: var(--zp-grey96);
+      --zp-secondary-variant-background: var(--zp-grey90);
+      --zp-tertiary-background: var(--zp-grey4);
+      --zp-border: var(--zp-grey96);
+      --zp-icon-bg: #fff4;
+    }
+  }
+  body.dark {
+    --zp-primary: var(--zp-grey20);
+    --zp-secondary: var(--zp-grey60);
+    --zp-tertiary: var(--zp-grey70);
+    --zp-primary-background: var(--zp-black);
+    --zp-secondary-background: var(--zp-grey96);
+    --zp-secondary-variant-background: var(--zp-grey90);
+    --zp-tertiary-background: var(--zp-grey4);
+    --zp-border: var(--zp-grey96);
+    --zp-icon-bg: #fff4;
+  }
+}
+
+.flex-placeholder,
+[flex-placeholder] {
+  flex: 1;
+}
+
+html {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  --scroll-container-max-height: 100vh;
+}
+
+body {
+  position: absolute;
+  width: 100%;
+  ::-webkit-scrollbar {
+    width: 10px; // 滚动条宽度
+    background-color: var(--zp-secondary-variant-background); // 滚动条背景颜色
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--zp-secondary); // 滚动条拖动块颜色
+    border-radius: 5px; // 滚动条拖动块圆角
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #1453ad; // 滚动条拖动块悬停颜色
+  }
+
+  ::-webkit-scrollbar-track {
+    background-color: var(--zp-secondary-variant-background); // 滚动条轨道颜色
+  }
+
+  ::-webkit-scrollbar-track:hover {
+    background-color: var(--zp-secondary-background); // 滚动条轨道悬停颜色
+  }
+  background: var(--zp-primary-background);
+  color: var(--zp-primary);
+  .ant-tabs > div.ant-tabs-nav {
+    margin: 0;
+  }
+  .ant-modal-wrap {
+    z-index: 10000;
+  }
+
+  .ant-message {
+    z-index: 10000;
+  }
+  .hidden-antd-btns-modal .ant-modal-confirm-btns {
+    display: none;
+  }
+}
+
+@mixin line-clamp($n: 1) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: $n;
+  overflow: hidden;
+}
+.line-clamp-1 {
+  @include line-clamp(1);
+}
+.line-clamp-2 {
+  @include line-clamp(2);
+}
+.line-clamp-3 {
+  @include line-clamp(3);
+}
+
+.actions {
+  & > * {
+    margin-right: 8px;
+  }
+}
+
+.tips {
+  background: var(--zp-secondary-background);
+  padding: 8px;
+  border-left: 4px solid var(--primary-color);
+}

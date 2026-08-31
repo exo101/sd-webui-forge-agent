@@ -1,0 +1,140 @@
+<div class="ve-container">
+  <style>
+    .ve-container { display: flex; gap: 12px; background: #1a1a2e; border-radius: 12px; padding: 16px; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 700px; height: 700px; position: relative; }
+    .ve-toolbar { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; min-width: 100px; position: relative; align-content: start; overflow-y: auto; max-height: 100%; }
+    .ve-toolbar button {
+      width: 48px; height: 48px; border: 1px solid #2a2a4a; border-radius: 8px;
+      background: #16213e; color: #e0e0e0; cursor: pointer; font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s ease; position: relative;
+    }
+    .ve-toolbar button:hover { background: #1e2a4a; border-color: #4f8cf7; }
+    .ve-toolbar button.ve-active { background: #4f8cf7; border-color: #4f8cf7; color: #fff; box-shadow: 0 0 12px rgba(79,140,247,0.3); }
+    .ve-toolbar button svg { width: 24px; height: 24px; }
+    .ve-toolbar .ve-tp {
+      display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+      background: #0d0d1a; color: #e0e0e0; padding: 3px 8px; border-radius: 4px;
+      font-size: 11px; white-space: nowrap; z-index: 10; border: 1px solid #2a2a4a; pointer-events: none; margin-top: 4px;
+    }
+    .ve-toolbar button:hover .ve-tp { display: block; }
+    .ve-toolbar .ve-sep { height: 1px; background: #2a2a4a; margin: 2px 0; grid-column: 1 / -1; }
+    .ve-btn-ratio { width: 48px; height: 36px; border: 1px solid #2a2a4a; border-radius: 6px; background: #16213e; color: #e0e0e0; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease; position: relative; }
+    .ve-btn-ratio:hover { background: #1e2a4a; border-color: #4f8cf7; }
+    .ve-btn-ratio.ve-active { background: #4f8cf7; border-color: #4f8cf7; color: #fff; box-shadow: 0 0 12px rgba(79,140,247,0.3); }
+    .ve-btn-ratio svg { width: 18px; height: 12px; }
+    .ve-canvas-wrap { flex: 1; background: #0d0d1a; border: 1px solid #2a2a4a; border-radius: 8px; overflow: hidden; position: relative; cursor: default; display: flex; align-items: center; justify-content: center; }
+    .ve-canvas-wrap canvas { display: block; }
+    .ve-panel { width: 180px; background: #16213e; border: 1px solid #2a2a4a; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .ve-panel h3 { margin: 0 0 2px; font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .ve-panel textarea { width: 100%; min-height: 56px; max-height: 120px; background: #0d0d1a; border: 1px solid #2a2a4a; border-radius: 5px; color: #e0e0e0; padding: 8px; font-size: 13px; resize: vertical; font-family: inherit; box-sizing: border-box; }
+    .ve-panel textarea:focus { outline: none; border-color: #4f8cf7; }
+    .ve-panel input[type="range"] { width: 100%; accent-color: #4f8cf7; height: 4px; cursor: pointer; }
+    .ve-panel .ve-wl { display: flex; justify-content: space-between; font-size: 12px; color: #888; }
+    .ve-btn { background: #4f8cf7; color: #fff; border: none; border-radius: 5px; padding: 9px 16px; font-size: 13px; cursor: pointer; transition: all 0.15s ease; font-weight: 500; }
+    .ve-btn:hover { background: #3a7ae0; }
+    .ve-btn.ve-dgr { background: #e74c3c; }
+    .ve-btn.ve-dgr:hover { background: #c0392b; }
+    .ve-sl { display: flex; flex-direction: column; gap: 3px; max-height: 160px; overflow-y: auto; margin-top: 2px; }
+    .ve-sl::-webkit-scrollbar { width: 4px; }
+    .ve-sl::-webkit-scrollbar-track { background: transparent; }
+    .ve-sl::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 2px; }
+    .ve-si { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.15s ease; }
+    .ve-si:hover { background: rgba(255,255,255,0.05); }
+    .ve-si.ve-sel { background: rgba(79,140,247,0.15); border-left: 2px solid #4f8cf7; }
+    .ve-si .ve-cd { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.15); flex-shrink: 0; }
+    .ve-si .ve-ei { font-size: 14px; flex-shrink: 0; width: 20px; text-align: center; }
+    .ve-si .ve-el { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #888; font-size: 12px; }
+    .ve-si .ve-ed { cursor: pointer; opacity: 0.4; font-size: 13px; padding: 0 2px; transition: all 0.15s ease; }
+    .ve-si .ve-ed:hover { opacity: 1; color: #e74c3c; }
+    .ve-sh { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; padding: 6px 8px; background: rgba(255,255,255,0.03); border-radius: 4px; }
+    .ve-sh .ve-sic { font-size: 18px; }
+    .ve-sh .ve-snm { font-size: 13px; color: #e0e0e0; font-weight: 500; }
+    </style>
+
+  <!-- Toolbar -->
+  <div class="ve-toolbar">
+    <button class="ve-btn-ratio ve-active" data-ratio="1:1" onclick="ve_setRatio('VE_ELADD','1:1',this)" title="1:1 方形">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="1"/></svg>
+      <span class="ve-tp">1:1</span>
+    </button>
+    <button class="ve-btn-ratio" data-ratio="16:9" onclick="ve_setRatio('VE_ELADD','16:9',this)" title="16:9 横屏">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="1"/></svg>
+      <span class="ve-tp">16:9</span>
+    </button>
+    <button class="ve-btn-ratio" data-ratio="9:16" onclick="ve_setRatio('VE_ELADD','9:16',this)" title="9:16 竖屏">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="1"/></svg>
+      <span class="ve-tp">9:16</span>
+    </button>
+    <div class="ve-sep"></div>
+    <button onclick="ve_selectElement('VE_ELADD','人物',this)" title="人物">
+      <span style="font-size:22px">👤</span>
+      <span class="ve-tp">人物</span>
+    </button>
+    <button onclick="ve_selectElement('VE_ELADD','物品',this)" title="物品">
+      <span style="font-size:22px">☕</span>
+      <span class="ve-tp">物品</span>
+    </button>
+    <button onclick="ve_selectElement('VE_ELADD','建筑',this)" title="建筑">
+      <span style="font-size:22px">🏠</span>
+      <span class="ve-tp">建筑</span>
+    </button>
+    <button onclick="ve_selectElement('VE_ELADD','交通',this)" title="交通">
+      <span style="font-size:22px">🚗</span>
+      <span class="ve-tp">交通</span>
+    </button>
+    <button onclick="ve_selectElement('VE_ELADD','天象',this)" title="天象">
+      <span style="font-size:22px">⭐</span>
+      <span class="ve-tp">天象</span>
+    </button>
+    <button onclick="ve_selectElement('VE_ELADD','山景',this)" title="山景">
+      <span style="font-size:22px">⛰️</span>
+      <span class="ve-tp">山景</span>
+    </button>
+    <button onclick="ve_selectElement('VE_ELADD','武器',this)" title="武器">
+      <span style="font-size:22px">🗡️</span>
+      <span class="ve-tp">武器</span>
+    </button>
+    <div class="ve-sep"></div>
+    <button onclick="ve_clickTool(event,this,'VE_ELADD','select')" class="ve-active" title="选择/移动">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+      <span class="ve-tp">选择</span>
+    </button>
+    <button onclick="ve_delete('VE_ELADD')" title="删除选中">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      <span class="ve-tp">删除</span>
+    </button>
+    <div class="ve-sep"></div>
+    <button onclick="ve_clear('VE_ELADD')" title="清空所有">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+      <span class="ve-tp">清空</span>
+    </button>
+  </div>
+
+  <!-- Canvas -->
+  <div class="ve-canvas-wrap" id="ve-canvas-wrap-VE_ELADD">
+    <canvas id="ve-canvas-VE_ELADD"></canvas>
+  </div>
+
+  <!-- Properties Panel -->
+  <div class="ve-panel">
+    <h3>选中的元素</h3>
+    <div id="ve-nosel-VE_ELADD" style="font-size:12px;color:#888;padding:12px 0;text-align:center;">点击画布上的元素选中</div>
+    <div id="ve-selprops-VE_ELADD" style="display:none;">
+      <div class="ve-sh">
+        <span class="ve-sic" id="ve-sic-VE_ELADD"></span>
+        <span class="ve-snm" id="ve-snm-VE_ELADD"></span>
+        <span class="ve-cd" id="ve-scd-VE_ELADD" style="width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,255,255,0.2);flex-shrink:0;margin-left:auto;"></span>
+      </div>
+      <h3>提示词</h3>
+      <textarea id="ve-pt-VE_ELADD" placeholder="输入此区域的提示词，如: 一个穿红裙的女孩"></textarea>
+      <div class="ve-wl">
+        <span>区域权重</span>
+        <span id="ve-wv-VE_ELADD">1.0</span>
+      </div>
+      <input type="range" id="ve-ws-VE_ELADD" min="0" max="2" step="0.1" value="1.0">
+    </div>
+    <button class="ve-btn" id="ve-gen-VE_ELADD">生成遮罩并应用</button>
+    <h3 style="margin-top:2px;">场景元素列表</h3>
+    <div class="ve-sl" id="ve-sl-VE_ELADD"></div>
+  </div>
+</div>

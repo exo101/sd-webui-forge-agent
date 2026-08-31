@@ -1,0 +1,15 @@
+# Intentionally excludes torch, torchvision and numpy: Forge owns those packages.
+# Forge-Neo currently pins OmegaConf 2.2.x, while upstream SeedVR2 declares >=2.3.
+# We do not force-upgrade it here because changing a Forge-pinned dependency is riskier
+# than preserving the host environment. The adapter uses the host version first.
+safetensors
+tqdm
+psutil
+einops
+omegaconf
+diffusers>=0.33.1
+peft>=0.17.0
+rotary-embedding-torch>=0.5.3
+opencv-python
+gguf
+matplotlib

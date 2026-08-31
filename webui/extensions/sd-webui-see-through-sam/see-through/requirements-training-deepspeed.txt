@@ -1,0 +1,8 @@
+# DeepSpeed for multi-GPU distributed training (requires C++ compiler + CUDA toolkit)
+# Install: pip install -r requirements-training-deepspeed.txt
+deepspeed==0.15.4
+
+# Optional extras (uncomment as needed):
+# wandb          — experiment tracking
+# bitsandbytes   — 8-bit Adam optimizer (--use_8bit_adam flag)
+# torchmetrics   — FID/LPIPS/PSNR benchmarks (scripts/benchmark.py)

@@ -1,0 +1,44 @@
+# ============================================
+# Documentação privada de contexto para IA
+# ============================================
+.github/copilot-instructions.md
+AGENTS.local.md
+docs/PROJECT_LOG.md
+.specstory/
+.github/internal-sync-rules.md
+docs/INTERNAL_SYNC_RULES.md
+
+# ============================================
+# Runtime / Cache / Estado da aplicação
+# ============================================
+config_states/
+lib/models/
+aria2/running
+aria2/_
+favoriteCreators.txt
+bannedCreators.txt
+
+# ============================================
+# Python
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+
+# ============================================
+# IDE / Editors
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+
+AGENTS.md
+
