@@ -583,7 +583,22 @@
     return !!target && target.offsetWidth > 0 && target.offsetHeight > 0 && getComputedStyle(target).visibility !== "hidden";
   }
 
+  let configRefreshing = false;
+  async function refreshConfig() {
+    if (configRefreshing) return;
+    configRefreshing = true;
+    try {
+      const fresh = await request("/settings");
+      if (fresh && typeof fresh === "object") {
+        state.config = fresh;
+        if ($(".h3s-settings-modal", root())) openSettings();
+      }
+    } catch (e) { }
+    finally { configRefreshing = false; }
+  }
+
   function onEnter() {
+    if (state.boot) refreshConfig();
     if (!state.boot || state.entered) return;
     state.entered = true;
     if (state.backend.ready) loadCatalog();
@@ -593,6 +608,11 @@
   async function ensureBackend(force = false) {
     if (state.backendStarting || state.backend.ready) return;
     if (!force && state.config.auto_start_on_tab === false) return;
+    // 云端 API 模式不需要启动本地 ComfyUI，仅刷新后端状态
+    if (state.config.backend_mode === "api") {
+      try { state.backend = await request("/backend/status"); updateBackendUi(); } catch (_) { }
+      return;
+    }
     state.backendStarting = true;
     showStartOverlay(true, "正在启动 H3 后端", state.config.backend_mode === "external" ? "连接外部 ComfyUI…" : "启动本地托管 ComfyUI…");
     try {
@@ -1043,6 +1063,7 @@
     else if (name === "preview-workflow") previewWorkflow();
     else if (name === "close-modal") closeModal();
     else if (name === "save-settings") saveSettings();
+    else if (name === "clear-api-key") clearApiKey();
     else if (name === "start-backend") { closeModal(); state.entered = true; ensureBackend(true); }
     else if (name === "stop-backend") stopBackend();
     else if (name === "refresh-logs") refreshLogs();
@@ -1074,6 +1095,11 @@
   }
 
   function handleChange(event) {
+    const setting = event.target.dataset.setting;
+    if (setting === "backend_mode") {
+      applySettingsModeVisibility();
+      return;
+    }
     const param = event.target.dataset.param;
     if (param && param !== "prompt") {
       state.params[param] = valueFromInput(event.target);
@@ -1832,29 +1858,74 @@
     } catch (error) { toast(`项目导入失败：${error.message}`, "error"); }
   }
 
+  function applySettingsModeVisibility() {
+    const modal = $(".h3s-settings-modal", root());
+    if (!modal) return;
+    const select = $("[data-setting='backend_mode']", modal);
+    const mode = select?.value || state.config.backend_mode || "managed";
+    const localSection = $("[data-role='local-backend-section']", modal);
+    const cloudSection = $("[data-role='cloud-api-section']", modal);
+    const isCloud = mode === "api";
+    if (localSection) localSection.hidden = isCloud;
+    if (cloudSection) cloudSection.hidden = !isCloud;
+    for (const input of $$("[data-setting]", localSection || modal)) input.disabled = isCloud && !!localSection?.contains(input);
+  }
+
   function openSettings() {
     const c = state.config;
     const discovered = state.backend.discovered_paths || [];
+    const keySet = !!c.minimax_api_key_set;
     const layer = $("[data-role='modal-layer']", root());
     layer.innerHTML = `<div class="h3s-modal-backdrop" data-action="close-modal"></div><div class="h3s-modal h3s-settings-modal"><header><div><strong>后端连接与启动</strong><span>切换到工作台时可自动启动并连接</span></div><button data-action="close-modal">${icon("close")}</button></header><div class="h3s-settings-grid"><section><h3>连接方式</h3>
-      ${field("后端模式", `<select data-setting="backend_mode"><option value="managed">Forge 托管本地 ComfyUI</option><option value="external" ${c.backend_mode === "external" ? "selected" : ""}>连接已经运行的 ComfyUI</option></select>`)}
+      ${field("后端模式", `<select data-setting="backend_mode" data-role="backend-mode"><option value="managed" ${c.backend_mode === "managed" || (!c.backend_mode && c.backend_mode !== "external" && c.backend_mode !== "api") ? "selected" : ""}>Forge 托管本地 ComfyUI</option><option value="external" ${c.backend_mode === "external" ? "selected" : ""}>连接已经运行的 ComfyUI</option><option value="api" ${c.backend_mode === "api" ? "selected" : ""}>云端 API（MiniMax H3）</option></select>`)}
+      <div data-role="cloud-api-section" hidden>
+        ${field("API Base URL", `<input data-setting="minimax_api_base" value="${esc(c.minimax_api_base || "https://api.minimaxi.com")}" placeholder="https://api.minimaxi.com">`, "国内站默认 https://api.minimaxi.com；国际站可改为 https://api.minimax.io")}
+        ${field("API Key", `<div class="h3s-api-key-row"><input type="password" data-setting="minimax_api_key" autocomplete="off" placeholder="${keySet ? "已配置（留空保持不变）" : "sk-api-..."}"><button class="h3s-row-danger" data-action="clear-api-key" ${keySet ? "" : "hidden"}>清除已保存 Key</button></div>`, "密钥仅保存在本机 data/config.json，不会写入项目文件")}
+        <div class="h3s-settings-note"><i>i</i><span>云端模式由后端直接调用 MiniMax H3 接口，无需启动本地 ComfyUI。保存后即生效。</span></div>
+      </div>
+      <div data-role="local-backend-section">
       ${field("ComfyUI 地址", `<input data-setting="comfy_url" value="${esc(c.comfy_url || "http://127.0.0.1:8189")}">`)}
       ${field("ComfyUI / Portable 目录", `<input data-setting="comfy_path" list="h3s-comfy-paths" value="${esc(c.comfy_path || discovered[0] || "")}" placeholder="例如 D:\\ComfyUI_windows_portable"><datalist id="h3s-comfy-paths">${discovered.map((path) => `<option value="${esc(path)}"></option>`).join("")}</datalist>`, "托管模式需要；可选择包含 ComfyUI 子目录的 Portable 根目录")}
       ${field("Python 可执行文件（可留空）", `<input data-setting="python_executable" value="${esc(c.python_executable || "")}" placeholder="自动寻找 python_embeded 或 venv">`)}
       <div class="h3s-field-grid">${field("端口", `<input type="number" data-setting="port" value="${Number(c.port || 8189)}">`)}${field("启动超时（秒）", `<input type="number" data-setting="startup_timeout" value="${Number(c.startup_timeout || 180)}">`)}</div>
       ${field("额外启动参数", `<input data-setting="extra_args" value="${esc(c.extra_args || "")}">`)}
       <label class="h3s-toggle-line"><input type="checkbox" data-setting="auto_start_on_tab" ${c.auto_start_on_tab !== false ? "checked" : ""}><span><b>进入 H3 页签时自动启动</b><small>已运行时只检查连接，不会重复创建进程</small></span></label>
+      </div>
       <div class="h3s-settings-actions"><button data-action="save-settings" class="h3s-primary-btn">保存设置</button><button data-action="start-backend">启动/连接</button><button data-action="stop-backend" class="danger">停止托管后端</button></div></section>
       <section><h3>后端状态</h3><div class="h3s-backend-summary" data-state="${esc(state.backend.ready ? "ready" : state.backend.state)}"><i></i><div><strong>${state.backend.ready ? "已连接" : state.backend.state === "starting" ? "正在启动" : "未连接"}</strong><span>${esc(state.backend.url || c.comfy_url || "")}</span></div></div><div class="h3s-log-head"><span>启动日志</span><button data-action="refresh-logs">${icon("refresh")}</button></div><pre data-role="backend-logs">点击刷新读取日志…</pre><div class="h3s-settings-foot"><button data-action="import-project">导入项目 JSON</button><button data-action="export-project">导出当前项目</button></div></section></div></div>`;
+    applySettingsModeVisibility();
     refreshLogs();
   }
 
   async function saveSettings() {
     const modal = $(".h3s-settings-modal", root()); if (!modal) return;
     const payload = {};
-    $$('[data-setting]', modal).forEach((input) => { payload[input.dataset.setting] = valueFromInput(input); });
-    try { state.config = await request("/settings", { method: "POST", body: payload }); toast("设置已保存", "success"); closeModal(); state.backend = await request("/backend/status"); updateBackendUi(); }
-    catch (error) { toast(error.message, "error", 7000); }
+    $$('[data-setting]', modal).forEach((input) => {
+      if (input.disabled) return;
+      const key = input.dataset.setting;
+      const value = valueFromInput(input);
+      // 已配置 Key 时留空表示保持不变，不覆盖后端已保存的密钥
+      if (key === "minimax_api_key" && value === "" && state.config.minimax_api_key_set) return;
+      payload[key] = value;
+    });
+    try {
+      state.config = await request("/settings", { method: "POST", body: payload });
+      toast("设置已保存", "success");
+      const wasCloud = state.config.backend_mode === "api";
+      closeModal();
+      state.backend = await request("/backend/status");
+      updateBackendUi();
+      if (!wasCloud && state.backend.ready) await loadCatalog(true);
+    } catch (error) { toast(error.message, "error", 7000); }
+  }
+
+  async function clearApiKey() {
+    if (!window.confirm("确定要清除已保存的 MiniMax API Key 吗？此操作不可撤销。")) return;
+    try {
+      state.config = await request("/settings", { method: "POST", body: { clear_minimax_api_key: true } });
+      toast("API Key 已清除", "success");
+      openSettings();
+    } catch (error) { toast(error.message, "error", 7000); }
   }
 
   async function stopBackend() {

@@ -4,3 +4,4 @@ __pycache__/
 .ruff_cache/
 data/config.json
 data/lora_presets.json
+data/cloud_uploads/

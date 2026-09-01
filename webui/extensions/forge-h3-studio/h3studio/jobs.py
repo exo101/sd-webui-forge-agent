@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import re
+import shutil
 import threading
 import time
 import uuid
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any
 
+from .cloud_client import CLOUD_UPLOAD_DIR, CloudClient
 from .comfy_client import ComfyClient
+from .config import load_config
 from .errors import H3StudioError
 from .workflow import build_h3_workflow
 
@@ -216,6 +220,9 @@ class JobStore:
             job.updated_at = now
 
     def submit(self, request: dict[str, Any]) -> dict[str, Any]:
+        config = load_config()
+        if str(config.get("backend_mode") or "") == "api" and CloudClient(config).enabled():
+            return self._submit_cloud(request, config)
         client = ComfyClient()
         health = client.health()
         if not health.get("ok"):
@@ -346,6 +353,119 @@ class JobStore:
                 job.error = "任务监控超过 24 小时"
                 job.updated_at = time.time()
         self._close_stream(job_id)
+
+    def _submit_cloud(self, request: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
+        """Submit a video generation task to the MiniMax H3 cloud API."""
+        client = CloudClient(config)
+        workflow, summary = build_h3_workflow(request)
+        requested_client_id = str(request.get("client_id") or "")
+        client_id = requested_client_id if re.fullmatch(r"[A-Za-z0-9_-]{16,128}", requested_client_id) else uuid.uuid4().hex
+        now = time.time()
+        job = StudioJob(
+            id=str(uuid.uuid4()),
+            prompt_id="",
+            client_id=client_id,
+            state="queued",
+            created_at=now,
+            updated_at=now,
+            summary=summary,
+            workflow=workflow,
+        )
+        with self._lock:
+            self._jobs[job.id] = job
+            self._trim()
+        try:
+            task_id = client.submit(request)
+        except Exception:
+            with self._lock:
+                self._jobs.pop(job.id, None)
+            raise
+        with self._lock:
+            job.prompt_id = str(task_id)
+            job.updated_at = time.time()
+        threading.Thread(target=self._monitor_cloud, args=(job.id,), daemon=True).start()
+        return job.public()
+
+    def _monitor_cloud(self, job_id: str) -> None:
+        """Poll MiniMax cloud task status, download result and persist locally."""
+        client = CloudClient()
+        started = time.time()
+        success_states = {"success", "completed", "done", "succeeded"}
+        failed_states = {"fail", "failed", "error", "cancelled", "canceled"}
+        while time.time() - started < 24 * 60 * 60:
+            with self._lock:
+                job = self._jobs.get(job_id)
+                if job is None:
+                    return
+                if job.state in {"completed", "failed", "cancelled"}:
+                    return
+                task_id = job.prompt_id
+            try:
+                result = client.query(task_id)
+                status = str(result.get("status") or "").lower()
+                video_url = str(result.get("video_url") or "")
+                error = str(result.get("error") or "")
+                with self._lock:
+                    job = self._jobs.get(job_id)
+                    if job is None:
+                        return
+                    if status in success_states:
+                        if not video_url:
+                            job.state = "failed"
+                            job.error = "云端任务成功但没有返回视频地址"
+                            job.completed_at = time.time()
+                            job.updated_at = job.completed_at
+                            break
+                        try:
+                            content, filename = client.download(video_url)
+                            CLOUD_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+                            cloud_path = CLOUD_UPLOAD_DIR / filename
+                            cloud_path.write_bytes(content)
+                            # Also copy to webui standard output directory
+                            webui_dir = Path(__file__).resolve().parents[3]
+                            out_dir = webui_dir / "outputs" / "h3_video"
+                            out_dir.mkdir(parents=True, exist_ok=True)
+                            out_path = out_dir / filename
+                            shutil.copy2(cloud_path, out_path)
+                            job.outputs = [
+                                {"filename": filename, "subfolder": "", "type": "output"}
+                            ]
+                            job.state = "completed"
+                            job.error = ""
+                            job.progress["nodePercent"] = 100.0
+                            job.progress["overallPercent"] = 100.0
+                            job.progress["nodeTitle"] = "生成完成"
+                        except Exception as dl_exc:
+                            job.state = "failed"
+                            job.error = f"下载云端视频失败：{dl_exc}"
+                        job.completed_at = time.time()
+                        job.updated_at = job.completed_at
+                        break
+                    elif status in failed_states:
+                        job.state = "failed"
+                        job.error = error or "云端任务失败"
+                        job.completed_at = time.time()
+                        job.updated_at = job.completed_at
+                        break
+                    else:
+                        job.state = "running" if status else "queued"
+                        if job.started_at is None:
+                            job.started_at = time.time()
+                        job.updated_at = time.time()
+            except Exception as exc:
+                with self._lock:
+                    job = self._jobs.get(job_id)
+                    if job is not None and job.state not in {"completed", "failed", "cancelled"} and not job.error:
+                        job.error = f"云端状态检查暂时失败：{exc}"
+                        job.updated_at = time.time()
+            time.sleep(3.0)
+        else:
+            with self._lock:
+                job = self._jobs.get(job_id)
+                if job is not None and job.state not in {"completed", "failed", "cancelled"}:
+                    job.state = "failed"
+                    job.error = "云端任务监控超过 24 小时"
+                    job.updated_at = time.time()
 
     def get(self, job_id: str, *, include_workflow: bool = False) -> dict[str, Any]:
         with self._lock:
