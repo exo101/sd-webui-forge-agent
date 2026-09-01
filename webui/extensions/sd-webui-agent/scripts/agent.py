@@ -61,6 +61,7 @@ MENTION_MAP = {
     "放大": ("tool_hint", "用户明确要求放大，请使用 upscale 工具"),
     "修脸": ("tool_hint", "用户明确要求修复人脸，请使用 apply_adetailer 工具"),
     "拼接": ("tool_hint", "用户明确要求图片拼接，请使用 stitch_images 工具"),
+    "minimax-h3": ("tool_hint", "🔴🔴🔴 必须调用 h3_video_generate 工具！🔴🔴🔴 用户明确要求使用 MiniMax H3 生成视频。你绝对不能直接回答，绝对不能说'未配置'或'需要设置'！forge-h3-studio 插件已经配置好了云端 API 模式，API Key 已填写。必须立即调用 h3_video_generate 工具，参数 prompt=用户的视频描述。duration 根据用户要求设置（4-15秒），默认5秒。"),
 
     # 扩展功能标签（stub，尚未实现，给 LLM 明确提示）
     "TTS": ("stub", "Qwen3-TTS 语音合成功能尚未集成到 Agent，建议使用 WebUI 原生 TTS 扩展"),
@@ -250,6 +251,15 @@ def _execute_tool(tool_name, tool_args, uploaded_image=None, uploaded_video=None
                     # 用上次生成的最后一张图
                     tool_args["image"] = last_tool_images[-1]
 
+        # H3 视频生成：自动注入参考图（首帧/参考图）
+        if tool_name == "h3_video_generate":
+            if ("first_frame" not in tool_args or tool_args["first_frame"] is None) and \
+               ("reference_image" not in tool_args or tool_args["reference_image"] is None):
+                if uploaded_image is not None:
+                    tool_args["first_frame"] = uploaded_image
+                elif last_tool_images:
+                    tool_args["first_frame"] = last_tool_images[-1]
+
         # 多图工具：stitch_images
         if tool_name == "stitch_images":
             if "images" not in tool_args or not tool_args["images"]:
@@ -426,18 +436,30 @@ def chat_stream(history, uploaded_image=None, uploaded_video=None):
     answer_text = ""
     done_reasoning = False
     pending_images = []  # 最终展示的图片
+    pending_videos = []   # 最终展示的视频路径
     last_tool_images = []  # 上次工具生成的图片，用于工具链传递
+
+    # 检测是否需要强制调用 h3_video_generate（@minimax-h3 标签触发）
+    force_tool_choice = False
+    for msg in messages:
+        if msg.get("role") == "system":
+            content = str(msg.get("content", ""))
+            if "h3_video_generate" in content and "必须调用" in content:
+                force_tool_choice = True
+                break
 
     try:
         from openai import OpenAI
         client = OpenAI(api_key=cfg["api_key"], base_url=cfg["base_url"])
 
         for iteration in range(cfg["max_tool_iterations"]):
+            # 首轮强制 tool_choice="required"（@minimax-h3 标签场景）
+            current_tool_choice = "required" if (force_tool_choice and iteration == 0) else "auto"
             stream = client.chat.completions.create(
                 model=cfg["model"],
                 messages=messages,
                 tools=TOOLS,
-                tool_choice="auto",
+                tool_choice=current_tool_choice,
                 stream=True,
             )
 
@@ -518,10 +540,22 @@ def chat_stream(history, uploaded_image=None, uploaded_video=None):
                     if images:
                         last_tool_images = images
 
+                    # 提取视频路径（h3_video_generate 等视频工具）
+                    try:
+                        result_data = json.loads(result_str)
+                        info = result_data.get("info", result_data.get("data", {}))
+                        video_path = info.get("video_path") if isinstance(info, dict) else None
+                        if video_path and os.path.isfile(video_path):
+                            pending_videos.append(video_path)
+                    except Exception:
+                        pass
+
                     messages.append({"role": "tool", "tool_call_id": tc["id"], "content": result_str})
 
                     if images:
                         yield new_history, f"✅ {tool_name} 完成，生成 {len(images)} 张图片"
+                    elif pending_videos and len(pending_videos) > 0:
+                        yield new_history, f"✅ {tool_name} 完成，生成视频"
                     else:
                         yield new_history, f"✅ {tool_name} 完成"
 
@@ -529,12 +563,12 @@ def chat_stream(history, uploaded_image=None, uploaded_video=None):
 
             break
 
-        # 最终回答 + 图片
+        # 最终回答 + 图片 + 视频
         # Gradio 5 Chatbot type='messages' 不支持列表混合格式，
-        # 所以文本和图片分成多条 assistant 消息
-        if pending_images:
+        # 所以文本和图片/视频分成多条 assistant 消息
+        if pending_images or pending_videos:
             # 文本消息
-            final_text = answer_text if answer_text else "已为你生成图片："
+            final_text = answer_text if answer_text else "已为你生成结果："
             new_history[-1] = {"role": "assistant", "content": final_text}
             # 每条图片单独一条消息，用 path dict 格式
             for i, img in enumerate(pending_images):
@@ -544,6 +578,12 @@ def chat_stream(history, uploaded_image=None, uploaded_video=None):
                         "role": "assistant",
                         "content": {"path": img_path, "alt_text": f"生成的图片 {i+1}"}
                     })
+            # 每条视频单独一条消息，用 path dict 格式
+            for i, vpath in enumerate(pending_videos):
+                new_history.append({
+                    "role": "assistant",
+                    "content": {"path": vpath, "alt_text": f"生成的视频 {i+1}"}
+                })
             yield new_history, "✅ 完成"
         else:
             new_history[-1] = {"role": "assistant", "content": answer_text}
