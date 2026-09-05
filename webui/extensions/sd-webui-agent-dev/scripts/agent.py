@@ -1202,16 +1202,13 @@ def on_ui_tabs():
             url = provider_base_url(provider) or normalize_base_url(current_url)
             return url
 
-        # 辅助函数：LLM 大脑供应商切换时更新 Base URL 和模型下拉列表
-        def on_llm_provider_change(provider, current_url):
+        # 辅助函数：LLM 大脑供应商切换时更新 Base URL 和模型下拉列表（仅显示该供应商模型）
+        def on_llm_provider_change(provider, current_url, current_model):
             url = provider_base_url(provider) or normalize_base_url(current_url)
             llm_models = LLM_MODELS_BY_PROVIDER.get(provider, [])
-            all_models = list(llm_models)
-            for p_models in LLM_MODELS_BY_PROVIDER.values():
-                for m in p_models:
-                    if m not in all_models:
-                        all_models.append(m)
-            return url, gr.update(choices=all_models if all_models else [], allow_custom_value=True)
+            # 如果当前模型不在新供应商列表中，回退到该供应商第一个模型
+            new_value = current_model if current_model in llm_models else (llm_models[0] if llm_models else current_model)
+            return url, gr.update(choices=llm_models, value=new_value, allow_custom_value=True)
 
         gr.HTML("""
         <div style="text-align:center; margin-bottom: 10px;">
@@ -1325,19 +1322,14 @@ def on_ui_tabs():
                         clear_api_key_btn = gr.Button("清空 API Key", size="sm", scale=1)
                     base_url = gr.Textbox(label="Base URL", value=cfg_init["base_url"], visible=False)
                     current_provider = cfg_init.get("api_provider", "ModelScope")
+                    # 模型列表仅显示当前供应商的模型，切换供应商时动态更新
                     llm_choices = LLM_MODELS_BY_PROVIDER.get(current_provider, [])
-                    # 合并所有供应商的 LLM 模型，确保切换供应商后仍可选择
-                    all_llm_models = []
-                    for p_models in LLM_MODELS_BY_PROVIDER.values():
-                        for m in p_models:
-                            if m not in all_llm_models:
-                                all_llm_models.append(m)
                     model_name = gr.Dropdown(
                         label="模型 ID（智能体大脑）",
-                        choices=all_llm_models if all_llm_models else [cfg_init["model"]],
+                        choices=llm_choices if llm_choices else [cfg_init["model"]],
                         value=cfg_init["model"],
                         allow_custom_value=True,
-                        info="可从列表选择或手动输入自定义模型 ID",
+                        info="先选择上方 API 供应商，此处显示该供应商的模型；也可手动输入自定义模型 ID",
                     )
                     save_settings_btn = gr.Button("💾 保存设置", variant="secondary")
                     settings_status = gr.Textbox(show_label=False, interactive=False)
@@ -1645,7 +1637,7 @@ def on_ui_tabs():
         upload_image.change(fn=on_image_upload, inputs=[upload_image], outputs=[state_image])
         upload_video.change(fn=on_video_upload, inputs=[upload_video], outputs=[state_video])
 
-        api_provider.change(fn=on_llm_provider_change, inputs=[api_provider, base_url], outputs=[base_url, model_name])
+        api_provider.change(fn=on_llm_provider_change, inputs=[api_provider, base_url, model_name], outputs=[base_url, model_name])
 
         # 首页 API 模型下拉切换 — 即时保存 provider 和 model
         def on_api_model_select(api_model_value):
