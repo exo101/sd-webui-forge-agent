@@ -401,13 +401,21 @@ def _extract_requested_api_model(messages):
 
 
 def _has_requested_local_model(messages):
+    """只检查最新的系统消息是否包含本地模型切换标记。
+
+    不能遍历所有历史消息：一旦用户曾经切换过本地模型（如 @klein），
+    旧消息会永久存在，导致后续即使选择了 API 模型也被错误跳过路由。
+    """
+    latest_system = ""
     for msg in messages:
-        if msg.get("role") != "system":
-            continue
-        content = str(msg.get("content", ""))
-        if "用户指定了 @" in content and "已自动切换到" in content:
-            return True
-    return False
+        if msg.get("role") == "system":
+            latest_system = str(msg.get("content", ""))
+    if not latest_system:
+        return False
+    # 最新系统消息中如果明确切换到了 API 模式，则不算本地模型请求
+    if "API 模型" in latest_system and ("已切换" in latest_system or "已选择" in latest_system):
+        return False
+    return "用户指定了 @" in latest_system and "已自动切换到" in latest_system
 
 
 def _should_protect_api_image_model(requested_api_model):
@@ -992,15 +1000,18 @@ def chat_stream(history, uploaded_image=None, uploaded_video=None):
                         tool_args = {}
                     original_tool_name = tool_name
                     requested_layer_separation = _has_requested_layer_separation(user_message)
+                    # 检查配置中是否有 API 模型（用户在设置区保存的优先于历史本地标记）
+                    _cfg_img_model_now = _configured_image_model()
+                    _cfg_has_api_model_now = _is_configured_api_image_model(_cfg_img_model_now)
                     if requested_layer_separation and tool_name in ("remove_background", "segment_anything", "sam"):
                         tool_name = "layer_separation"
                         tool_args = {"output_format": tool_args.get("output_format", "psd")}
                         print(f"[Agent] 用户明确要求图层分离，已阻止 {original_tool_name}，强制使用 See-Through layer_separation")
-                    elif requested_local_model and tool_name == "api_image_edit":
+                    elif requested_local_model and not _cfg_has_api_model_now and tool_name == "api_image_edit":
                         tool_name = "edit_image"
                         tool_args = {"instruction": tool_args.get("instruction") or user_message}
                         print("[Agent] 用户指定本地模型，已阻止 api_image_edit，改用本地 edit_image")
-                    elif requested_local_model and tool_name == "api_image_generate":
+                    elif requested_local_model and not _cfg_has_api_model_now and tool_name == "api_image_generate":
                         # 用户选择了本地模型（如 @z_image），不能用 API 生图，强制改回本地 txt2img
                         prompt = tool_args.get("prompt") or user_message
                         tool_name = "txt2img"
@@ -1010,8 +1021,13 @@ def chat_stream(history, uploaded_image=None, uploaded_video=None):
                         tool_name, tool_args = _coerce_api_image_edit_tool(
                             tool_name, tool_args, requested_api_model, user_message
                         )
-                        # 用户选择了本地模型时，跳过按 API 模型的工具修正
-                        if not requested_local_model:
+                        # 只有当用户明确选择了本地模型 AND 配置中没有 API 模型时，才跳过 API 路由
+                        # 如果配置了 API 模型（用户在设置区保存的），优先路由到 API
+                        _cfg_img_model = _configured_image_model()
+                        _cfg_has_api_model = _is_configured_api_image_model(_cfg_img_model)
+                        if not requested_local_model or _cfg_has_api_model:
+                            if requested_local_model and _cfg_has_api_model:
+                                print(f"[Agent] 配置了 API 模型 {_cfg_img_model}，优先使用 API 路由，忽略历史本地模型标记")
                             tool_name, tool_args = _coerce_generation_tool_by_selected_model(
                                 tool_name, tool_args, user_message
                             )
@@ -1223,9 +1239,9 @@ def on_ui_tabs():
                 # 模型选择下拉列表 — 替换原来的 @快捷指令按钮
                 with gr.Row():
                     local_model_select = gr.Dropdown(
-                        label="🎯 本地模型/工具",
+                        label="🎯 本地模型/工具（仅在需要本地生成时选择）",
                         choices=[
-                            ("默认/不指定", ""),
+                            ("不使用本地模型", ""),
                             ("🎨 @krea2 多风格美学", "@krea2"),
                             ("✏️ @klein 编辑模型", "@klein"),
                             ("🌸 @anima 二次元动漫", "@anima"),
@@ -1242,9 +1258,9 @@ def on_ui_tabs():
                         scale=1,
                     )
                     api_model_select = gr.Dropdown(
-                        label="🌐 API 图像模型",
+                        label="🌐 API 图像模型（选择后立即生效）",
                         choices=[
-                            ("默认/不指定", ""),
+                            ("保持当前设置", ""),
                             ("🤖 YoboxAI · banana2", "YoboxAI|banana2"),
                             ("🤖 YoboxAI · bananapro", "YoboxAI|bananapro"),
                             ("🧩 ModelScope · Krea-2-Turbo", "ModelScope|krea/Krea-2-Turbo"),
@@ -1397,6 +1413,7 @@ def on_ui_tabs():
 
             # ===== 下拉列表自动注入 =====
             prefix = ""
+            api_switched = False  # 标记本次是否切换了 API 模型
 
             # 本地模型/工具下拉 — 自动 prepend @标签
             if local_model_value and str(local_model_value).strip():
@@ -1443,6 +1460,7 @@ def on_ui_tabs():
                         shared.opts.set("forge_api_model", model)
                         set_session_api_key(cfg.get("image_api_key", ""))
                         print(f"[Agent] API 图像模型已切换: provider={provider}, model={model}")
+                        api_switched = True  # 标记切换成功
                     except Exception as e:
                         print(f"[Agent] API 模型切换失败: {e}")
 
@@ -1464,6 +1482,8 @@ def on_ui_tabs():
             # system 消息必须在开头，放在 assistant 后面会报错 "System message must be at the beginning"。
             # 改为合并到已有的第一条 system 消息中，或插入到 history 开头。
             hidden_notes = []
+            if api_switched:
+                hidden_notes.append("✅ API 模型已切换为远程图像生成模式，必须使用 api_image_generate/api_image_edit 工具，禁止使用本地 txt2img/edit_image/Klein 模型。")
             if model_note:
                 hidden_notes.append(model_note)
             if api_model_note:
