@@ -1183,6 +1183,11 @@ def on_ui_tabs():
         print(f"[Agent] 启动恢复配置异常: {_e}")
 
     with gr.Blocks(analytics_enabled=False) as agent_interface:
+        # 辅助函数：供应商切换时自动更新 Base URL（需在 UI 定义前声明）
+        def on_provider_change(provider, current_url):
+            url = provider_base_url(provider) or normalize_base_url(current_url)
+            return url
+
         gr.HTML("""
         <div style="text-align:center; margin-bottom: 10px;">
             <h2 style="color: #c084fc;">绘梦智能体助手 — AI 全能生图智能体</h2>
@@ -1300,6 +1305,11 @@ def on_ui_tabs():
                     settings_status = gr.Textbox(show_label=False, interactive=False)
 
                     gr.Markdown("### 图像/视频生成 API 设置（独立于 Agent 大脑）")
+                    image_api_provider = gr.Dropdown(
+                        label="生成 API 供应商（选择对应平台的 Key，勿混用）",
+                        choices=list(API_PROVIDERS.keys()),
+                        value=cfg_init.get("image_api_provider", "YoboxAI"),
+                    )
                     with gr.Row():
                         image_api_key = gr.Textbox(
                             label="生成 API Key（图像模型选择在首页）",
@@ -1313,6 +1323,12 @@ def on_ui_tabs():
                         label="生成 API Base URL",
                         value=cfg_init.get("image_base_url") or cfg_init.get("video_base_url", "https://api.yoboxai.com/v1"),
                         visible=False,
+                    )
+                    # 切换供应商时自动更新 Base URL
+                    image_api_provider.change(
+                        fn=on_provider_change,
+                        inputs=[image_api_provider, image_base_url],
+                        outputs=[image_base_url],
                     )
                     save_image_settings_btn = gr.Button("💾 保存生成 API 设置", variant="secondary")
                     image_settings_status = gr.Textbox(show_label=False, interactive=False)
@@ -1507,15 +1523,14 @@ def on_ui_tabs():
                 _sync_forge_api_key(key)
             return "✅ 设置已保存" if ok else "❌ 保存失败"
 
-        def save_image_settings(key, url):
+        def save_image_settings(provider, key, url):
             cfg = load_config(resolve_local=False)
             normalized_url = normalize_base_url(url)
-            # provider、image_model、video_model 由首页 API 模型下拉切换时保存
-            provider = cfg.get("image_api_provider", "YoboxAI")
             # 如果用户没填 base_url，根据供应商自动补全
             if not normalized_url:
                 normalized_url = provider_base_url(provider)
                 print(f"[Agent] save_image_settings: base_url 为空，自动补全为 {normalized_url}")
+            cfg["image_api_provider"] = provider
             cfg["image_api_key"] = key
             cfg["image_base_url"] = normalized_url
             cfg["video_api_provider"] = provider
@@ -1575,10 +1590,6 @@ def on_ui_tabs():
             _clear_all_persisted_keys()
             return "", "✅ 生成 API Key 已清空（所有存储位置）" if ok else "❌ 生成 API Key 清空失败"
 
-        def on_provider_change(provider, current_url):
-            url = provider_base_url(provider) or normalize_base_url(current_url)
-            return url
-
         def detect_local(use_local_mode):
             """手动触发本地模型检测，清除缓存强制重新扫描。仅当 local_mode 开启时才执行。"""
             if not use_local_mode:
@@ -1621,7 +1632,7 @@ def on_ui_tabs():
         api_model_select.change(fn=on_api_model_select, inputs=[api_model_select], outputs=[image_settings_status])
 
         save_settings_btn.click(fn=save_settings, inputs=[api_provider, api_key, base_url, model_name, local_mode], outputs=[settings_status])
-        save_image_settings_btn.click(fn=save_image_settings, inputs=[image_api_key, image_base_url], outputs=[image_settings_status])
+        save_image_settings_btn.click(fn=save_image_settings, inputs=[image_api_provider, image_api_key, image_base_url], outputs=[image_settings_status])
         clear_api_key_btn.click(fn=clear_api_key, outputs=[api_key, settings_status])
         clear_image_api_key_btn.click(fn=clear_image_api_key, outputs=[image_api_key, image_settings_status])
         detect_btn.click(fn=detect_local, inputs=[local_mode], outputs=[detect_status, model_name, base_url, api_key, api_provider])
