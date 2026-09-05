@@ -1437,11 +1437,27 @@ body[class*="theme-"] #img_comp_row .comp-block img {
     display: block !important;
     user-select: none !important;
     -webkit-user-drag: none !important;
+    pointer-events: none !important;
 }
 
 body[class*="theme-"] #img_comp_row .bar {
     position: absolute !important;
+    top: 0 !important;
+    width: 2px !important;
+    height: 100% !important;
+    transform: translateX(-50%) !important;
     z-index: 500 !important;
+}
+
+body[class*="theme-"] #img_comp_row .comp-handle {
+    position: absolute !important;
+    top: 0 !important;
+    width: 44px !important;
+    height: 100% !important;
+    transform: translateX(-50%) !important;
+    z-index: 600 !important;
+    cursor: ew-resize !important;
+    pointer-events: auto !important;
 }
 
 /* 紧凑控制行：单行排列所有按钮和滑块 */

@@ -1,0 +1,4 @@
+The model architecture in this directory is derived from the open-source
+Depth Anything V2 implementation and DINOv2 components. Preserve the
+upstream Apache-2.0 copyright and license terms when redistributing this
+plugin. The NVIDIA runtime and model weights are subject to their own terms.

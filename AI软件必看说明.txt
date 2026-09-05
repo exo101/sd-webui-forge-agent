@@ -1,8 +1,6 @@
 1.不支持AMD显卡，如果启动器出现闪退，就是因为驱动版本太低，安装英伟达NVIDIA驱动 596.49
 
-2.在sd-webui-forge-neo-v3.5\system\vcredist目录，安装VC_redist.x64.exe修复环境库
- 
-3：模型目录位置：sd-webui-forge-neo-v3/  webui  /  models
+模型目录位置：sd-webui-forge-neo-v3/  webui  /  models
          
 变分解码器                                              vae
 图生3d模型目录                                      trellis2   

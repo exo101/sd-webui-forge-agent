@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -67,7 +68,7 @@ def _validate_settings(payload: dict[str, Any]) -> dict[str, Any]:
         raise H3StudioError("设置格式无效")
     cleaned: dict[str, Any] = {}
     if "backend_mode" in payload:
-        if payload["backend_mode"] not in {"managed", "external"}:
+        if payload["backend_mode"] not in {"managed", "external", "api"}:
             raise H3StudioError("后端模式无效")
         cleaned["backend_mode"] = payload["backend_mode"]
     for key in ("comfy_path", "python_executable", "extra_args", "output_prefix"):
@@ -86,13 +87,13 @@ def _validate_settings(payload: dict[str, Any]) -> dict[str, Any]:
         cleaned["request_timeout"] = max(3, min(int(payload["request_timeout"]), 600))
     if "auto_start_on_tab" in payload:
         cleaned["auto_start_on_tab"] = bool(payload["auto_start_on_tab"])
-    if "minimax_api_key" in payload:
+    if payload.get("clear_minimax_api_key") and "minimax_api_key" not in payload:
+        cleaned["minimax_api_key"] = ""
+    elif "minimax_api_key" in payload:
         api_key = str(payload["minimax_api_key"] or "").strip()
         clear_key = bool(payload.get("clear_minimax_api_key"))
-        if clear_key:
-            cleaned["minimax_api_key"] = ""
-        elif api_key:
-            cleaned["minimax_api_key"] = api_key
+        # Key 字段明确提交为空时代表用户要求清空，不能静默保留旧值。
+        cleaned["minimax_api_key"] = "" if clear_key or not api_key else api_key
     if "minimax_api_base" in payload:
         cleaned["minimax_api_base"] = (
             str(payload["minimax_api_base"] or "").strip() or "https://api.minimaxi.com"
@@ -170,6 +171,25 @@ def register_api(_: Any, app: FastAPI) -> None:
             suffix = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
             if suffix not in ASSET_EXTENSIONS:
                 raise H3StudioError("只允许上传常见的图片、视频或音频文件")
+            if load_config().get("backend_mode") == "api":
+                # Cloud mode has no local ComfyUI input endpoint. Keep a private
+                # local copy so the cloud client can send it as a data URL.
+                CLOUD_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+                safe_name = f"{uuid.uuid4().hex}{suffix}"
+                target = CLOUD_UPLOAD_DIR / safe_name
+                with target.open("wb") as output:
+                    while True:
+                        chunk = file.file.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        output.write(chunk)
+                return {
+                    "name": safe_name,
+                    "subfolder": "",
+                    "type": "input",
+                    "file": safe_name,
+                    "url": _asset_url({"name": safe_name, "type": "input"}),
+                }
             result = ComfyClient().upload(file.file, file.filename or "asset.bin", file.content_type)
             result["file"] = "/".join(part for part in (result.get("subfolder"), result.get("name")) if part)
             result["url"] = _asset_url(result)

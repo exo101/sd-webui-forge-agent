@@ -115,6 +115,7 @@ class ApiProvider(Enum):
     dashscope = 2
     pixapi = 3
     openai = 4
+    yoboxai = 5
 
     @staticmethod
     def choices() -> list[str]:
@@ -127,6 +128,7 @@ class ApiProvider(Enum):
             "dashscope": "DashScope (Qwen-Image)",
             "pixapi": "Pixapi.ai",
             "openai": "OpenAI (GPT-Image)",
+            "yoboxai": "YoboxAI",
         }
         return names.get(name, name)
 
@@ -173,6 +175,19 @@ API_PROVIDER_CONFIGS = {
             "dall-e-2",
         ],
     },
+    "yoboxai": {
+        "api_root": "https://api.yoboxai.com",
+        "base_url": "https://api.yoboxai.com/v1/images/generations",
+        "doc_url": "https://api.yoboxai.com/",
+        "fallback_models": [
+            "gpt-image-2",
+            "nano-banana",
+            "gemini-3-pro-image-preview",
+            "gemini-3.1-flash-lite-image",
+            "gemini-3.1-flash-image-preview",
+            "minimax-h3",
+        ],
+    },
 }
 
 
@@ -193,6 +208,10 @@ def fetch_models_from_api(provider: str, api_key: str) -> tuple[list[str], bool]
         return fallback, False
 
     # Pixapi and OpenAI use /v1/models endpoint
+    if provider == "yoboxai":
+        fallback = config.get("fallback_models", [])
+        return fallback, False
+
     url = f"{api_root}/v1/models"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -448,7 +467,7 @@ def _download_image(url: str) -> Image.Image:
 
 def _call_openai_images_api(url: str, headers: dict, payload: dict, expected_count: int) -> list[Image.Image]:
     """Call an OpenAI-compatible /v1/images/generations endpoint."""
-    logger.info(f"Calling OpenAI-compatible API: {url}")
+    logger.info(f"Calling image API: {url}")
     logger.info(f"Payload: {json.dumps(payload, ensure_ascii=False)[:500]}")
 
     sess = _make_session()
@@ -642,6 +661,32 @@ def call_api_openai(prompt: str, negative_prompt: str, api_key: str, model: str,
     return _call_openai_images_api(config["base_url"], headers, payload, n_iter * batch_size)
 
 
+def call_api_yoboxai(prompt: str, negative_prompt: str, api_key: str, model: str, width: int, height: int, n_iter: int, batch_size: int, reference_images: list[Image.Image] = None) -> list[Image.Image]:
+    """Call YoboxAI's OpenAI-compatible image generation/editing API."""
+    config = API_PROVIDER_CONFIGS["yoboxai"]
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "n": n_iter * batch_size,
+        "size": f"{width}x{height}",
+    }
+
+    if negative_prompt:
+        payload["negative_prompt"] = negative_prompt
+
+    if reference_images:
+        payload["image"] = _upload_image_to_hosting(reference_images[0])
+        payload.pop("negative_prompt", None)
+        logger.info(f"Added {len(reference_images)} reference image(s) to YoboxAI payload, using edits endpoint")
+        return _call_openai_images_api(config["api_root"] + "/v1/images/edits", headers, payload, n_iter * batch_size)
+
+    return _call_openai_images_api(config["base_url"], headers, payload, n_iter * batch_size)
+
+
 def generate_with_api(provider: str, prompt: str, negative_prompt: str, api_key: str, model: str, width: int, height: int, n_iter: int, batch_size: int, reference_images: list[Image.Image] = None) -> list[Image.Image]:
     if provider == "modelscope":
         return call_api_modelscope(prompt, negative_prompt, api_key, model, width, height, n_iter, batch_size, reference_images)
@@ -651,5 +696,7 @@ def generate_with_api(provider: str, prompt: str, negative_prompt: str, api_key:
         return call_api_pixapi(prompt, negative_prompt, api_key, model, width, height, n_iter, batch_size, reference_images)
     elif provider == "openai":
         return call_api_openai(prompt, negative_prompt, api_key, model, width, height, n_iter, batch_size, reference_images)
+    elif provider == "yoboxai":
+        return call_api_yoboxai(prompt, negative_prompt, api_key, model, width, height, n_iter, batch_size, reference_images)
     else:
         raise ValueError(f"Unknown API provider: {provider}")

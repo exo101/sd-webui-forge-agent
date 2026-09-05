@@ -1904,8 +1904,6 @@
       if (input.disabled) return;
       const key = input.dataset.setting;
       const value = valueFromInput(input);
-      // 已配置 Key 时留空表示保持不变，不覆盖后端已保存的密钥
-      if (key === "minimax_api_key" && value === "" && state.config.minimax_api_key_set) return;
       payload[key] = value;
     });
     try {

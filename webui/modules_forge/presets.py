@@ -54,7 +54,7 @@ STEPS = {
     PresetArch.sd: 32,
     PresetArch.xl: 24,
     PresetArch.flux: 20,
-    PresetArch.klein: 4,
+    PresetArch.klein: 8,
     PresetArch.qwen: 8,
     PresetArch.lumina: 32,
     PresetArch.zit: 9,

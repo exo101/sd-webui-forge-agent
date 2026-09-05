@@ -23,8 +23,7 @@ def create_ui():
                     extras_batch_output_dir = gr.Textbox(label="Output directory", **shared.hide_dirs, placeholder="Leave blank to save images to the default path.", elem_id="extras_batch_output_dir")
                     show_extras_results = gr.Checkbox(label="Show result images", value=True, elem_id="extras_show_extras_results")
 
-                with gr.Tab("Single Video", id="single_video", elem_id="extras_single_video") as tab_video:
-                    extras_video_input = gr.Textbox(label="Input Clip", info='For video longer than 1 minute, please extract the frames and use "Batch from Directory" instead', **shared.hide_dirs, placeholder="Path to a video file", elem_id="extras_video_input")
+            extras_video_input = gr.File(label="上传视频", interactive=True, elem_id="extras_video_input", file_types=[".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"])
 
             script_inputs = scripts.scripts_postproc.setup_ui()
 
@@ -38,18 +37,21 @@ def create_ui():
     tab_single.select(fn=lambda: 0, outputs=[tab_index], queue=False)
     tab_batch.select(fn=lambda: 1, outputs=[tab_index], queue=False)
     tab_batch_dir.select(fn=lambda: 2, outputs=[tab_index], queue=False)
-    tab_video.select(fn=lambda: 3, outputs=[tab_index], queue=False)
+    extras_image.change(fn=lambda _: 0, inputs=[extras_image], outputs=[tab_index], queue=False)
+    extras_video_input.change(fn=lambda _: 3, inputs=[extras_video_input], outputs=[tab_index], queue=False)
 
     submit_click_inputs = [dummy_component, tab_index, extras_image, image_batch, extras_batch_input_dir, extras_batch_output_dir, show_extras_results, extras_video_input, *script_inputs]
 
     submit.click(
-        fn=call_queue.wrap_gradio_gpu_call(postprocessing.run_postprocessing_webui, extra_outputs=[None, ""]),
+        fn=call_queue.wrap_gradio_gpu_call(postprocessing.run_postprocessing_webui, extra_outputs=[None, None, "", ""]),
         _js="submit_extras",
         inputs=submit_click_inputs,
         outputs=[
             output_panel.gallery,
+            output_panel.player,
             output_panel.generation_info,
             output_panel.html_log,
+            output_panel.comparison,
         ],
         show_progress=False,
     )

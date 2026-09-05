@@ -36,3 +36,53 @@ sd-webui-forge-neo-v3/
 
 # 启动器大文件 (超过 GitHub 100MB 限制)
 *.exe
+
+# ============================================================
+# 敏感配置文件（含 API Key，禁止提交）
+# ============================================================
+# Forge 核心配置（含 forge_api_key）
+webui/config.json
+webui/ui-config.json
+
+# Agent 配置（含 api_key / image_api_key / video_api_key）
+webui/**/agent_config.json
+
+# H3 工作室配置（含 minimax_api_key）
+webui/extensions/forge-h3-studio/data/config.json
+
+# 其他扩展的 data/config.json（可能含 key）
+webui/extensions/*/data/config.json
+
+# 扩展工作区临时文件和上传图片
+webui/extensions/*/workspace/
+webui/extensions/sd-webui-see-through-sam/see-through/workspace/
+
+# 日志文件
+*.log
+
+# 启动脚本（含环境路径，用户本地生成）
+webui/start_webui.bat
+start_webui.bat
+_launch_tmp_*.bat
+
+# DLSS 大文件（158MB+，需 Git LFS 或单独下载）
+webui/extensions/TE-webui-DLSS5/te_dlss5/runtime/
+
+# launcher 运行时配置
+launcher_config.json
+
+# Python 虚拟环境
+venv/
+.venv/
+env/
+
+# IDE 配置
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 操作系统文件
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -150,11 +150,37 @@ window.__sdSidebarLoaded = true;
         'forge_h3_studio': 'MiniMax H3 工作台',
         'aesthetic_enhancement_tab': '视觉分析',
         'multimodal_media_tab': '多媒体处理',
-        'Segmentation_Tab': '智能抠图',
+        'Segmentation_Tab': '图层处理',
         'trellis2_3d_generator': 'TRELLIS 图生3D',
         'tagger': '标签器',
         'sddp-wildcard-manager': '通配符管理',
         'sd_forge_image_stitch': '多图拼接参考'
+    };
+
+    // Some extensions are one outer WebUI tab containing their own Gradio
+    // tabs. Keep these child entries in the sidebar so users can open each
+    // module directly without flattening Gradio's nested tabs.
+    var pluginChildTabs = {
+        'aesthetic_enhancement_tab': [
+            { label: '图像识别', match: '图像识别', elemId: 'aesthetic_image_recognition_tab' },
+            { label: '打光辅助', match: '打光辅助', elemId: 'aesthetic_lighting_tab' },
+            { label: '人物与场景分析', match: '人物与场景分析', elemId: 'aesthetic_character_scene_tab' },
+            { label: '构图技巧', match: '构图技巧', elemId: 'aesthetic_composition_tab' },
+            { label: '画师百科', match: '画师百科', elemId: 'aesthetic_artist_tab' },
+            { label: 'WD14 标签器', tabId: 'tagger' }
+        ],
+        'Segmentation_Tab': [
+            { label: '智能抠图', match: '智能抠图', elemId: 'layer_processing_matting_tab' },
+            { label: '点选分割', match: '点选分割', elemId: 'layer_processing_sam_tab' },
+            { label: '图层分类', match: '图层分类', elemId: 'layer_processing_classification_tab' },
+            { label: '图像清理', match: '图像清理', elemId: 'layer_processing_cleaner_tab' }
+        ],
+        'multimodal_media_tab': [
+            { label: '语音合成', match: 'Qwen3-TTS 语音合成', elemId: 'multimodal_tts_tab' },
+            { label: '视频抽帧', match: '视频关键帧提取', elemId: 'multimodal_frame_extract_tab' },
+            { label: '可灵视频', match: 'Kling 可灵视频生成', elemId: 'multimodal_kling_tab' },
+            { label: '音乐生成', match: 'ACE-Step 音乐生成', elemId: 'multimodal_music_tab' }
+        ]
     };
 
     function getChineseName(tabId, fallbackLabel) {
@@ -221,12 +247,13 @@ window.__sdSidebarLoaded = true;
             }
         }
 
-        var tabButtons = tablist ? tablist.querySelectorAll(':scope > button[role="tab"]') : [];
+        var tabButtons = tablist ? tablist.querySelectorAll('button[role="tab"]') : [];
         // Fallback: direct button children of #tabs (Gradio 4 style)
         if (tabButtons.length === 0) {
-            tabButtons = tabBar.querySelectorAll(':scope > button[role="tab"]');
+            tabButtons = tabBar.querySelectorAll('button[role="tab"]');
         }
         tabButtons.forEach(function(btn) {
+            if (btn.closest('[role="tabpanel"]')) return;
             var panelId = btn.getAttribute('aria-controls') || '';
             if (!panelId || seenPanelIds[panelId]) return;
             var panel = document.getElementById(panelId);
@@ -516,11 +543,16 @@ window.__sdSidebarLoaded = true;
         // extension management UI, etc.).
         var tabButton = document.querySelector('button[aria-controls="' + panelId + '"]');
         if (tabButton) {
-            tabButton.click();
+            clickMainTabButton(tabButton);
         } else {
             // Fallback: try matching by button text or partial aria-controls
             var fallbackBtn = document.querySelector('button[aria-controls*="' + tabId + '"]');
-            if (fallbackBtn) fallbackBtn.click();
+            if (fallbackBtn) clickMainTabButton(fallbackBtn);
+        }
+
+        var panel = document.getElementById(panelId);
+        if (panel) {
+            panel.classList.remove('sd-panel-hidden');
         }
 
         // Only manage embedded accordions on txt2img/img2img pages
@@ -537,6 +569,21 @@ window.__sdSidebarLoaded = true;
         }
     }
 
+    function clickMainTabButton(btn) {
+        var wasHidden = btn.classList.contains('sd-tab-hidden');
+        if (wasHidden) {
+            btn.classList.remove('sd-tab-hidden');
+            btn.style.setProperty('display', 'inline-flex', 'important');
+        }
+        btn.click();
+        if (wasHidden) {
+            setTimeout(function() {
+                btn.style.removeProperty('display');
+                btn.classList.add('sd-tab-hidden');
+            }, 100);
+        }
+    }
+
     function switchSubTab(panelId, label) {
         var panel = document.getElementById('tab_' + panelId);
         if (!panel) return;
@@ -547,6 +594,135 @@ window.__sdSidebarLoaded = true;
                 btn.click();
             }
         });
+    }
+
+    function normalizeTabLabel(text) {
+        return (text || '')
+            .replace(/[^\u4e00-\u9fa5A-Za-z0-9]+/g, '')
+            .trim();
+    }
+
+    function switchNestedTab(parentTabId, label, elemId) {
+        var parent = null;
+        for (var i = 0; i < allTabPanels.length; i++) {
+            if (allTabPanels[i].id === parentTabId) {
+                parent = allTabPanels[i].elem;
+                break;
+            }
+        }
+        if (!parent) parent = document.getElementById('tab_' + parentTabId);
+        if (!parent) return;
+
+        if (elemId) {
+            var exactBtn = parent.querySelector('button[aria-controls="' + elemId + '"]');
+            if (!exactBtn) exactBtn = parent.querySelector('button[aria-controls*="' + elemId + '"]');
+            if (exactBtn) {
+                var exactTablist = exactBtn.closest('[role="tablist"], .tab-nav, .tab-container');
+                var exactButtons = exactTablist ? Array.prototype.slice.call(exactTablist.querySelectorAll('button[role="tab"], button[aria-controls], button')) : [exactBtn];
+                activateNestedTab(parent, exactTablist, exactButtons, exactBtn, Math.max(0, exactButtons.indexOf(exactBtn)), elemId);
+                return true;
+            }
+        }
+
+        var tablists = parent.querySelectorAll('[role="tablist"], .tab-nav, .tab-container');
+        for (var t = 0; t < tablists.length; t++) {
+            var tablist = tablists[t];
+            if (!parent.contains(tablist)) continue;
+            if (tablist.id === 'tabs') continue;
+
+            var buttons = Array.prototype.slice.call(tablist.querySelectorAll('button[role="tab"], button[aria-controls], button'));
+            if (buttons.length < 2) continue;
+
+            for (var j = 0; j < buttons.length; j++) {
+                var btn = buttons[j];
+                var text = normalizeTabLabel(btn.textContent);
+                var targetText = normalizeTabLabel(label);
+                if (text.indexOf(targetText) === -1 && targetText.indexOf(text) === -1) continue;
+
+                activateNestedTab(parent, tablist, buttons, btn, j, elemId);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function activateNestedTab(parent, tablist, buttons, activeBtn, activeIndex, elemId) {
+        activeBtn.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true, view: window }));
+        activeBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+        activeBtn.click();
+        activeBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+        activeBtn.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, cancelable: true, view: window }));
+
+        buttons.forEach(function(btn) {
+            var isActive = btn === activeBtn;
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            btn.classList.toggle('selected', isActive);
+            btn.classList.toggle('active', isActive);
+        });
+
+        var panelMap = [];
+        buttons.forEach(function(btn) {
+            var panelId = btn.getAttribute('aria-controls');
+            var panel = panelId ? document.getElementById(panelId) : null;
+            if (panel && parent.contains(panel)) panelMap.push(panel);
+        });
+
+        if (panelMap.length < buttons.length) {
+            panelMap = findSiblingTabPanels(parent, tablist);
+        }
+
+        var exactPanel = elemId ? document.getElementById(elemId) : null;
+        panelMap.forEach(function(panel, index) {
+            var isActive = exactPanel ? panel === exactPanel : index === activeIndex;
+            if (isActive) {
+                panel.removeAttribute('hidden');
+            } else {
+                panel.hidden = true;
+            }
+            panel.style.display = isActive ? '' : 'none';
+            panel.classList.toggle('hide', !isActive);
+            panel.classList.toggle('hidden', !isActive);
+            panel.classList.toggle('selected', isActive);
+        });
+    }
+
+    function findSiblingTabPanels(parent, tablist) {
+        var panels = [];
+        var node = tablist.nextElementSibling;
+        while (node) {
+            if (node.matches && node.matches('[role="tabpanel"], .tabitem, .tab-item')) {
+                panels.push(node);
+            }
+            if (panels.length > 0 && node.matches && node.matches('[role="tablist"], .tab-nav, .tab-container')) break;
+            node = node.nextElementSibling;
+        }
+
+        if (panels.length === 0 && tablist.parentElement) {
+            Array.prototype.slice.call(tablist.parentElement.children).forEach(function(child) {
+                if (child !== tablist && parent.contains(child)) {
+                    var role = child.getAttribute ? child.getAttribute('role') : '';
+                    if (role === 'tabpanel' || child.classList.contains('tabitem') || child.classList.contains('tab-item')) {
+                        panels.push(child);
+                    }
+                }
+            });
+        }
+
+        return panels;
+    }
+
+    function switchNestedTabWithRetry(parentTabId, label, elemId) {
+        var attempts = 0;
+        var maxAttempts = 20;
+
+        function tick() {
+            attempts++;
+            if (switchNestedTab(parentTabId, label, elemId)) return;
+            if (attempts >= maxAttempts) return;
+            setTimeout(tick, 100);
+        }
+
+        tick();
     }
 
     // ============================================================
@@ -590,7 +766,7 @@ function buildSidebarHTML() {
 
     // Unified "插件" section: ALL external plugin tabs with eye-toggles
     var externalPlugins = allTabPanels.filter(function(panel) {
-        return !isBuiltinTab(panel) && panel.id !== 'sd_webui_agent';
+        return !isBuiltinTab(panel) && panel.id !== 'sd_webui_agent' && panel.id !== 'tagger' && panel.id !== 'tutorial_center';
     });
     if (externalPlugins.length > 0) {
         html += '<div class="sd-sidebar-section">';
@@ -603,12 +779,45 @@ function buildSidebarHTML() {
         externalPlugins.forEach(function(panel) {
             var isHidden = isTabHidden(panel.id);
             var eyeIcon = isHidden ? '🚫' : '👁';
-            html += '    <div class="sd-sidebar-item has-eye-toggle" data-tab="' + panel.id + '">';
+            var childTabs = pluginChildTabs[panel.id];
+            if (childTabs) {
+                html += '    <div class="sd-plugin-group" data-plugin="' + panel.id + '">';
+            }
+            html += '    <div class="sd-sidebar-item has-eye-toggle' + (childTabs ? ' sd-plugin-parent' : '') + '" data-tab="' + panel.id + '">';
             html += '      <span class="sd-sidebar-item-label">' + panel.label + '</span>';
+            if (childTabs) {
+                html += '      <span class="sd-sidebar-child-chevron">▸</span>';
+            }
             html += '      <span class="sd-sidebar-eye-toggle' + (isHidden ? ' hidden' : '') + '" data-tab-id="' + panel.id + '" title="' + (isHidden ? '显示标签页' : '隐藏标签页') + '">' + eyeIcon + '</span>';
             html += '    </div>';
+
+            if (childTabs) {
+                html += '    <div class="sd-plugin-subitems">';
+                childTabs.forEach(function(child) {
+                    var childTabId = child.tabId || panel.id;
+                    html += '    <div class="sd-sidebar-item sd-sidebar-subitem" data-tab="' + childTabId + '" data-nested-tab="' + (child.match || '') + '" data-nested-elem="' + (child.elemId || '') + '">';
+                    html += '      <span class="sd-sidebar-item-label">　' + child.label + '</span>';
+                    html += '    </div>';
+                });
+                html += '    </div>';
+                html += '    </div>';
+            }
         });
         html += '  </div>';
+        html += '</div>';
+    }
+
+    // 教程中心固定放在插件分组下方，不参与插件列表的排序和隐藏开关。
+    var tutorialPanel = null;
+    for (var j = 0; j < allTabPanels.length; j++) {
+        if (allTabPanels[j].id === 'tutorial_center') {
+            tutorialPanel = allTabPanels[j];
+            break;
+        }
+    }
+    if (tutorialPanel) {
+        html += '<div class="sd-sidebar-item" data-tab="tutorial_center" style="margin:4px 8px;">';
+        html += '  <span class="sd-sidebar-item-label">' + tutorialPanel.label + '</span>';
         html += '</div>';
     }
 
@@ -736,9 +945,17 @@ function rebuildSidebarHTML() {
                     return;
                 }
 
+                if (this.classList.contains('sd-plugin-parent')) {
+                    var group = this.closest('.sd-plugin-group');
+                    if (group) group.classList.toggle('expanded');
+                    return;
+                }
+
                 var tab = this.dataset.tab;
                 var accordionId = this.dataset.accordion;
                 var subTabLabel = this.dataset.subtab;
+                var nestedTabLabel = this.dataset.nestedTab;
+                var nestedElemId = this.dataset.nestedElem;
                 var containerIdsStr = this.dataset.containers;
                 var containerIds = containerIdsStr ? containerIdsStr.split(',').filter(function(s) { return s; }) : null;
                 if (!tab) return;
@@ -751,6 +968,11 @@ function rebuildSidebarHTML() {
                 var section = this.closest('.sd-sidebar-section');
                 if (section) section.classList.add('expanded');
                 switchTab(tab, accordionId, subTabLabel, containerIds);
+                if (nestedTabLabel) {
+                    setTimeout(function() {
+                        switchNestedTabWithRetry(tab, nestedTabLabel, nestedElemId);
+                    }, 100);
+                }
             });
         });
     }

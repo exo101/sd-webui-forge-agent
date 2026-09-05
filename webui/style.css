@@ -2772,6 +2772,33 @@ div.xyz_entries button.secondary {
     flex: 1;
 }
 
+/* Nested navigation entries for plugin-owned tab groups. */
+.sd-plugin-subitems {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.18s ease;
+}
+
+.sd-plugin-group.expanded .sd-plugin-subitems {
+    max-height: 240px;
+}
+
+.sd-sidebar-item.sd-sidebar-subitem {
+    padding-left: 54px;
+    font-size: 11px;
+    opacity: 0.9;
+}
+
+.sd-sidebar-child-chevron {
+    font-size: 10px;
+    opacity: 0.55;
+    transition: transform 0.15s ease;
+}
+
+.sd-plugin-group.expanded .sd-plugin-parent .sd-sidebar-child-chevron {
+    transform: rotate(90deg);
+}
+
 /* Eye icon for hide/show item */
 .sd-sidebar-item-eye {
     font-size: 10px;
@@ -3038,6 +3065,7 @@ button.sd-tab-hidden {
     /* img NEVER moves — only overlay clips it */
     user-select: none;
     -webkit-user-drag: none;
+    pointer-events: none !important; /* 鼠标事件穿透到 row，避免原生图片拖拽拦截 */
 }
 
 #img_comp_row img.drag:hover {
@@ -3077,12 +3105,30 @@ button.sd-tab-hidden {
 #img_comp_row .bar {
     display: block;
     position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    transform: translateX(-50%);
     background-color: white;
     z-index: 500;
     min-width: 0px;
     min-height: 0px;
     opacity: 0.9;
     pointer-events: none;
+}
+
+/* 拖拽手柄：透明的宽点击区，位于分割线上方 */
+#img_comp_row .comp-handle {
+    display: block;
+    position: absolute;
+    top: 0;
+    width: 44px;
+    height: 100%;
+    transform: translateX(-50%);
+    z-index: 600;
+    cursor: ew-resize;
+    pointer-events: auto;
+    background: transparent;
 }
 
 #img_comp_btn {
@@ -3188,9 +3234,19 @@ button.sd-tab-hidden {
 
 /* Hide plugin tabs from the top bar — only keep essential built-in tabs.
    Plugin tabs are still accessible via the sidebar dropdown and "插件" section.
-   Using chained :not() selectors for broad browser compatibility. */
-#tabs button[role="tab"]:not([aria-controls="tab_txt2img"]):not([aria-controls="tab_img2img"]):not([aria-controls="tab_extras"]):not([aria-controls="tab_pnginfo"]):not([aria-controls="tab_tutorial_center"]):not([aria-controls="tab_settings"]):not([aria-controls="tab_extensions"]):not([aria-controls="tab_modelmerger"]) {
+   Using chained :not() selectors for broad browser compatibility.
+   NOTE: 必须用 > 直接子级，否则会误杀 txt2img/img2img 页面内的 extra networks 子标签页（生成/模型/Lora/嵌入式） */
+#tabs > div.tab-wrapper > div.tab-container > button[role="tab"]:not([aria-controls="tab_txt2img"]):not([aria-controls="tab_img2img"]):not([aria-controls="tab_extras"]):not([aria-controls="tab_pnginfo"]):not([aria-controls="tab_tutorial_center"]):not([aria-controls="tab_settings"]):not([aria-controls="tab_extensions"]):not([aria-controls="tab_modelmerger"]),
+#tabs > div.tab-container > button[role="tab"]:not([aria-controls="tab_txt2img"]):not([aria-controls="tab_img2img"]):not([aria-controls="tab_extras"]):not([aria-controls="tab_pnginfo"]):not([aria-controls="tab_tutorial_center"]):not([aria-controls="tab_settings"]):not([aria-controls="tab_extensions"]):not([aria-controls="tab_modelmerger"]) {
     display: none !important;
+}
+
+/* 强制显示 extra networks 子标签页（生成/模型/Lora/嵌入式等）
+   修复上方规则可能的误杀，确保子标签页始终可见
+   用 #tabs #txt2img_extra_tabs 双 ID 提高优先级，压过隐藏规则 */
+#tabs #txt2img_extra_tabs [role="tab"],
+#tabs #img2img_extra_tabs [role="tab"] {
+    display: flex !important;
 }
 
 /* 隐藏扩展注册的顶部工具栏（美学提升、模型下载器等） */
@@ -3325,4 +3381,118 @@ button.sd-tab-hidden {
 #sd-theme-close:hover {
     background: var(--sd-bg-hover);
     color: var(--sd-text-primary);
+}
+
+.extras-before-after-output:empty {
+    display: none;
+}
+
+.extras-before-after {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.extras-before-after-stage {
+    position: relative;
+    container-type: inline-size;
+    width: 100%;
+    min-height: 280px;
+    max-height: 62vh;
+    overflow: hidden;
+    background: var(--sd-bg-card, #1f1f1f);
+    border: 1px solid var(--sd-border, rgba(255, 255, 255, 0.16));
+    border-radius: 8px;
+}
+
+.extras-before-after-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    user-select: none;
+    pointer-events: none;
+}
+
+video.extras-before-after-img {
+    background: #000;
+    pointer-events: auto;
+}
+
+.extras-before-after-overlay video.extras-before-after-img {
+    pointer-events: none;
+}
+
+.extras-before-after-overlay {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+}
+
+.extras-before-after-overlay .extras-before-after-img {
+    width: 100cqw;
+    max-width: none;
+}
+
+.extras-before-after-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.92);
+    transform: translateX(-1px);
+    pointer-events: none;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.extras-before-after-bar span {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(0, 0, 0, 0.22);
+    transform: translate(-50%, -50%);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.extras-before-after-bar span::before,
+.extras-before-after-bar span::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-top: 2px solid rgba(0, 0, 0, 0.72);
+    border-left: 2px solid rgba(0, 0, 0, 0.72);
+}
+
+.extras-before-after-bar span::before {
+    left: 9px;
+    transform: translateY(-50%) rotate(-45deg);
+}
+
+.extras-before-after-bar span::after {
+    right: 9px;
+    transform: translateY(-50%) rotate(135deg);
+}
+
+.extras-before-after-range {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: ew-resize;
+}
+
+.extras-before-after-video .extras-before-after-stage {
+    aspect-ratio: 16 / 9;
+}
+
+.extras-before-after-video .extras-before-after-range {
+    bottom: 48px;
+    height: calc(100% - 48px);
 }

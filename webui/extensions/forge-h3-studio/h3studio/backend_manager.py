@@ -125,6 +125,8 @@ class BackendManager:
 
     def start(self) -> dict[str, Any]:
         config = load_config()
+        if config.get("backend_mode") == "api":
+            return self.status()
         if config.get("backend_mode") == "external":
             health = ComfyClient().health()
             if not health["ok"]:
@@ -195,6 +197,26 @@ class BackendManager:
     def status(self, *, skip_health: bool = False) -> dict[str, Any]:
         config = load_config()
         with self._lock:
+            if config.get("backend_mode") == "api":
+                api_ready = bool(str(config.get("minimax_api_key") or "").strip())
+                return {
+                    "state": "ready" if api_ready else "stopped",
+                    "ready": api_ready,
+                    "mode": "api",
+                    "url": config.get("minimax_api_base"),
+                    "process_running": False,
+                    "pid": None,
+                    "exit_code": None,
+                    "started_at": None,
+                    "command": [],
+                    "health": {
+                        "ok": api_ready,
+                        "base_url": config.get("minimax_api_base"),
+                        "provider": "MiniMax H3 API",
+                    },
+                    "auto_start_on_tab": bool(config.get("auto_start_on_tab", True)),
+                    "discovered_paths": self.discover(),
+                }
             process_running = self._process is not None and self._process.poll() is None
             exit_code = None if self._process is None or process_running else self._process.poll()
             health = {"ok": False, "base_url": config.get("comfy_url")}
