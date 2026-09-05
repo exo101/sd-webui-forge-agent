@@ -305,7 +305,7 @@ class ImageStitch(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        with InputAccordion(value=False, label=self.title()) as enable:
+        with InputAccordion(value=True, label=self.title()) as enable:
             gr.HTML(i2i_info if is_img2img else t2i_info)
 
             # 使用 State 存储当前图片列表
@@ -1053,7 +1053,10 @@ class ImageStitch(scripts.Script):
         p.sd_model.clear_references()
 
     def process(self, p: StableDiffusionProcessing, enable: bool, references: list[str | tuple[Image.Image, str]], max_dim: int):
-        if not (enable and references and any(getattr(dynamic_args, key) for key in ("kontext", "edit", "klein", "wan", "krea2"))):
+        # Fallback: 即使 InputAccordion 状态同步失败，只要有参考图就视为启用
+        has_edit_model = any(getattr(dynamic_args, key) for key in ("kontext", "edit", "klein", "wan", "krea2"))
+        effective_enable = enable or bool(references)
+        if not (effective_enable and references and has_edit_model):
             if self.cached_parameters is None:
                 return
 
