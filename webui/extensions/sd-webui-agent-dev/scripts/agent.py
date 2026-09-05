@@ -468,15 +468,15 @@ def _coerce_generation_tool_by_selected_model(tool_name, tool_args, user_instruc
     image_model = _configured_image_model()
     video_model = _configured_video_model()
 
-    # 检查是否有可用的图像 API key（image_api_key 优先，回退到 LLM api_key）
+    # 检查是否有与当前图像供应商匹配的可用 key
     _cfg = load_config()
-    _has_image_key = bool((_cfg.get("image_api_key") or "").strip())
-    _has_llm_key = bool((_cfg.get("api_key") or "").strip())
-    _can_use_api = _has_image_key or _has_llm_key
+    from scripts.agent_tools import _select_image_api_key
+    _selected_key = _select_image_api_key(_cfg)
+    _can_use_api = bool(_selected_key.strip())
 
-    # 没有任何可用 key 时，不强制转换到 API 工具，保持本地生图避免 401
+    # 没有匹配的可用 key 时，不强制转换到 API 工具，保持本地生图避免 401
     if not _can_use_api and _is_configured_api_image_model(image_model):
-        print(f"[Agent] ⚠️ 未配置图像 API Key，跳过 API 工具强制转换，保持本地工具: {tool_name}")
+        print(f"[Agent] ⚠️ 未配置与当前图像供应商匹配的 API Key，跳过 API 工具强制转换，保持本地工具: {tool_name}")
         return tool_name, tool_args
 
     if _is_configured_api_image_model(image_model) and tool_name == "txt2img":
