@@ -1465,7 +1465,7 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
         return None, {"status": "error", "error": str(e), "method": "api_image_edit"}
 
 
-def _modelscope_poll_task(base_url, api_key, task_id, task_type="image_generation", max_polls=40, poll_interval=3):
+def _modelscope_poll_task(base_url, api_key, task_id, task_type="image_generation", max_polls=60, poll_interval=3):
     """轮询 ModelScope 异步任务，返回 (images_list, error_dict_or_None)。"""
     for i in range(max_polls):
         time.sleep(poll_interval)
