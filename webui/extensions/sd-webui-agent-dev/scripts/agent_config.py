@@ -52,7 +52,7 @@ DEFAULT_CONFIG = {
     "image_api_key": "",
     "image_api_provider": "YoboxAI",
     "image_base_url": "https://api.yoboxai.com/v1",
-    "image_model": "nano-banana",
+    "image_model": "banana2",
     "video_api_key": "",
     "video_api_provider": "YoboxAI",
     "video_base_url": "https://api.yoboxai.com/api/v3/contents/generations",

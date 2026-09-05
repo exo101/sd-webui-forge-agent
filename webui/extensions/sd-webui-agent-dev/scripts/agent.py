@@ -157,13 +157,10 @@ def _parse_mentions(user_text):
         return user_text, []
 
     alias_map = {
-        "@GPT Image2": "@gpt-image-2",
-        "@GPT Image 2": "@gpt-image-2",
-        "@Nano Banana": "@nano-banana",
-        "@Gemini3 Pro": "@gemini-3-pro-image-preview",
-        "@Gemini 3 Pro": "@gemini-3-pro-image-preview",
-        "@Gemini Flash Lite": "@gemini-3.1-flash-lite-image",
-        "@Gemini Flash": "@gemini-3.1-flash-image-preview",
+        "@Banana2": "@banana2",
+        "@BananaPro": "@bananapro",
+        "@banana2": "@banana2",
+        "@bananapro": "@bananapro",
         "@MiniMax H3": "@minimax-h3",
         "@dreamina-seedance-2-5-hc": "@dreamina-seedance-2-5-hc",
         "@dreamina-seedance-2-0-hc": "@dreamina-seedance-2-0-hc",

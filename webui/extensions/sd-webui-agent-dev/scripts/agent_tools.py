@@ -1281,23 +1281,12 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
                 return None, {"status": "error", "error": "DashScope 未返回图像数据", "raw": result, "model_used": model_id}
             return images, {"status": "success", "model_used": model_id, "instruction": instruction, "method": "dashscope_multimodal_generation"}
 
-        # YoboxAI 的 Gemini/Nano Banana 接口使用 generateContent 协议，
+        # YoboxAI 的 Gemini/banana 接口使用 generateContent 协议，
         # 图片必须放在 parts.inlineData，API Key 放在 query string。
-        gemini_models = {
-            "nano-banana",
-            "gemini-3-pro-image-preview",
-            "gemini-3.1-flash-lite-image",
-            "gemini-3.1-flash-image-preview",
-        }
-        if model_id in gemini_models and "yoboxai.com" in base_url.lower():
-            gemini_model_id = (
-                "gemini-3-pro-image-preview"
-                if model_id == "nano-banana"
-                else model_id
-            )
+        if _is_gemini_image_model(model_id) and "yoboxai.com" in base_url.lower():
             endpoint = (
                 f"{base_url.rstrip('/')}/../gemini/v1beta/models/"
-                f"{urllib.parse.quote(gemini_model_id, safe='')}:generateContent"
+                f"{urllib.parse.quote(model_id, safe='')}:generateContent"
             )
             endpoint = endpoint.replace("/v1/../gemini/", "/gemini/")
             endpoint = f"{endpoint}?{urllib.parse.urlencode({'key': api_key})}"
@@ -1418,7 +1407,7 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
             return images, {"status": "success", "model_used": model_id, "instruction": instruction, "method": "modelscope_edit"}
 
         # OpenAI-compatible图像编辑接口要求 multipart/form-data，不能把 image
-        # 作为 data URL 放进 JSON。YoboxAI 的 gpt-image-2 也走这一兼容编辑协议。
+        # 作为 data URL 放进 JSON。
         boundary = f"----ForgeAgent{int(time.time() * 1000000)}"
         parts = []
 
@@ -1592,14 +1581,8 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
                 return images, info
             return None, {"status": "error", "error": "Gemini 图片解码失败"}
 
-        gemini_models = {
-            "nano-banana",
-            "gemini-3-pro-image-preview",
-            "gemini-3.1-flash-lite-image",
-            "gemini-3.1-flash-image-preview",
-        }
-        if provider == "yoboxai" and model_id in gemini_models:
-            gemini_model_id = "gemini-3-pro-image-preview" if model_id == "nano-banana" else model_id
+        if provider == "yoboxai" and _is_gemini_image_model(model_id):
+            gemini_model_id = model_id
             endpoint = (
                 f"{base_url.rstrip('/')}/../gemini/v1beta/models/"
                 f"{urllib.parse.quote(gemini_model_id, safe='')}:generateContent"
@@ -3760,12 +3743,12 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "api_image_edit",
-            "description": "外部/API 图像编辑工具。用户使用 @nano-banana、@gpt-image-2、@Qwen-Image-Edit-2511、@FireRed-Image-Edit 等 API 图像编辑模型标签时必须优先使用此工具，不要改用 remove_background、change_background 或本地 Klein 编辑。",
+            "description": "外部/API 图像编辑工具。用户使用 @banana2、@bananapro、@Qwen-Image-Edit-2511、@FireRed-Image-Edit 等 API 图像编辑模型标签时必须优先使用此工具，不要改用 remove_background、change_background 或本地 Klein 编辑。",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "instruction": {"type": "string", "description": "图像编辑指令，如 'change the image background to pure white, preserve the subject exactly'"},
-                    "model": {"type": "string", "description": "API 模型 ID。若用户标签指定了模型，必须填写该模型 ID，如 nano-banana"},
+                    "model": {"type": "string", "description": "API 模型 ID。若用户标签指定了模型，必须填写该模型 ID，如 banana2"},
                     "size": {"type": "string", "description": "输出尺寸，默认 auto", "default": "auto"},
                 },
                 "required": ["instruction", "model"],
