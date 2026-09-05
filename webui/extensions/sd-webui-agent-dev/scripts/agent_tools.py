@@ -1536,6 +1536,45 @@ def _modelscope_poll_task(base_url, api_key, task_id, task_type="image_generatio
     return None, {"status": "error", "error": f"ModelScope 任务轮询超时（{max_polls * poll_interval}秒）"}
 
 
+# 比例 → 像素尺寸映射（gpt-image-2 等 OpenAI 兼容接口只接受像素尺寸）
+_ASPECT_RATIO_TO_PIXELS = {
+    "1:1": "1024x1024",
+    "9:16": "1024x1792",
+    "16:9": "1792x1024",
+    "3:4": "768x1024",
+    "4:3": "1024x768",
+    "2:3": "832x1248",
+    "3:2": "1248x832",
+    "21:9": "1792x768",
+}
+
+
+def _resolve_image_size(size):
+    """将 size 参数统一解析为 API 可接受的像素尺寸字符串。
+
+    - 比例格式 (如 '9:16') → 映射为像素尺寸 (如 '1024x1792')
+    - 像素格式 (如 '1024x1792') → 原样返回
+    - 空值/无效值 → 默认 '1024x1024'
+    """
+    if not size or not str(size).strip():
+        return "1024x1024"
+    s = str(size).strip().lower()
+    # 比例格式（含冒号）
+    if ":" in s:
+        mapped = _ASPECT_RATIO_TO_PIXELS.get(s)
+        if mapped:
+            return mapped
+        # 未知比例，回退到默认
+        print(f"[Agent] 未知比例 '{s}'，回退到 1024x1024")
+        return "1024x1024"
+    # 像素格式（含 x）
+    if "x" in s:
+        return s
+    # 其他情况回退默认
+    print(f"[Agent] 无法识别的 size '{s}'，回退到 1024x1024")
+    return "1024x1024"
+
+
 def api_image_generate_tool(prompt, model=None, size="1024x1024", response_format="b64_json", negative_prompt="", quality=""):
     """使用设置区选择的外部/API 图像模型生成图片。
 
@@ -1550,6 +1589,10 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
     try:
         if not prompt or not str(prompt).strip():
             return None, {"status": "error", "error": "请提供图像生成提示词"}
+
+        # 比例字符串 → 像素尺寸转换（gpt-image-2 等 OpenAI 兼容接口只接受像素尺寸）
+        size = _resolve_image_size(size)
+        print(f"[Agent] api_image_generate: size 参数解析为 {size}")
 
         cfg = load_config()
         model_id = (model or cfg.get("image_model") or "").strip()
@@ -3747,7 +3790,7 @@ TOOLS = [
                 "properties": {
                     "prompt": {"type": "string", "description": "图像生成提示词"},
                     "model": {"type": "string", "description": "API 模型 ID，默认读取设置区当前图像生成模型"},
-                    "size": {"type": "string", "description": "输出尺寸，如 1024x1024、16:9 等，默认 1024x1024", "default": "1024x1024"},
+                    "size": {"type": "string", "description": "输出尺寸（像素），默认 1024x1024。常用值：1024x1024(1:1正方形)、1024x1792(9:16竖版)、1792x1024(16:9横版)、768x1024(3:4)、1024x768(4:3)。用户提到竖版/9:16/竖屏时必须传 1024x1792；横版/16:9/横屏时传 1792x1024", "default": "1024x1024"},
                     "negative_prompt": {"type": "string", "description": "负向提示词，描述不希望出现的元素，如 'blurry, low resolution, ugly, deformed, watermark'（可选）", "default": ""},
                     "quality": {"type": "string", "description": "生成质量档位：high/medium/low（可选，仅部分模型支持）", "default": ""},
                 },
