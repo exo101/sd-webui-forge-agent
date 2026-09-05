@@ -472,6 +472,152 @@ window.__sdSidebarLoaded = true;
         });
     }
 
+    // ============================================================
+    //  Collapse "参数设置" accordions by default on page load.
+    //  Python keeps open=True so Gradio 5 correctly initializes
+    //  slider/dropdown values; JS collapses them visually after.
+    // ============================================================
+    function collapseParamsAccordions() {
+        var paramsIds = ['txt2img_params_accordion', 'img2img_params_accordion'];
+        paramsIds.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            // Find the accordion header / toggle button inside
+            var header = el.querySelector('button') || el.querySelector('.label-wrap') || el.querySelector('summary');
+            if (header) {
+                // Check if already collapsed — some accordions use open attr,
+                // others use a CSS class or aria-expanded.
+                var parent = header.parentElement;
+                var isOpen = true;
+                if (parent && parent.hasAttribute('open')) isOpen = parent.hasAttribute('open');
+                if (header.hasAttribute('aria-expanded')) isOpen = header.getAttribute('aria-expanded') === 'true';
+                if (isOpen) {
+                    header.click();
+                }
+            } else {
+                // Fallback: try clicking the first clickable child
+                var clickable = el.querySelector('.accordion-header, .gr-accordion-header, [role="button"]');
+                if (clickable) clickable.click();
+            }
+        });
+    }
+
+    // ============================================================
+    //  Agent Chatbot Lightbox - 图片点击放大功能
+    //  在 tryInit() 中调用，利用其重试机制确保 chatbot 渲染后绑定。
+    // ============================================================
+    function initAgentLightbox() {
+        // 注入 CSS（只一次）
+        if (!document.getElementById('agent-lightbox-style')) {
+            var css = document.createElement('style');
+            css.id = 'agent-lightbox-style';
+            css.textContent = [
+                '#agent-lightbox{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:99999;justify-content:center;align-items:center;cursor:zoom-out;}',
+                '#agent-lightbox.active{display:flex;}',
+                '#agent-lightbox img{max-width:95vw;max-height:95vh;object-fit:contain;box-shadow:0 0 30px rgba(0,0,0,0.5);}',
+                '#agent-lightbox-close{position:fixed;top:20px;right:30px;color:white;font-size:36px;cursor:pointer;z-index:100000;background:rgba(0,0,0,0.5);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;}',
+                '#agent-chatbot .icon-button-wrapper > button{display:none !important;}',
+                '#agent-chatbot .image-container{position:relative;}',
+                '#agent-chatbot .image-container::after{content:"\\1F50D";position:absolute;top:8px;right:8px;font-size:18px;background:rgba(0,0,0,0.6);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;pointer-events:none;z-index:10;}',
+                '#agent-chatbot .image-container:hover::after{opacity:1;}',
+                '#agent-chatbot img{cursor:zoom-in;transition:opacity .2s;}',
+                '#agent-chatbot img:hover{opacity:.9;}'
+            ].join('\n');
+            document.head.appendChild(css);
+        }
+
+        // 确保 DOM 存在（去重）
+        var existing = document.querySelectorAll('#agent-lightbox');
+        for (var i = 1; i < existing.length; i++) {
+            existing[i].parentNode.removeChild(existing[i]);
+        }
+        var lightbox = existing[0];
+        if (!lightbox) {
+            lightbox = document.createElement('div');
+            lightbox.id = 'agent-lightbox';
+            lightbox.innerHTML = '<span id="agent-lightbox-close">\\u00d7</span><img id="agent-lightbox-img" src="" alt="放大预览">';
+            document.body.appendChild(lightbox);
+        }
+        var lightboxImg = document.getElementById('agent-lightbox-img');
+        var closeBtn = document.getElementById('agent-lightbox-close');
+        if (!lightbox || !lightboxImg) return false;
+
+        // 绑定关闭事件（只一次）
+        if (!lightbox.dataset.closeBound) {
+            lightbox.addEventListener('click', function() {
+                lightbox.classList.remove('active');
+                lightboxImg.src = '';
+                document.body.style.overflow = '';
+            });
+            if (closeBtn) closeBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                lightbox.classList.remove('active');
+                lightboxImg.src = '';
+                document.body.style.overflow = '';
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+                    lightbox.classList.remove('active');
+                    lightboxImg.src = '';
+                    document.body.style.overflow = '';
+                }
+            });
+            lightbox.dataset.closeBound = '1';
+        }
+
+        // 绑定 chatbot 事件委托
+        var chatbotEl = document.getElementById('agent-chatbot');
+        if (!chatbotEl) return false;
+        if (chatbotEl.dataset.lightboxDelegated) return true;
+
+        chatbotEl.dataset.lightboxDelegated = '1';
+        chatbotEl.addEventListener('click', function(e) {
+            var target = e.target;
+            var img = target.tagName === 'IMG' ? target : target.closest('img');
+            var rawSrc = img ? img.getAttribute('src') : null;
+            if (img && rawSrc && !img.closest('a[download]')) {
+                e.preventDefault();
+                e.stopPropagation();
+                lightboxImg.src = rawSrc;
+                lightbox.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }, true);
+        return true;
+    }
+
+    // ============================================================
+    //  Sync size to main UI width/height sliders (called from
+    //  image_stitch.py button click via _js callback).
+    // ============================================================
+    window.syncSizeToMainUI = function(tab, w, h) {
+        if (!tab || !w || !h) return;
+        function updateSlider(elemId, value) {
+            var container = document.getElementById(elemId);
+            if (!container) return false;
+            var slider = container.querySelector('input[type="range"]');
+            var numberInput = container.querySelector('input[type="number"]');
+            if (slider) {
+                slider.value = value;
+                slider.dispatchEvent(new Event('input', { bubbles: true }));
+                slider.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (numberInput) {
+                numberInput.value = value;
+                numberInput.dispatchEvent(new Event('input', { bubbles: true }));
+                numberInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            return true;
+        }
+        var okW = updateSlider(tab + '_width', w);
+        var okH = updateSlider(tab + '_height', h);
+        if (okW && okH) {
+            console.log('[Image Stitch] Synced size to main UI: ' + w + 'x' + h);
+        } else {
+            console.warn('[Image Stitch] Could not find main UI sliders for tab: ' + tab);
+        }
+    };
+
     function showEmbeddedAccordion(id) {
         var el = document.getElementById(id);
         if (!el && id && id.indexOf('label:') === 0) {
@@ -1245,6 +1391,12 @@ function rebuildSidebarHTML() {
         if (initialized) {
             enhanceSeedDiceButtons();
             relabelControls();
+            // Collapse 参数设置 accordions after Gradio has rendered them
+            setTimeout(collapseParamsAccordions, 500);
+            // Agent lightbox - keep trying until chatbot is rendered
+            if (!initAgentLightbox()) {
+                setTimeout(function() { initAgentLightbox(); }, 1000);
+            }
             // Re-apply tab visibility in case Gradio re-rendered tab buttons
             applyAllTabVisibility();
             return true;
