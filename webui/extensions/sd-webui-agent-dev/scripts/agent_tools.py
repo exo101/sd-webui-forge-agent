@@ -1326,19 +1326,19 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
                 "method": "yoboxai_gemini_generate_content",
             }
 
-        # ModelScope 图像编辑使用 JSON payload + base64 data URL，不支持 multipart。
+        # ModelScope 图像编辑使用 /v1/images/generations 端点 + image_url 参数（非 /images/edits）。
         # 支持 FireRedTeam/FireRed-Image-Edit-1.1、Qwen/Qwen-Image-Edit-2511 等编辑模型。
         if provider == "modelscope":
             payload = {
                 "model": model_id,
                 "prompt": str(instruction).strip(),
-                "image": f"data:image/png;base64,{image_b64_list[0]}",
+                "image_url": f"data:image/png;base64,{image_b64_list[0]}",
                 "n": 1,
             }
             if size and str(size).lower() not in ("auto", "none", "null"):
                 payload["size"] = size
             req = urllib.request.Request(
-                f"{base_url}/images/edits",
+                f"{base_url}/images/generations",
                 data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
                 method="POST",
                 headers={
