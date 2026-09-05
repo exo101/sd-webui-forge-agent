@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # Agent Tools — 所有 WebUI 工具函数 + Function Calling 定义
 # =============================================================================
 
@@ -1170,13 +1170,52 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
         model_id = (model or cfg.get("image_model") or "").strip()
         if not model_id:
             return None, {"status": "error", "error": "未指定 API 图像模型"}
-        base_url = (cfg.get("image_base_url") or "").rstrip("/")
+        # 根据模型选择正确的 base URL（Gemini 模型使用专用端点）
+        base_url = _get_image_api_base_url(cfg, model_id)
         api_key = _select_image_api_key(cfg)
         provider = str(cfg.get("image_api_provider") or "").strip().lower()
         if not base_url:
             return None, {"status": "error", "error": "未配置图像/视频生成 API Base URL"}
         if not api_key:
             return None, {"status": "error", "error": "未配置图像/视频生成 API Key，请在独立的生成 API 设置中填写，不是 Agent 大脑 API Key"}
+
+        # Gemini 图像编辑模型使用 Google-native generateContent 格式
+        if _is_gemini_image_model(model_id):
+            # 将输入图片转为 base64
+            if not isinstance(image, (list, tuple)):
+                image = [image]
+            first_img = image[0] if image else None
+            img_b64 = None
+            img_mime = "image/png"
+            if isinstance(first_img, Image.Image):
+                buf = BytesIO()
+                first_img.convert("RGB").save(buf, format="PNG")
+                img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+            elif isinstance(first_img, str) and os.path.isfile(first_img):
+                with open(first_img, "rb") as f:
+                    img_b64 = base64.b64encode(f.read()).decode("utf-8")
+                if first_img.lower().endswith((".jpg", ".jpeg")):
+                    img_mime = "image/jpeg"
+
+            if not img_b64:
+                return None, {"status": "error", "error": "无法读取输入图片用于 Gemini 编辑"}
+
+            images_b64, err = _call_gemini_generate(base_url, api_key, model_id, instruction, img_b64, img_mime)
+            if err:
+                return None, err
+            from PIL import Image
+            images = []
+            for b64_data in images_b64:
+                try:
+                    img_data = base64.b64decode(b64_data)
+                    img = Image.open(BytesIO(img_data))
+                    images.append(img)
+                except Exception as e:
+                    print(f"[Agent] Gemini 编辑图片解码失败: {e}")
+            if images:
+                info = {"status": "success", "model_used": model_id, "count": len(images)}
+                return images, info
+            return None, {"status": "error", "error": "Gemini 编辑图片解码失败"}
 
         if not isinstance(image, (list, tuple)):
             image = [image]
@@ -1518,7 +1557,8 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
 
         cfg = load_config()
         model_id = (model or cfg.get("image_model") or "").strip()
-        base_url = (cfg.get("image_base_url") or "").rstrip("/")
+        # 根据模型选择正确的 base URL（Gemini 模型使用专用端点）
+        base_url = _get_image_api_base_url(cfg, model_id)
         # 根据供应商选择正确的 key：避免跨供应商混用导致 401
         api_key = _select_image_api_key(cfg)
         provider = str(cfg.get("image_api_provider") or "").strip().lower()
@@ -1534,6 +1574,27 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
             return None, {"status": "error", "error": "未配置生成 API Base URL"}
         if not api_key:
             return None, {"status": "error", "error": "未配置生成 API Key，请在生成 API 设置中填写"}
+
+        # Gemini 图像模型使用 Google-native generateContent 格式
+        if _is_gemini_image_model(model_id):
+            images_b64, err = _call_gemini_generate(base_url, api_key, model_id, prompt)
+            if err:
+                return None, err
+            # 将 base64 转为 PIL Image
+            from PIL import Image
+            import io
+            images = []
+            for b64_data in images_b64:
+                try:
+                    img_data = base64.b64decode(b64_data)
+                    img = Image.open(BytesIO(img_data))
+                    images.append(img)
+                except Exception as e:
+                    print(f"[Agent] Gemini 图片解码失败: {e}")
+            if images:
+                info = {"status": "success", "model_used": model_id, "count": len(images)}
+                return images, info
+            return None, {"status": "error", "error": "Gemini 图片解码失败"}
 
         gemini_models = {
             "nano-banana",
@@ -1861,6 +1922,98 @@ def _select_image_api_key(cfg):
         return llm_key or image_key
     # 不同供应商，用图像专用 key；如果为空则回退到 LLM key
     return image_key or llm_key
+
+
+def _get_image_api_base_url(cfg, model_id=""):
+    """根据模型 ID 选择正确的 API Base URL。
+
+    YoboxAI 的 Gemini 图像模型需要专用端点 https://api.yoboxai.com/gemini，
+    不能用 OpenAI 兼容的 /v1 端点。
+    """
+    model_lower = str(model_id or "").lower()
+    if model_lower.startswith("gemini"):
+        # YoboxAI Gemini 专用端点
+        return "https://api.yoboxai.com/gemini"
+    return (cfg.get("image_base_url") or "").rstrip("/")
+
+
+def _is_gemini_image_model(model_id):
+    """判断是否为 Gemini 图像模型（需要 Google-native generateContent 格式）。"""
+    return str(model_id or "").lower().startswith("gemini")
+
+
+def _call_gemini_generate(base_url, api_key, model_id, prompt_text, image_b64=None, image_mime="image/png"):
+    """调用 Gemini generateContent API 生成/编辑图片。
+
+    返回 (images_list, error_dict)，成功时 images_list 为 base64 图片列表，error_dict 为 None。
+    """
+    parts = []
+    if image_b64:
+        parts.append({
+            "inlineData": {
+                "mimeType": image_mime,
+                "data": image_b64,
+            }
+        })
+    parts.append({"text": str(prompt_text).strip()})
+
+    payload = {
+        "contents": [{
+            "parts": parts,
+        }],
+        "generationConfig": {
+            "responseModalities": ["TEXT", "IMAGE"],
+        },
+    }
+
+    # base_url 已经是 https://api.yoboxai.com/gemini
+    endpoint = f"{base_url}/v1beta/models/{model_id}:generateContent"
+    req = urllib.request.Request(
+        endpoint,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        return None, _format_api_http_error(e, "Gemini 图像生成")
+    except Exception as e:
+        return None, {"status": "error", "error": f"Gemini API 调用异常: {e}"}
+
+    # 解析响应，提取 inlineData 图片
+    images = []
+    try:
+        candidates = result.get("candidates", [])
+        for candidate in candidates:
+            content = candidate.get("content", {})
+            parts_list = content.get("parts", [])
+            for part in parts_list:
+                inline = part.get("inlineData") or part.get("inline_data")
+                if inline and inline.get("data"):
+                    images.append(inline["data"])
+    except Exception as e:
+        return None, {"status": "error", "error": f"解析 Gemini 响应失败: {e}", "detail": str(result)[:500]}
+
+    if not images:
+        # 没有返回图片，可能只返回了文本
+        text_parts = []
+        try:
+            for candidate in result.get("candidates", []):
+                for part in candidate.get("content", {}).get("parts", []):
+                    if part.get("text"):
+                        text_parts.append(part["text"])
+        except Exception:
+            pass
+        text_info = " ".join(text_parts)[:200] if text_parts else "无内容"
+        return None, {"status": "error", "error": f"Gemini 未返回图片，仅返回文本: {text_info}"}
+
+    return images, None
 
 
 def _format_api_http_error(e, action="调用"):
@@ -3769,3 +3922,4 @@ TOOL_FUNCTIONS = {
     "analyze_document": analyze_document_tool,
     "audit_extensions": audit_extensions_tool,
 }
+
