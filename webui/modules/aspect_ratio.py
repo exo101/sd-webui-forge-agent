@@ -80,3 +80,85 @@ def create_aspect_ratio_buttons(tabname, width, height):
                 show_progress=False,
                 queue=False,
             )
+
+
+def _apply_scale(scale, base, width, height, step=8):
+    """Return (new_width, new_height, new_base) for a percentage scale.
+
+    Uses *base* (a (w, h) list stored in gr.State) so that moving the
+    slider does not compound on previous scaled values. When scale is 100%
+    it restores FROM the stored base; the base itself is only updated via
+    the width/height change callbacks when the user manually edits at 100%.
+    """
+    if scale is None:
+        scale = 100
+    base_w = base[0] if base else None
+    base_h = base[1] if base else None
+    # First run: capture current dimensions as the base
+    if base_w is None or base_h is None:
+        base_w = _snap(width, step) if width else 1024
+        base_h = _snap(height, step) if height else 1024
+        return base_w, base_h, [base_w, base_h]
+    # At 100%: restore original base dimensions
+    if scale == 100:
+        return base_w, base_h, [base_w, base_h]
+    # Otherwise: scale from the base
+    new_w = _snap(base_w * scale / 100.0, step)
+    new_h = _snap(base_h * scale / 100.0, step)
+    return new_w, new_h, [base_w, base_h]
+
+
+def _update_base_on_manual_edit(scale, base, width, height, step=8):
+    """Update the stored base when the user manually edits width/height
+    while the scale slider is at 100% (i.e. not actively scaling).
+
+    When scale != 100, returns the existing *base* unchanged so that
+    programmatic width changes from scale adjustments don't corrupt it.
+    """
+    if scale is None or scale == 100:
+        w = _snap(width, step) if width else 1024
+        h = _snap(height, step) if height else 1024
+        return [w, h]
+    return base  # keep existing base unchanged
+
+
+def create_size_scale_slider(tabname, width, height):
+    """Render a percentage slider (10-200%) to scale width/height proportionally.
+
+    Uses gr.State to store the base dimensions so scaling is non-destructive
+    and does not compound.
+    """
+    base_state = gr.State(value=None)
+    with gr.Row(elem_id=f"{tabname}_scale_row", elem_classes=["size-scale-row"]):
+        scale = gr.Slider(
+            minimum=10,
+            maximum=200,
+            step=5,
+            value=100,
+            label="尺寸 %",
+            elem_id=f"{tabname}_size_scale",
+        )
+        scale.change(
+            fn=_apply_scale,
+            inputs=[scale, base_state, width, height],
+            outputs=[width, height, base_state],
+            show_progress=False,
+            queue=False,
+        )
+    # When user manually edits width/height at 100%, refresh the base.
+    # base_state is passed as input so we can return it unchanged when
+    # scale != 100 (avoiding corruption from programmatic width changes).
+    width.change(
+        fn=_update_base_on_manual_edit,
+        inputs=[scale, base_state, width, height],
+        outputs=[base_state],
+        show_progress=False,
+        queue=False,
+    )
+    height.change(
+        fn=_update_base_on_manual_edit,
+        inputs=[scale, base_state, width, height],
+        outputs=[base_state],
+        show_progress=False,
+        queue=False,
+    )
