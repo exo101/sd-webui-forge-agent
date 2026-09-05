@@ -1165,6 +1165,11 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
         if not instruction or not str(instruction).strip():
             return None, {"status": "error", "error": "请提供图像编辑指令"}
 
+        # 比例字符串 → 像素尺寸转换（auto/none/null 保持不变，让 API 自行决定）
+        if size and str(size).strip().lower() not in ("auto", "none", "null"):
+            size = _resolve_image_size(size)
+            print(f"[Agent] api_image_edit: size 参数解析为 {size}")
+
         cfg = load_config()
         model_id = (model or cfg.get("image_model") or "").strip()
         if not model_id:
@@ -3808,7 +3813,7 @@ TOOLS = [
                 "properties": {
                     "instruction": {"type": "string", "description": "图像编辑指令，如 'change the image background to pure white, preserve the subject exactly'"},
                     "model": {"type": "string", "description": "API 模型 ID。若用户标签指定了模型，必须填写该模型 ID，如 banana2"},
-                    "size": {"type": "string", "description": "输出尺寸，默认 auto", "default": "auto"},
+                    "size": {"type": "string", "description": "输出尺寸（像素），默认 auto(保持原图尺寸)。如需指定比例：1024x1792(9:16竖版)、1792x1024(16:9横版)、1024x1024(1:1)", "default": "auto"},
                 },
                 "required": ["instruction", "model"],
             },
