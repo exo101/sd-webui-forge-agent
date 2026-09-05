@@ -70,14 +70,6 @@ API_PROVIDERS = {
         "base_url": "https://api-inference.modelscope.cn/v1",
         "note": "ModelScope API",
     },
-    "DashScope": {
-        "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "note": "DashScope OpenAI 兼容 API",
-    },
-    "Pixapi": {
-        "base_url": "https://api.pixapi.ai/v1",
-        "note": "Pixapi.ai OpenAI 兼容 API",
-    },
     "YoboxAI": {
         "base_url": "https://api.yoboxai.com/v1",
         "note": "YoboxAI API，支持 GPT Image 2、Nano Banana、Gemini 3 Pro、Gemini Flash Lite、Gemini Flash、MiniMax H3 等模型标签",
