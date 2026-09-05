@@ -184,6 +184,21 @@ def load_config(resolve_local=True):
 
     cfg["base_url"] = normalize_base_url(cfg.get("base_url"))
 
+    # 兜底：如果 image_base_url/video_base_url 为空，根据供应商自动补全
+    _img_provider = str(cfg.get("image_api_provider") or "").strip()
+    _img_url = normalize_base_url(cfg.get("image_base_url"))
+    if not _img_url and _img_provider:
+        _img_url = provider_base_url(_img_provider)
+        if _img_url:
+            cfg["image_base_url"] = _img_url
+            print(f"[Agent] load_config: image_base_url 为空，根据供应商 {_img_provider} 自动补全为 {_img_url}")
+    _vid_provider = str(cfg.get("video_api_provider") or "").strip()
+    _vid_url = normalize_base_url(cfg.get("video_base_url"))
+    if not _vid_url and _vid_provider:
+        _vid_url = provider_base_url(_vid_provider)
+        if _vid_url:
+            cfg["video_base_url"] = _vid_url
+
     # 本地模式：仅当用户主动开启时才检测 llama-server
     if resolve_local and cfg.get("local_mode", False):
         detected = _detect_local_llama()
