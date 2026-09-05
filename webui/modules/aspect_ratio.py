@@ -13,10 +13,6 @@ from modules.options import OptionInfo, options_section
 # Aspect ratio presets: (display label, width ratio, height ratio)
 ASPECT_RATIOS = [
     ("1:1", 1, 1),
-    ("3:2", 3, 2),
-    ("2:3", 2, 3),
-    ("4:3", 4, 3),
-    ("3:4", 3, 4),
     ("16:9", 16, 9),
     ("9:16", 9, 16),
 ]
