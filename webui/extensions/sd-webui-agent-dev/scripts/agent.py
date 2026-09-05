@@ -1283,7 +1283,7 @@ def on_ui_tabs():
                         value=cfg_init.get("api_provider", "ModelScope"),
                     )
                     with gr.Row():
-                        api_key = gr.Textbox(label="API Key（云端用，本地可留空）", value=cfg_init["api_key"], type="password", scale=4, elem_id="agent_api_key_input")
+                        api_key = gr.Textbox(label="API Key（云端用，本地可留空）", value=cfg_init["api_key"], type="text", scale=4, elem_id="agent_api_key_input")
                         clear_api_key_btn = gr.Button("清空 API Key", size="sm", scale=1)
                     base_url = gr.Textbox(label="Base URL", value=cfg_init["base_url"], visible=False)
                     model_name = gr.Textbox(label="模型 ID", value=cfg_init["model"])
@@ -1295,7 +1295,7 @@ def on_ui_tabs():
                         image_api_key = gr.Textbox(
                             label="生成 API Key（图像模型选择在首页）",
                             value=cfg_init.get("image_api_key") or cfg_init.get("video_api_key", ""),
-                            type="password",
+                            type="text",
                             scale=4,
                             elem_id="agent_image_api_key_input",
                         )
@@ -1709,13 +1709,20 @@ def on_ui_tabs():
         </style>
         """)
 
-    # 安全防护：防止浏览器密码管理器自动填充 API Key
-    # 注意：lightbox 交互逻辑已完全移至 sidebar.js（gr.HTML 内 script 不执行，Blocks.load(js=) 也不可靠）
-    agent_interface.load(
-        js="""() => {
-            document.querySelectorAll('input[type=password]').forEach(i => i.setAttribute('autocomplete', 'new-password'));
-        }"""
-    )
+        # 加载时从服务端获取配置回填到 Textbox
+        # Gradio 5.x 的 Textbox 不会通过 HTML 属性渲染初始值（尤其是懒加载标签页），
+        # 所以需要在 .load() 回调中从 load_config() 读取并设置。
+        def _load_config_to_ui():
+            cfg = load_config(resolve_local=False)
+            return cfg.get("api_key", ""), cfg.get("image_api_key", "") or cfg.get("video_api_key", "")
+
+        agent_interface.load(
+            fn=_load_config_to_ui,
+            outputs=[api_key, image_api_key],
+            js="""() => {
+                document.querySelectorAll('textarea').forEach(t => t.setAttribute('autocomplete', 'new-password'));
+            }"""
+        )
 
     return [(agent_interface, "绘梦智能体助手", "sd_webui_agent")]
 

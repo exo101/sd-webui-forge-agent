@@ -505,6 +505,7 @@ window.__sdSidebarLoaded = true;
     // ============================================================
     //  Agent Chatbot Lightbox - 图片点击放大功能
     //  在 tryInit() 中调用，利用其重试机制确保 chatbot 渲染后绑定。
+    //  由于 agent 标签页是懒加载的，还需要 MutationObserver 持续监听。
     // ============================================================
     function initAgentLightbox() {
         // 注入 CSS（只一次）
@@ -521,7 +522,9 @@ window.__sdSidebarLoaded = true;
                 '#agent-chatbot .image-container::after{content:"\\1F50D";position:absolute;top:8px;right:8px;font-size:18px;background:rgba(0,0,0,0.6);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;pointer-events:none;z-index:10;}',
                 '#agent-chatbot .image-container:hover::after{opacity:1;}',
                 '#agent-chatbot img{cursor:zoom-in;transition:opacity .2s;}',
-                '#agent-chatbot img:hover{opacity:.9;}'
+                '#agent-chatbot img:hover{opacity:.9;}',
+                '/* API Key 输入框掩码（Gradio 5.x Textbox 渲染为 textarea，不通过 HTML 属性显示初始值） */',
+                '#agent_api_key_input textarea, #agent_image_api_key_input textarea{-webkit-text-security:disc;text-security:disc;}'
             ].join('\n');
             document.head.appendChild(css);
         }
@@ -566,24 +569,42 @@ window.__sdSidebarLoaded = true;
         }
 
         // 绑定 chatbot 事件委托
-        var chatbotEl = document.getElementById('agent-chatbot');
-        if (!chatbotEl) return false;
-        if (chatbotEl.dataset.lightboxDelegated) return true;
+        function bindChatbot(chatbotEl) {
+            if (!chatbotEl || chatbotEl.dataset.lightboxDelegated) return false;
+            chatbotEl.dataset.lightboxDelegated = '1';
+            chatbotEl.addEventListener('click', function(e) {
+                var target = e.target;
+                var img = target.tagName === 'IMG' ? target : target.closest('img');
+                var rawSrc = img ? img.getAttribute('src') : null;
+                if (img && rawSrc && !img.closest('a[download]')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    lightboxImg.src = rawSrc;
+                    lightbox.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+            }, true);
+            return true;
+        }
 
-        chatbotEl.dataset.lightboxDelegated = '1';
-        chatbotEl.addEventListener('click', function(e) {
-            var target = e.target;
-            var img = target.tagName === 'IMG' ? target : target.closest('img');
-            var rawSrc = img ? img.getAttribute('src') : null;
-            if (img && rawSrc && !img.closest('a[download]')) {
-                e.preventDefault();
-                e.stopPropagation();
-                lightboxImg.src = rawSrc;
-                lightbox.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            }
-        }, true);
-        return true;
+        // 先尝试直接绑定（chatbot 可能已经存在）
+        var chatbotEl = document.getElementById('agent-chatbot');
+        if (chatbotEl) {
+            bindChatbot(chatbotEl);
+            return true;
+        }
+
+        // chatbot 还不存在（懒加载标签页），用 MutationObserver 持续监听
+        if (!window._agentLightboxObserver) {
+            window._agentLightboxObserver = new MutationObserver(function() {
+                var cb = document.getElementById('agent-chatbot');
+                if (cb && !cb.dataset.lightboxDelegated) {
+                    bindChatbot(cb);
+                }
+            });
+            window._agentLightboxObserver.observe(document.body, { childList: true, subtree: true });
+        }
+        return false;
     }
 
     // ============================================================
