@@ -296,6 +296,9 @@ def create_ui():
                                 if opts.arh_show_aspect_buttons:
                                     aspect_ratio.create_aspect_ratio_buttons("txt2img", width, height)
 
+                                # 尺寸百分比缩放滑块
+                                aspect_ratio.create_size_scale_slider("txt2img", width, height)
+
                             with gr.Column(elem_id="txt2img_dimensions_row", scale=1, elem_classes="dimensions-tools"):
                                 res_switch_btn = ToolButton(value=switch_values_symbol, elem_id="txt2img_res_switch_btn", tooltip="Switch width/height")
 
@@ -683,6 +686,9 @@ def create_ui():
                                                 # 纵横比快捷按钮（整合自 aspect-ratio-helper 插件）
                                                 if opts.arh_show_aspect_buttons:
                                                     aspect_ratio.create_aspect_ratio_buttons("img2img", width, height)
+
+                                                # 尺寸百分比缩放滑块
+                                                aspect_ratio.create_size_scale_slider("img2img", width, height)
                                             with gr.Column(elem_id="img2img_dimensions_row", scale=1, elem_classes="dimensions-tools"):
                                                 res_switch_btn = ToolButton(value=switch_values_symbol, elem_id="img2img_res_switch_btn", tooltip="Switch width/height")
                                                 detect_image_size_btn = ToolButton(value=detect_image_size_symbol, elem_id="img2img_detect_image_size_btn", tooltip="Auto detect size from img2img")
