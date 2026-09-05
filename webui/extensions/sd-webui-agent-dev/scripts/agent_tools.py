@@ -732,12 +732,12 @@ def list_preprocessors_tool():
 
 
 def apply_adetailer_tool(image, prompt="", model_name=""):
-    """ADetailer 脸部修复（如果安装了 aadetailer 插件）。
+    """ADetailer 脸部修复：检测人脸并对人脸区域做 inpaint 修复。
 
     参数:
         image: 输入图片 (PIL Image)
-        prompt: 修复时使用的提示词（可选）
-        model_name: 检测模型名称（可选）
+        prompt: 修复时使用的提示词（可选，默认使用通用面部修复提示）
+        model_name: 检测模型名称（可选，默认 face_yolov8n.pt）
     返回: (images_list, info_dict)
     """
     try:
@@ -746,20 +746,103 @@ def apply_adetailer_tool(image, prompt="", model_name=""):
         elif not isinstance(image, Image.Image):
             raise ValueError("image must be a PIL Image")
 
-        # 尝试导入 aadetailer
+        # ===== 1. 人脸检测 =====
         try:
-            from adetailer import run
-            result = run(
-                image=image,
-                prompt=prompt,
-                model_name=model_name or None,
-            )
-            if isinstance(result, list):
-                return result, {"status": "success", "count": len(result)}
-            return [result], {"status": "success"}
+            from adetailer.ultralytics import ultralytics_predict
+            from adetailer.mediapipe import mediapipe_face_detection
         except ImportError:
-            # aadetailer 不可用，返回原图
-            return [image], {"status": "skipped", "note": "ADetailer 插件未安装，返回原图"}
+            return [image], {"status": "skipped", "note": "ADetailer 模块未加载，返回原图"}
+
+        # 查找检测模型
+        adetailer_models_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            "..", "models", "adetailer"
+        )
+        model_path = None
+        target_model = model_name or "face_yolov8n.pt"
+        candidate_paths = [
+            os.path.join(adetailer_models_dir, target_model),
+            os.path.join(adetailer_models_dir, "face_yolov8n.pt"),
+        ]
+        for p in candidate_paths:
+            if os.path.isfile(p):
+                model_path = p
+                break
+
+        if model_path is None:
+            # 尝试用 mediapipe（无需模型文件）
+            try:
+                pred = mediapipe_face_detection(image)
+            except Exception as e:
+                return [image], {"status": "skipped", "note": f"ADetailer 检测模型未找到且 mediapipe 不可用: {e}，返回原图"}
+        else:
+            try:
+                pred = ultralytics_predict(model_path, image, confidence=0.3)
+            except Exception as e:
+                return [image], {"status": "skipped", "note": f"ADetailer 人脸检测失败: {e}，返回原图"}
+
+        if not pred.masks:
+            return [image], {"status": "no_face", "note": "未检测到人脸，返回原图"}
+
+        print(f"[Agent] ADetailer: 检测到 {len(pred.masks)} 张人脸，开始修复")
+
+        # ===== 2. 对每个人脸区域做 inpaint 修复 =====
+        result_image = image.copy()
+        face_prompt = prompt or "beautiful detailed face, high quality skin, sharp focus, symmetrical face, portrait"
+        face_negative = "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry"
+
+        for i, mask in enumerate(pred.masks):
+            try:
+                # 确保 mask 尺寸与原图一致
+                if mask.size != result_image.size:
+                    mask = mask.resize(result_image.size, Image.LANCZOS)
+
+                # 创建 inpaint 任务
+                p = StableDiffusionProcessingImg2Img(
+                    outpath_samples=shared.opts.outdir_samples or shared.opts.outdir_img2img_samples,
+                    outpath_grids=shared.opts.outdir_grids or shared.opts.outdir_img2img_grids,
+                    prompt=face_prompt,
+                    negative_prompt=face_negative,
+                    seed=-1,
+                    steps=20,
+                    cfg_scale=7.0,
+                    width=result_image.width,
+                    height=result_image.height,
+                    init_images=[result_image],
+                    mask=mask,
+                    denoising_strength=0.45,
+                    inpainting_mask_invert=0,  # 修复 mask 白色区域
+                    inpainting_fill=1,  # 保留原始内容作为基础
+                    inpaint_full_res=True,  # 全分辨率 inpaint
+                    inpaint_full_res_padding=32,
+                    sampler_name=_get_sampler(),
+                    do_not_save_samples=True,
+                    do_not_save_grid=True,
+                )
+                p.sd_model = shared.sd_model
+
+                try:
+                    from modules_forge import main_thread
+                    processed = main_thread.run_and_wait_result(process_images, p)
+                except Exception:
+                    processed = process_images(p)
+
+                if processed and hasattr(processed, 'images') and len(processed.images) > 0:
+                    # 将修复后的图像合成回原图（仅取 mask 区域）
+                    inpainted = processed.images[0]
+                    if inpainted.size != result_image.size:
+                        inpainted = inpainted.resize(result_image.size, Image.LANCZOS)
+                    result_image = Image.composite(inpainted, result_image, mask)
+                    print(f"[Agent] ADetailer: 第 {i+1}/{len(pred.masks)} 张人脸修复完成")
+                else:
+                    print(f"[Agent] ADetailer: 第 {i+1} 张人脸修复返回空，跳过")
+
+            except Exception as e:
+                print(f"[Agent] ADetailer: 第 {i+1} 张人脸修复失败: {e}")
+                continue
+
+        return [result_image], {"status": "success", "faces_detected": len(pred.masks), "model": os.path.basename(model_path) if model_path else "mediapipe"}
+
     except Exception as e:
         return [image], {"status": "error", "error": str(e), "note": "返回原图"}
 

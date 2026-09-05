@@ -130,7 +130,7 @@ def adui(
     eid = partial(elem_id, n=0, is_img2img=is_img2img)
 
     with InputAccordion(
-        value=False,
+        value=True,
         elem_id=eid("ad_main_accordion"),
         label=ADETAILER,
         visible=True,
