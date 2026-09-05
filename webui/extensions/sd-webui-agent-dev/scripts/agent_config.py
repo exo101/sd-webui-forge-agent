@@ -233,18 +233,43 @@ def save_config(cfg):
 # WebUI 工具函数 (Agent 可调用的 tools)
 # =============================================================================
 
+def _get_webui_output_dir():
+    """获取 WebUI 的 outputs/agent 目录。"""
+    try:
+        # agent_config.py 在 webui/extensions/sd-webui-agent-dev/scripts/
+        # WebUI 根目录 = 向上 4 级
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        webui_root = os.path.abspath(os.path.join(script_dir, "..", "..", "..", ".."))
+        output_dir = os.path.join(webui_root, "outputs", "agent")
+        os.makedirs(output_dir, exist_ok=True)
+        return output_dir
+    except Exception:
+        return tempfile.gettempdir()
+
+
 def _save_pil_to_tempfile(img):
-    """保存 PIL Image 到临时文件，返回文件路径。用于 Gradio Chatbot 显示图片。"""
+    """保存 PIL Image 到 WebUI outputs/agent 目录，返回文件路径。用于 Gradio Chatbot 显示图片。"""
     if not isinstance(img, Image.Image):
         return None
     try:
-        tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
-        img.save(tmp.name, format="PNG")
-        tmp.close()
-        return tmp.name
+        # 优先保存到 WebUI output 目录
+        output_dir = _get_webui_output_dir()
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        filename = f"agent-{timestamp}-{int(time.time()*1000)%10000}.png"
+        filepath = os.path.join(output_dir, filename)
+        img.save(filepath, format="PNG")
+        print(f"[Agent] 图像已保存到: {filepath}")
+        return filepath
     except Exception as e:
-        print(f"[Agent] 保存临时图片失败: {e}")
-        return None
+        print(f"[Agent] 保存到 output 目录失败，回退到临时文件: {e}")
+        try:
+            tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+            img.save(tmp.name, format="PNG")
+            tmp.close()
+            return tmp.name
+        except Exception as e2:
+            print(f"[Agent] 保存临时图片也失败: {e2}")
+            return None
 
 
 def _get_current_checkpoint():
