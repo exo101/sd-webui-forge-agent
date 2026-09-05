@@ -605,7 +605,8 @@ class ForgeCanvas {
 
     loadImage(base64) {
         if (typeof this.gradio_config !== "undefined") {
-            if (!this.gradio_config.version.startsWith("4.")) return;
+            var ver = this.gradio_config.version || "";
+            if (!ver.startsWith("4.") && !ver.startsWith("5.")) return;
         } else {
             return;
         }
