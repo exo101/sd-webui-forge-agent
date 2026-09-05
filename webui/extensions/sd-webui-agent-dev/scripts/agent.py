@@ -40,9 +40,10 @@ from scripts.agent_prompts import _get_system_prompt
 
 IMAGE_GENERATION_MODELS_BY_PROVIDER = {
     "ModelScope": [
-        "Qwen-Image-Edit-2511",
-        "FireRed-Image-Edit",
-        "Krea-2-Turbo",
+        "krea/Krea-2-Turbo",
+        "Tongyi-MAI/Z-Image-Turbo",
+        "FireRedTeam/FireRed-Image-Edit-1.1",
+        "Qwen/Qwen-Image-Edit-2511",
     ],
     "YoboxAI": [
         "nano-banana",
@@ -65,9 +66,10 @@ IMAGE_GENERATION_MODELS = [
     "gpt-image-2",
     "qwen-image-3.0",
     "qwen-image-3.0-pro",
-    "Qwen-Image-Edit-2511",
-    "FireRed-Image-Edit",
-    "Krea-2-Turbo",
+    "krea/Krea-2-Turbo",
+    "Tongyi-MAI/Z-Image-Turbo",
+    "FireRedTeam/FireRed-Image-Edit-1.1",
+    "Qwen/Qwen-Image-Edit-2511",
 ]
 
 VIDEO_GENERATION_MODELS = [
@@ -109,9 +111,10 @@ MENTION_MAP = {
     "illustrious": ("model", "illustrious"),
 
     # API 模型标签（切换 Forge 到对应 API 供应商和远程模型）
-    "Qwen-Image-Edit-2511": ("api_model", "Qwen-Image-Edit-2511"),
-    "FireRed-Image-Edit": ("api_model", "FireRed-Image-Edit"),
-    "Krea-2-Turbo": ("api_model", "Krea-2-Turbo"),
+    "Qwen/Qwen-Image-Edit-2511": ("api_model", "Qwen/Qwen-Image-Edit-2511"),
+    "FireRedTeam/FireRed-Image-Edit-1.1": ("api_model", "FireRedTeam/FireRed-Image-Edit-1.1"),
+    "krea/Krea-2-Turbo": ("api_model", "krea/Krea-2-Turbo"),
+    "Tongyi-MAI/Z-Image-Turbo": ("api_model", "Tongyi-MAI/Z-Image-Turbo"),
     "qwen-image-3.0": ("api_model", "qwen-image-3.0"),
     "qwen-image-3.0-pro": ("api_model", "qwen-image-3.0-pro"),
     "gpt-image-2": ("api_model", "gpt-image-2"),
@@ -353,8 +356,8 @@ def _handle_tool_mentions(actions):
 
 
 API_IMAGE_EDIT_MODELS = {
-    "Qwen-Image-Edit-2511",
-    "FireRed-Image-Edit",
+    "Qwen/Qwen-Image-Edit-2511",
+    "FireRedTeam/FireRed-Image-Edit-1.1",
     "gpt-image-2",
     "nano-banana",
 }
@@ -1234,9 +1237,10 @@ def on_ui_tabs():
                             ("🤖 YoboxAI · gemini-3.1-flash", "YoboxAI|gemini-3.1-flash-image-preview"),
                             ("🤖 YoboxAI · gemini-3.1-flash-lite", "YoboxAI|gemini-3.1-flash-lite-image"),
                             ("🤖 YoboxAI · gpt-image-2", "YoboxAI|gpt-image-2"),
-                            ("🧩 ModelScope · Qwen-Image-Edit", "ModelScope|Qwen-Image-Edit-2511"),
-                            ("🧩 ModelScope · FireRed-Image-Edit", "ModelScope|FireRed-Image-Edit"),
-                            ("🧩 ModelScope · Krea-2-Turbo", "ModelScope|Krea-2-Turbo"),
+                            ("🧩 ModelScope · Krea-2-Turbo", "ModelScope|krea/Krea-2-Turbo"),
+                            ("🧩 ModelScope · Z-Image-Turbo", "ModelScope|Tongyi-MAI/Z-Image-Turbo"),
+                            ("🧩 ModelScope · FireRed-Image-Edit", "ModelScope|FireRedTeam/FireRed-Image-Edit-1.1"),
+                            ("🧩 ModelScope · Qwen-Image-Edit", "ModelScope|Qwen/Qwen-Image-Edit-2511"),
                             ("☁️ DashScope · qwen-image-3.0", "DashScope|qwen-image-3.0"),
                             ("☁️ DashScope · qwen-image-3.0-pro", "DashScope|qwen-image-3.0-pro"),
                             ("🎬 视频 · dreamina-seedance-2-0", "video|dreamina-seedance-2-0-hc"),

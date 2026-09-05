@@ -1326,6 +1326,60 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
                 "method": "yoboxai_gemini_generate_content",
             }
 
+        # ModelScope 图像编辑使用 JSON payload + base64 data URL，不支持 multipart。
+        # 支持 FireRedTeam/FireRed-Image-Edit-1.1、Qwen/Qwen-Image-Edit-2511 等编辑模型。
+        if provider == "modelscope":
+            payload = {
+                "model": model_id,
+                "prompt": str(instruction).strip(),
+                "image": f"data:image/png;base64,{image_b64_list[0]}",
+                "n": 1,
+            }
+            if size and str(size).lower() not in ("auto", "none", "null"):
+                payload["size"] = size
+            req = urllib.request.Request(
+                f"{base_url}/images/edits",
+                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                method="POST",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key}",
+                    "X-ModelScope-Async-Mode": "true",
+                },
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    result = json.loads(resp.read().decode("utf-8"))
+            except urllib.error.HTTPError as e:
+                body = e.read().decode("utf-8", errors="ignore")[:1200]
+                return None, {"status": "error", "error": f"ModelScope 图像编辑失败: HTTP {e.code}", "detail": body, "model_used": model_id}
+
+            # 异步模式：轮询任务结果
+            if "task_id" in result:
+                print(f"[Agent] ModelScope 编辑异步任务已提交: {result['task_id']}")
+                images, err = _modelscope_poll_task(base_url, api_key, result["task_id"], "image_generation")
+                if err:
+                    return None, err
+                return images, {"status": "success", "model_used": model_id, "instruction": instruction, "method": "modelscope_async_edit"}
+
+            # 同步模式回退
+            data_items = result.get("data") or []
+            if not data_items:
+                return None, {"status": "error", "error": "ModelScope 未返回图像数据", "raw": result, "model_used": model_id}
+            images = []
+            for item in data_items:
+                b64 = item.get("b64_json") or item.get("image")
+                if b64:
+                    if isinstance(b64, str) and b64.startswith("data:image"):
+                        b64 = b64.split(",", 1)[1]
+                    images.append(Image.open(BytesIO(base64.b64decode(b64))).convert("RGB"))
+                elif item.get("url"):
+                    with urllib.request.urlopen(item["url"], timeout=120) as img_resp:
+                        images.append(Image.open(BytesIO(img_resp.read())).convert("RGB"))
+            if not images:
+                return None, {"status": "error", "error": "ModelScope 编辑未返回可解析图像", "raw": result, "model_used": model_id}
+            return images, {"status": "success", "model_used": model_id, "instruction": instruction, "method": "modelscope_edit"}
+
         # OpenAI-compatible图像编辑接口要求 multipart/form-data，不能把 image
         # 作为 data URL 放进 JSON。YoboxAI 的 gpt-image-2 也走这一兼容编辑协议。
         boundary = f"----ForgeAgent{int(time.time() * 1000000)}"
@@ -1350,22 +1404,35 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
         parts.append(f"--{boundary}--\r\n".encode("ascii"))
         data = b"".join(parts)
         url = f"{base_url}/images/edits"
+        edit_headers = {
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+            "Authorization": f"Bearer {api_key}",
+        }
+        # ModelScope 使用异步模式
+        is_modelscope = provider == "modelscope"
+        if is_modelscope:
+            edit_headers["X-ModelScope-Async-Mode"] = "true"
         req = urllib.request.Request(
             url,
             data=data,
             method="POST",
-            headers={
-                "Content-Type": f"multipart/form-data; boundary={boundary}",
-                "Authorization": f"Bearer {api_key}",
-            },
+            headers=edit_headers,
         )
 
         try:
-            with urllib.request.urlopen(req, timeout=180) as resp:
+            with urllib.request.urlopen(req, timeout=60) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", errors="ignore")[:1200]
             return None, {"status": "error", "error": f"API 图像编辑失败: HTTP {e.code}", "detail": body, "model_used": model_id}
+
+        # ModelScope 异步模式：轮询任务结果
+        if is_modelscope and "task_id" in result:
+            print(f"[Agent] ModelScope 编辑异步任务已提交: {result['task_id']}")
+            images, err = _modelscope_poll_task(base_url, api_key, result["task_id"], "image_generation")
+            if err:
+                return None, err
+            return images, {"status": "success", "model_used": model_id, "instruction": instruction, "method": "modelscope_async_edit"}
 
         data_items = result.get("data") or []
         if not data_items:
@@ -1396,6 +1463,52 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
         }
     except Exception as e:
         return None, {"status": "error", "error": str(e), "method": "api_image_edit"}
+
+
+def _modelscope_poll_task(base_url, api_key, task_id, task_type="image_generation", max_polls=40, poll_interval=3):
+    """轮询 ModelScope 异步任务，返回 (images_list, error_dict_or_None)。"""
+    for i in range(max_polls):
+        time.sleep(poll_interval)
+        poll_req = urllib.request.Request(
+            f"{base_url}/tasks/{task_id}",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "X-ModelScope-Task-Type": task_type,
+            },
+        )
+        try:
+            with urllib.request.urlopen(poll_req, timeout=30) as poll_resp:
+                poll_result = json.loads(poll_resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="ignore")[:500]
+            return None, {"status": "error", "error": f"ModelScope 轮询失败: HTTP {e.code}", "detail": body}
+        except Exception as e:
+            # 网络超时等可恢复错误，继续轮询
+            print(f"[Agent] ModelScope 轮询 {i+1} 次异常（继续重试）: {e}")
+            continue
+
+        status = str(poll_result.get("task_status") or poll_result.get("status", "")).upper()
+        print(f"[Agent] ModelScope 任务轮询 {i+1}/{max_polls}: status={status}")
+
+        if status in ("SUCCEEDED", "SUCCEED", "COMPLETED"):
+            images = []
+            # ModelScope 返回 output_images 数组
+            output_images = poll_result.get("output_images") or []
+            for img_url in output_images:
+                if isinstance(img_url, str) and img_url.startswith("http"):
+                    try:
+                        with urllib.request.urlopen(img_url, timeout=60) as img_resp:
+                            images.append(Image.open(BytesIO(img_resp.read())).convert("RGB"))
+                    except Exception as e:
+                        print(f"[Agent] ModelScope 下载图片失败: {e}")
+            if images:
+                return images, None
+            return None, {"status": "error", "error": "ModelScope 任务成功但未返回图片", "raw": poll_result}
+        elif status in ("FAILED", "FAILURE", "ERROR"):
+            err_msg = poll_result.get("errors") or poll_result.get("error") or "未知错误"
+            return None, {"status": "error", "error": f"ModelScope 任务失败: {err_msg}", "raw": poll_result}
+
+    return None, {"status": "error", "error": f"ModelScope 任务轮询超时（{max_polls * poll_interval}秒）"}
 
 
 def api_image_generate_tool(prompt, model=None, size="1024x1024", response_format="b64_json"):
@@ -1479,21 +1592,34 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
         }
         if response_format:
             payload["response_format"] = response_format
+        request_headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
+        # ModelScope 使用异步模式
+        is_modelscope = provider == "modelscope"
+        if is_modelscope:
+            request_headers["X-ModelScope-Async-Mode"] = "true"
         req = urllib.request.Request(
             f"{base_url}/images/generations",
             data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
             method="POST",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}",
-            },
+            headers=request_headers,
         )
         try:
-            with urllib.request.urlopen(req, timeout=180) as resp:
+            with urllib.request.urlopen(req, timeout=60) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", errors="ignore")[:1200]
             return None, {"status": "error", "error": f"API 图像生成失败: HTTP {e.code}", "detail": body, "model_used": model_id}
+
+        # ModelScope 异步模式：轮询任务结果
+        if is_modelscope and "task_id" in result:
+            print(f"[Agent] ModelScope 异步任务已提交: {result['task_id']}")
+            images, err = _modelscope_poll_task(base_url, api_key, result["task_id"], "image_generation")
+            if err:
+                return None, err
+            return images, {"status": "success", "model_used": model_id, "prompt": prompt, "method": "modelscope_async_generate"}
 
         images = []
         for item in result.get("data") or []:
@@ -1509,6 +1635,7 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
             return None, {"status": "error", "error": "API 未返回图像数据", "raw": result, "model_used": model_id}
         return images, {"status": "success", "model_used": model_id, "prompt": prompt, "method": "api_image_generate"}
     except Exception as e:
+        print(f"[Agent] api_image_generate_tool 异常: {traceback.format_exc()}")
         return None, {"status": "error", "error": str(e), "method": "api_image_generate"}
 
 
