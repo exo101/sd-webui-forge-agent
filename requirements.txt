@@ -1,0 +1,31 @@
+# ModelScope Studio 部署依赖
+# 注意：版本需相互兼容，避免 ResolutionImpossible
+
+# 核心深度学习框架
+torch>=2.4.0
+torchvision>=0.19.0
+
+# 扩散模型相关（需兼容）
+diffusers>=0.30.0,<0.41.0
+transformers>=4.44.0
+accelerate>=1.0.0
+
+# safetensors 必须 >=0.8.0 以满足 diffusers 0.40.0 的要求
+# 之前固定 0.7.0 会导致与 diffusers 冲突
+safetensors>=0.8.0
+
+# WebUI 框架
+gradio>=4.0.0,<5.0.0
+fastapi
+uvicorn[standard]
+
+# 图像处理
+Pillow>=10.0.0
+numpy>=1.26.0
+opencv-python-headless>=4.8.0
+
+# 工具依赖
+sentencepiece
+protobuf
+tokenizers
+huggingface-hub>=0.24.0
