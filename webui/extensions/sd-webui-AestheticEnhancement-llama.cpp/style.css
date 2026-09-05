@@ -1,0 +1,268 @@
+/**
+ * 打光辅助插件 - Lighting Assistant
+ * 样式文件
+ */
+
+/* 主容器样式 */
+#lighting_assistant {
+    padding: 20px;
+}
+
+/* 标题样式 */
+#lighting_assistant h1 {
+    color: #f0c040;
+    border-bottom: 2px solid #f0c040;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+#lighting_assistant h2 {
+    color: #ffd700;
+    margin-top: 20px;
+}
+
+#lighting_assistant h3 {
+    color: #ffeb3b;
+}
+
+/* 复选框组样式 */
+#lighting_assistant .gradio-checkbox-group {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 10px;
+}
+
+#lighting_assistant .gradio-checkbox-group label {
+    display: flex;
+    align-items: center;
+    padding: 5px 10px;
+    margin: 2px 0;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+#lighting_assistant .gradio-checkbox-group label:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* 按钮样式 */
+#lighting_assistant .primary-btn {
+    background: linear-gradient(135deg, #f0c040 0%, #ff9800 100%);
+    border: none;
+    color: #000;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+#lighting_assistant .primary-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(240, 192, 64, 0.4);
+}
+
+#lighting_assistant .secondary-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    transition: all 0.3s;
+}
+
+#lighting_assistant .secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* 输出文本框样式 */
+#lighting_assistant .output-textbox {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #f0c040;
+    border-radius: 8px;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* 卡片样式 */
+#lighting_assistant .gradio-group {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    padding: 15px;
+    margin: 10px 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 图片上传区域 */
+#lighting_assistant .gradio-image {
+    border: 2px dashed rgba(240, 192, 64, 0.5);
+    border-radius: 12px;
+    transition: border-color 0.3s;
+}
+
+#lighting_assistant .gradio-image:hover {
+    border-color: #f0c040;
+}
+
+/* 标签页样式 */
+#lighting_assistant .tabs {
+    margin-top: 20px;
+}
+
+#lighting_assistant .tab-nav {
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+#lighting_assistant .tab-nav button {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 10px 20px;
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+#lighting_assistant .tab-nav button:hover {
+    color: #f0c040;
+}
+
+#lighting_assistant .tab-nav button.selected {
+    color: #f0c040;
+    border-bottom: 2px solid #f0c040;
+}
+
+/* Markdown 内容样式 */
+#lighting_assistant .markdown-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+}
+
+#lighting_assistant .markdown-body th,
+#lighting_assistant .markdown-body td {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 10px;
+    text-align: left;
+}
+
+#lighting_assistant .markdown-body th {
+    background: rgba(240, 192, 64, 0.2);
+    color: #f0c040;
+}
+
+#lighting_assistant .markdown-body tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* 状态指示器 */
+#lighting_assistant .status-success {
+    color: #4caf50;
+}
+
+#lighting_assistant .status-error {
+    color: #f44336;
+}
+
+#lighting_assistant .status-warning {
+    color: #ff9800;
+}
+
+/* 分隔线 */
+#lighting_assistant hr {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 20px 0;
+}
+
+/* 图标样式 */
+#lighting_assistant .light-icon {
+    font-size: 24px;
+    margin-right: 8px;
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+    #lighting_assistant .gradio-row {
+        flex-direction: column;
+    }
+    
+    #lighting_assistant .gradio-column {
+        width: 100%;
+    }
+}
+
+/* 动画效果 */
+@keyframes glow {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(240, 192, 64, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(240, 192, 64, 0.8);
+    }
+}
+
+#lighting_assistant .glow-effect {
+    animation: glow 2s infinite;
+}
+
+/* Toast 通知样式 */
+#lighting-assistant-toast {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+/* 预设按钮样式 */
+.preset-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    margin: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.preset-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+/* 帮助提示 */
+.help-tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: help;
+}
+
+.help-tooltip .tooltip-text {
+    visibility: hidden;
+    width: 200px;
+    background-color: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.help-tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* 加载动画 */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #f0c040;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

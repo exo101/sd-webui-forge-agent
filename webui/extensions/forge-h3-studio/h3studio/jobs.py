@@ -357,7 +357,25 @@ class JobStore:
     def _submit_cloud(self, request: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
         """Submit a video generation task to the MiniMax H3 cloud API."""
         client = CloudClient(config)
-        workflow, summary = build_h3_workflow(request)
+        # Cloud mode does not use ComfyUI's local model graph. Do not run the
+        # local workflow validator here: text encoder/VAE/model files are not
+        # required for MiniMax's remote API.
+        seed = int(request.get("seed") or 0)
+        summary = {
+            "mode": request.get("mode") or "t2v",
+            "mode_name": "MiniMax H3 云端 API",
+            "model": "MiniMax-H3",
+            "prompt": str(request.get("prompt") or ""),
+            "resolution": f"{int(request.get('width') or 1344)} × {int(request.get('height') or 768)}",
+            "frames": int(request.get("frames") or 124),
+            "duration_seconds": round(int(request.get("frames") or 124) / 24, 2),
+            "seed": seed,
+            "node_count": 1,
+            "node_titles": {},
+            "loras": request.get("loras") or [],
+            "reproducible": dict(request),
+        }
+        workflow = None
         requested_client_id = str(request.get("client_id") or "")
         client_id = requested_client_id if re.fullmatch(r"[A-Za-z0-9_-]{16,128}", requested_client_id) else uuid.uuid4().hex
         now = time.time()

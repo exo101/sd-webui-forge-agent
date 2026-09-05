@@ -119,7 +119,7 @@ def segmentation_tab():
     with gr.Blocks(analytics_enabled=False) as ui:
         with gr.Tabs():
             # 智能抠图标签页
-            with gr.TabItem("智能抠图"):
+            with gr.TabItem("智能抠图", elem_id="layer_processing_matting_tab"):
                 if create_image_matting_module is not None:
                     try:
                         create_image_matting_module()
@@ -129,7 +129,7 @@ def segmentation_tab():
                     gr.Markdown("智能抠图模块当前不可用。")
             
             # 点选分割标签页
-            with gr.TabItem("点选分割"):
+            with gr.TabItem("点选分割", elem_id="layer_processing_sam_tab"):
                 if SAM_AVAILABLE and create_sam_ui is not None:
                     try:
                         sam_ui_components = create_sam_ui()
@@ -144,7 +144,7 @@ def segmentation_tab():
                     gr.Markdown("图像分割模块不可用。请确保已安装 segment-anything 库。")
             
             # 图像清理标签页
-            with gr.TabItem("图像清理"):
+            with gr.TabItem("图像清理", elem_id="layer_processing_cleaner_tab"):
                 if CLEANER_AVAILABLE and create_cleaner_module is not None:
                     try:
                         cleaner_ui_components = create_cleaner_module()
@@ -159,7 +159,7 @@ def segmentation_tab():
                     gr.Markdown("图像清理模块不可用。请确保已安装 litelama 库。")
             
             # 图层分离标签页
-            with gr.TabItem("图层分离"):
+            with gr.TabItem("图层分类", elem_id="layer_processing_classification_tab"):
                 if create_layer_separation_ui is not None:
                     try:
                         create_layer_separation_ui()

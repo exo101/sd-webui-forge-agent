@@ -160,6 +160,7 @@ def save_files(js_data, images, do_make_zip, index):
 class OutputPanel:
     gallery: gr.Gallery = None
     player: gr.Video = None
+    comparison: gr.HTML = None
     generation_info: gr.HTML = None
     infotext: gr.HTML = None
     html_log: gr.HTML = None
@@ -268,6 +269,7 @@ def create_output_panel(tabname, outdir, toprow=None):
                     )
 
             else:
+                res.comparison = gr.HTML(elem_id=f"{tabname}_before_after_comparison", elem_classes="extras-before-after-output")
                 res.generation_info = gr.HTML(elem_id=f"html_info_x_{tabname}")
                 res.infotext = gr.HTML(elem_id=f"html_info_{tabname}", elem_classes="infotext")
                 res.html_log = gr.HTML(elem_id=f"html_log_{tabname}")

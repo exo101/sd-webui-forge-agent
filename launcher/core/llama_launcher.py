@@ -125,7 +125,9 @@ class LlamaWorker(QThread):
             "--model", selected["path"],
             "--host", "0.0.0.0",
             "--port", str(port),
-            "-ngl", str(ngl),
+            # CUDA build: offload all possible layers and use GPU attention.
+            "-ngl", str(max(ngl, 999)),
+            "--flash-attn", "on",
         ]
         if selected["mmproj"] and os.path.exists(selected["mmproj"]):
             cmd += ["--mmproj", selected["mmproj"]]
@@ -151,7 +153,9 @@ class LlamaWorker(QThread):
         # 等待进程结束
         try:
             for line in p.stdout:
-                pass  # 丢弃输出，等待进程结束
+                line = line.rstrip()
+                if line:
+                    self.log_line.emit(f"[llama] {line}")
             p.wait()
         except Exception:
             pass
