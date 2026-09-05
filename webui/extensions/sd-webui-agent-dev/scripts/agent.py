@@ -304,16 +304,25 @@ def _activate_api_model_mentions(actions):
         try:
             from modules_forge.api_providers import set_session_api_key
 
+            # 持久化到 agent_config.json
+            cfg["image_model"] = model_id
+            # 自动补全 base_url
+            provider_name = str(cfg.get("image_api_provider") or "").strip()
+            correct_url = provider_base_url(provider_name)
+            if correct_url and normalize_base_url(cfg.get("image_base_url", "")) != correct_url:
+                cfg["image_base_url"] = correct_url
+            save_config(cfg)
+
             shared.opts.set("forge_model_mode", "api")
-            provider_name = str(cfg.get("image_api_provider") or "").strip().lower()
+            provider_lower = provider_name.lower()
             provider_aliases = {
                 "modelscope": "modelscope",
                 "dashscope": "dashscope",
                 "pixapi": "pixapi",
                 "yoboxai": "yoboxai",
             }
-            if provider_name in provider_aliases:
-                shared.opts.set("forge_api_provider", provider_aliases[provider_name])
+            if provider_lower in provider_aliases:
+                shared.opts.set("forge_api_provider", provider_aliases[provider_lower])
             shared.opts.set("forge_api_model", model_id)
             set_session_api_key(cfg.get("image_api_key", ""))
 
@@ -322,7 +331,7 @@ def _activate_api_model_mentions(actions):
                 "供应商、Base URL 和 API Key 使用独立的生成 API 设置。"
             )
             results.append({"tag": tag, "status": "success", "model": model_id})
-            print(f"[Agent] API 模型已设置: model={model_id}")
+            print(f"[Agent] API 模型已设置: model={model_id}, base_url={cfg.get('image_base_url')}")
         except Exception as e:
             notes.append(f"⚠️ @{tag} API 模型启用失败: {e}")
             results.append({"tag": tag, "status": "error", "error": str(e)})
@@ -1375,6 +1384,12 @@ def on_ui_tabs():
                         cfg = load_config()
                         cfg["image_api_provider"] = provider
                         cfg["image_model"] = model
+                        # 自动补全 base_url（如果为空或与供应商不匹配）
+                        correct_url = provider_base_url(provider)
+                        if correct_url and normalize_base_url(cfg.get("image_base_url", "")) != correct_url:
+                            cfg["image_base_url"] = correct_url
+                        if correct_url and normalize_base_url(cfg.get("video_base_url", "")) != correct_url:
+                            cfg["video_base_url"] = correct_url
                         save_config(cfg)
                         # 切换 Forge API 设置
                         from modules_forge.api_providers import set_session_api_key
@@ -1497,6 +1512,10 @@ def on_ui_tabs():
             normalized_url = normalize_base_url(url)
             # provider、image_model、video_model 由首页 API 模型下拉切换时保存
             provider = cfg.get("image_api_provider", "YoboxAI")
+            # 如果用户没填 base_url，根据供应商自动补全
+            if not normalized_url:
+                normalized_url = provider_base_url(provider)
+                print(f"[Agent] save_image_settings: base_url 为空，自动补全为 {normalized_url}")
             cfg["image_api_key"] = key
             cfg["image_base_url"] = normalized_url
             cfg["video_api_provider"] = provider
