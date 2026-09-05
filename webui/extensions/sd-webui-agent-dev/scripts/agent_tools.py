@@ -1171,7 +1171,7 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
         if not model_id:
             return None, {"status": "error", "error": "未指定 API 图像模型"}
         base_url = (cfg.get("image_base_url") or "").rstrip("/")
-        api_key = cfg.get("image_api_key") or ""
+        api_key = _select_image_api_key(cfg)
         provider = str(cfg.get("image_api_provider") or "").strip().lower()
         if not base_url:
             return None, {"status": "error", "error": "未配置图像/视频生成 API Base URL"}
@@ -1423,8 +1423,7 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
             with urllib.request.urlopen(req, timeout=60) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
-            body = e.read().decode("utf-8", errors="ignore")[:1200]
-            return None, {"status": "error", "error": f"API 图像编辑失败: HTTP {e.code}", "detail": body, "model_used": model_id}
+            return None, _format_api_http_error(e, "图像编辑")
 
         # ModelScope 异步模式：轮询任务结果
         if is_modelscope and "task_id" in result:
@@ -1520,14 +1519,15 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
         cfg = load_config()
         model_id = (model or cfg.get("image_model") or "").strip()
         base_url = (cfg.get("image_base_url") or "").rstrip("/")
-        # image_api_key 为空时回退使用 LLM 的 api_key（用户通常只配了一个 key）
-        api_key = cfg.get("image_api_key") or cfg.get("api_key") or ""
+        # 根据供应商选择正确的 key：避免跨供应商混用导致 401
+        api_key = _select_image_api_key(cfg)
         provider = str(cfg.get("image_api_provider") or "").strip().lower()
         # 诊断日志
         _kp = cfg.get("image_api_key") or ""
         _kp2 = cfg.get("api_key") or ""
-        _k_mask = (_kp or _kp2)[:8] + "..." + (_kp or _kp2)[-4:] if len(_kp or _kp2) > 12 else ("(空)" if not (_kp or _kp2) else "***")
-        print(f"[Agent] api_image_generate: model={model_id}, provider={provider}, base_url={base_url}, api_key={_k_mask} (image_key={'有' if _kp else '无'}, 回退LLM_key={'是' if (not _kp and _kp2) else '否'})")
+        _k_mask = api_key[:8] + "..." + api_key[-4:] if len(api_key) > 12 else ("(空)" if not api_key else "***")
+        _key_source = "LLM_key" if (api_key == _kp2 and _kp2) else ("image_key" if api_key == _kp and _kp else "fallback")
+        print(f"[Agent] api_image_generate: model={model_id}, provider={provider}, base_url={base_url}, api_key={_k_mask} (image_key={'有' if _kp else '无'}, LLM_key={'有' if _kp2 else '无'}, key_source={_key_source})")
         if not model_id:
             return None, {"status": "error", "error": "未指定 API 图像模型"}
         if not base_url:
@@ -1609,8 +1609,7 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
             with urllib.request.urlopen(req, timeout=60) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
-            body = e.read().decode("utf-8", errors="ignore")[:1200]
-            return None, {"status": "error", "error": f"API 图像生成失败: HTTP {e.code}", "detail": body, "model_used": model_id}
+            return None, _format_api_http_error(e, "图像生成")
 
         # ModelScope 异步模式：轮询任务结果
         if is_modelscope and "task_id" in result:
@@ -1842,6 +1841,57 @@ def _get_webui_root():
         return os.path.realpath(os.path.dirname(ext_dir))
 
     return os.path.realpath(os.path.dirname(os.path.dirname(os.path.dirname(scripts.basedir()))))
+
+
+def _select_image_api_key(cfg):
+    """根据图像供应商选择正确的 API Key，避免跨供应商 key 混用导致 401。
+
+    逻辑：
+    - 如果图像供应商 == LLM 供应商（如都是 YoboxAI），使用 LLM 的 api_key
+    - 否则使用 image_api_key
+    - 如果 image_api_key 为空，回退到 api_key
+    """
+    image_provider = str(cfg.get("image_api_provider") or "").strip().lower()
+    llm_provider = str(cfg.get("api_provider") or "").strip().lower()
+    image_key = str(cfg.get("image_api_key") or "").strip()
+    llm_key = str(cfg.get("api_key") or "").strip()
+
+    if image_provider and image_provider == llm_provider:
+        # 同一供应商，优先用 LLM key
+        return llm_key or image_key
+    # 不同供应商，用图像专用 key；如果为空则回退到 LLM key
+    return image_key or llm_key
+
+
+def _format_api_http_error(e, action="调用"):
+    """格式化 API HTTP 错误，特别是 401 鉴权失败时给出明确提示，防止 LLM 静默回退本地。"""
+    body = ""
+    try:
+        body = e.read().decode("utf-8", errors="ignore")[:1200]
+    except Exception:
+        pass
+    if e.code == 401:
+        return {
+            "status": "error",
+            "error": f"API {action}鉴权失败 (HTTP 401)：当前选择的 API Key 与供应商不匹配或已失效。请检查图像生成 API 设置中的供应商和 Key 是否对应。不要切换到本地模型，应直接告知用户此错误。",
+            "detail": body,
+            "http_code": 401,
+            "do_not_fallback": True,
+        }
+    if e.code == 403:
+        return {
+            "status": "error",
+            "error": f"API {action}权限不足 (HTTP 403)：当前 Key 无权限访问该模型。不要切换到本地模型，应直接告知用户此错误。",
+            "detail": body,
+            "http_code": 403,
+            "do_not_fallback": True,
+        }
+    return {
+        "status": "error",
+        "error": f"API {action}失败: HTTP {e.code}",
+        "detail": body,
+        "http_code": e.code,
+    }
 
 
 def _resolve_webui_path(path):
