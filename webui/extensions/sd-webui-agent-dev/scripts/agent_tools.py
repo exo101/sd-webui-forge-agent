@@ -1542,7 +1542,6 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
             "gemini-3.1-flash-image-preview",
         }
         if provider == "yoboxai" and model_id in gemini_models:
-            import urllib.parse
             gemini_model_id = "gemini-3-pro-image-preview" if model_id == "nano-banana" else model_id
             endpoint = (
                 f"{base_url.rstrip('/')}/../gemini/v1beta/models/"
