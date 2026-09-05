@@ -35,13 +35,32 @@ from scripts.agent_prompts import _get_system_prompt
 
 
 # =============================================================================
+# 智能体大脑 LLM 模型列表
+# =============================================================================
+
+LLM_MODELS_BY_PROVIDER = {
+    "ModelScope": [
+        "Qwen/Qwen3.8-27B",
+        "Qwen/Qwen3.8-Flash-Next",
+        "ZhipuAI/GLM-5.3",
+        "moonshotai/Kimi-K3",
+    ],
+    "YoboxAI": [
+        "gpt-5.4-mini",
+        "gpt-5.6-luna",
+        "gpt-5.5",
+    ],
+}
+
+# =============================================================================
 # 生成 API 模型列表
 # =============================================================================
 
 IMAGE_GENERATION_MODELS_BY_PROVIDER = {
     "ModelScope": [
         "krea/Krea-2-Turbo",
-        "Tongyi-MAI/Z-Image-Turbo",
+        "Tongyi-MAI/Z-Image",
+        "Qwen/Qwen-Image-2512",
         "FireRedTeam/FireRed-Image-Edit-1.1",
         "Qwen/Qwen-Image-Edit-2511",
     ],
@@ -51,10 +70,9 @@ IMAGE_GENERATION_MODELS_BY_PROVIDER = {
         "gemini-3.1-flash-image-preview",
         "gemini-3.1-flash-lite-image",
         "gpt-image-2",
-    ],
-    "DashScope": [
-        "qwen-image-3.0",
-        "qwen-image-3.0-pro",
+        "gpt-5.4-mini",
+        "gpt-5.6-luna",
+        "gpt-5.5",
     ],
 }
 
@@ -64,10 +82,12 @@ IMAGE_GENERATION_MODELS = [
     "gemini-3.1-flash-image-preview",
     "gemini-3.1-flash-lite-image",
     "gpt-image-2",
-    "qwen-image-3.0",
-    "qwen-image-3.0-pro",
+    "gpt-5.4-mini",
+    "gpt-5.6-luna",
+    "gpt-5.5",
     "krea/Krea-2-Turbo",
-    "Tongyi-MAI/Z-Image-Turbo",
+    "Tongyi-MAI/Z-Image",
+    "Qwen/Qwen-Image-2512",
     "FireRedTeam/FireRed-Image-Edit-1.1",
     "Qwen/Qwen-Image-Edit-2511",
 ]
@@ -114,10 +134,12 @@ MENTION_MAP = {
     "Qwen/Qwen-Image-Edit-2511": ("api_model", "Qwen/Qwen-Image-Edit-2511"),
     "FireRedTeam/FireRed-Image-Edit-1.1": ("api_model", "FireRedTeam/FireRed-Image-Edit-1.1"),
     "krea/Krea-2-Turbo": ("api_model", "krea/Krea-2-Turbo"),
-    "Tongyi-MAI/Z-Image-Turbo": ("api_model", "Tongyi-MAI/Z-Image-Turbo"),
-    "qwen-image-3.0": ("api_model", "qwen-image-3.0"),
-    "qwen-image-3.0-pro": ("api_model", "qwen-image-3.0-pro"),
+    "Tongyi-MAI/Z-Image": ("api_model", "Tongyi-MAI/Z-Image"),
+    "Qwen/Qwen-Image-2512": ("api_model", "Qwen/Qwen-Image-2512"),
     "gpt-image-2": ("api_model", "gpt-image-2"),
+    "gpt-5.4-mini": ("api_model", "gpt-5.4-mini"),
+    "gpt-5.6-luna": ("api_model", "gpt-5.6-luna"),
+    "gpt-5.5": ("api_model", "gpt-5.5"),
     "nano-banana": ("api_model", "nano-banana"),
     "gemini-3-pro-image-preview": ("api_model", "gemini-3-pro-image-preview"),
     "gemini-3.1-flash-lite-image": ("api_model", "gemini-3.1-flash-lite-image"),
@@ -1186,10 +1208,21 @@ def on_ui_tabs():
         print(f"[Agent] 启动恢复配置异常: {_e}")
 
     with gr.Blocks(analytics_enabled=False) as agent_interface:
-        # 辅助函数：供应商切换时自动更新 Base URL（需在 UI 定义前声明）
+        # 辅助函数：生成 API 供应商切换时自动更新 Base URL（需在 UI 定义前声明）
         def on_provider_change(provider, current_url):
             url = provider_base_url(provider) or normalize_base_url(current_url)
             return url
+
+        # 辅助函数：LLM 大脑供应商切换时更新 Base URL 和模型下拉列表
+        def on_llm_provider_change(provider, current_url):
+            url = provider_base_url(provider) or normalize_base_url(current_url)
+            llm_models = LLM_MODELS_BY_PROVIDER.get(provider, [])
+            all_models = list(llm_models)
+            for p_models in LLM_MODELS_BY_PROVIDER.values():
+                for m in p_models:
+                    if m not in all_models:
+                        all_models.append(m)
+            return url, gr.update(choices=all_models if all_models else [], allow_custom_value=True)
 
         gr.HTML("""
         <div style="text-align:center; margin-bottom: 10px;">
@@ -1237,12 +1270,14 @@ def on_ui_tabs():
                             ("🤖 YoboxAI · gemini-3.1-flash", "YoboxAI|gemini-3.1-flash-image-preview"),
                             ("🤖 YoboxAI · gemini-3.1-flash-lite", "YoboxAI|gemini-3.1-flash-lite-image"),
                             ("🤖 YoboxAI · gpt-image-2", "YoboxAI|gpt-image-2"),
+                            ("🤖 YoboxAI · gpt-5.4-mini", "YoboxAI|gpt-5.4-mini"),
+                            ("🤖 YoboxAI · gpt-5.6-luna", "YoboxAI|gpt-5.6-luna"),
+                            ("🤖 YoboxAI · gpt-5.5", "YoboxAI|gpt-5.5"),
                             ("🧩 ModelScope · Krea-2-Turbo", "ModelScope|krea/Krea-2-Turbo"),
-                            ("🧩 ModelScope · Z-Image-Turbo", "ModelScope|Tongyi-MAI/Z-Image-Turbo"),
+                            ("🧩 ModelScope · Z-Image", "ModelScope|Tongyi-MAI/Z-Image"),
+                            ("🧩 ModelScope · Qwen-Image-2512", "ModelScope|Qwen/Qwen-Image-2512"),
                             ("🧩 ModelScope · FireRed-Image-Edit", "ModelScope|FireRedTeam/FireRed-Image-Edit-1.1"),
                             ("🧩 ModelScope · Qwen-Image-Edit", "ModelScope|Qwen/Qwen-Image-Edit-2511"),
-                            ("☁️ DashScope · qwen-image-3.0", "DashScope|qwen-image-3.0"),
-                            ("☁️ DashScope · qwen-image-3.0-pro", "DashScope|qwen-image-3.0-pro"),
                             ("🎬 视频 · dreamina-seedance-2-0", "video|dreamina-seedance-2-0-hc"),
                             ("🎬 视频 · dreamina-seedance-2-5", "video|dreamina-seedance-2-5-hc"),
                             ("🎬 视频 · MiniMax-H3", "video|MiniMax-H3"),
@@ -1304,7 +1339,21 @@ def on_ui_tabs():
                         api_key = gr.Textbox(label="API Key（云端用，本地可留空）", value=cfg_init["api_key"], type="text", scale=4, elem_id="agent_api_key_input")
                         clear_api_key_btn = gr.Button("清空 API Key", size="sm", scale=1)
                     base_url = gr.Textbox(label="Base URL", value=cfg_init["base_url"], visible=False)
-                    model_name = gr.Textbox(label="模型 ID", value=cfg_init["model"])
+                    current_provider = cfg_init.get("api_provider", "ModelScope")
+                    llm_choices = LLM_MODELS_BY_PROVIDER.get(current_provider, [])
+                    # 合并所有供应商的 LLM 模型，确保切换供应商后仍可选择
+                    all_llm_models = []
+                    for p_models in LLM_MODELS_BY_PROVIDER.values():
+                        for m in p_models:
+                            if m not in all_llm_models:
+                                all_llm_models.append(m)
+                    model_name = gr.Dropdown(
+                        label="模型 ID（智能体大脑）",
+                        choices=all_llm_models if all_llm_models else [cfg_init["model"]],
+                        value=cfg_init["model"],
+                        allow_custom_value=True,
+                        info="可从列表选择或手动输入自定义模型 ID",
+                    )
                     save_settings_btn = gr.Button("💾 保存设置", variant="secondary")
                     settings_status = gr.Textbox(show_label=False, interactive=False)
 
@@ -1611,7 +1660,7 @@ def on_ui_tabs():
         upload_image.change(fn=on_image_upload, inputs=[upload_image], outputs=[state_image])
         upload_video.change(fn=on_video_upload, inputs=[upload_video], outputs=[state_video])
 
-        api_provider.change(fn=on_provider_change, inputs=[api_provider, base_url], outputs=[base_url])
+        api_provider.change(fn=on_llm_provider_change, inputs=[api_provider, base_url], outputs=[base_url, model_name])
 
         # 首页 API 模型下拉切换 — 即时保存 provider 和 model
         def on_api_model_select(api_model_value):
