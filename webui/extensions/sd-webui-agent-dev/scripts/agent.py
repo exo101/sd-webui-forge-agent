@@ -360,8 +360,8 @@ def _handle_tool_mentions(actions):
 API_IMAGE_EDIT_MODELS = {
     "Qwen/Qwen-Image-Edit-2511",
     "FireRedTeam/FireRed-Image-Edit-1.1",
-    "gpt-image-2",
-    "nano-banana",
+    "banana2",
+    "bananapro",
 }
 
 
@@ -464,18 +464,24 @@ def _coerce_generation_tool_by_selected_model(tool_name, tool_args, user_instruc
     from scripts.agent_tools import _select_image_api_key
     _selected_key = _select_image_api_key(_cfg)
     _can_use_api = bool(_selected_key.strip())
+    _is_api_model = _is_configured_api_image_model(image_model)
+
+    # 诊断日志：路由决策可见
+    print(f"[Agent] 路由检查: tool={tool_name}, image_model={image_model!r}, is_api_model={_is_api_model}, has_key={_can_use_api}, provider={_cfg.get('image_api_provider')}")
 
     # 没有匹配的可用 key 时，不强制转换到 API 工具，保持本地生图避免 401
-    if not _can_use_api and _is_configured_api_image_model(image_model):
+    if not _can_use_api and _is_api_model:
         print(f"[Agent] ⚠️ 未配置与当前图像供应商匹配的 API Key，跳过 API 工具强制转换，保持本地工具: {tool_name}")
         return tool_name, tool_args
 
-    if _is_configured_api_image_model(image_model) and tool_name == "txt2img":
+    if _is_api_model and tool_name == "txt2img":
         prompt = tool_args.get("prompt") or user_instruction
+        print(f"[Agent] 路由: txt2img -> api_image_generate (model={image_model})")
         return "api_image_generate", {"model": image_model, "prompt": prompt}
 
-    if _is_configured_api_image_model(image_model) and tool_name in ("edit_image", "change_background", "img2img"):
+    if _is_api_model and tool_name in ("edit_image", "change_background", "img2img"):
         instruction = tool_args.get("instruction") or tool_args.get("prompt") or user_instruction
+        print(f"[Agent] 路由: {tool_name} -> api_image_edit (model={image_model})")
         return "api_image_edit", {"model": image_model, "instruction": instruction}
 
     if tool_name in ("h3_video_generate", "dreamina_video_generate"):
