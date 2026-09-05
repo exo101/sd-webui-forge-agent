@@ -176,6 +176,16 @@ def load_config(resolve_local=True):
 
     cfg["base_url"] = normalize_base_url(cfg.get("base_url"))
 
+    # 供应商兼容：旧版 DashScope/Pixapi 已移除，回退到 ModelScope
+    for _provider_key in ("api_provider", "image_api_provider", "video_api_provider"):
+        _p = str(cfg.get(_provider_key) or "").strip()
+        if _p and _p not in API_PROVIDERS:
+            _fallback = "ModelScope"
+            print(f"[Agent] {_provider_key}={_p} 已不再支持，回退到 {_fallback}")
+            cfg[_provider_key] = _fallback
+            _url_key = _provider_key.replace("_api_provider", "_base_url").replace("api_provider", "base_url")
+            cfg[_url_key] = provider_base_url(_fallback)
+
     # 兜底：如果 image_base_url/video_base_url 为空，根据供应商自动补全
     _img_provider = str(cfg.get("image_api_provider") or "").strip()
     _img_url = normalize_base_url(cfg.get("image_base_url"))
