@@ -1536,8 +1536,17 @@ def _modelscope_poll_task(base_url, api_key, task_id, task_type="image_generatio
     return None, {"status": "error", "error": f"ModelScope 任务轮询超时（{max_polls * poll_interval}秒）"}
 
 
-def api_image_generate_tool(prompt, model=None, size="1024x1024", response_format="b64_json"):
-    """使用设置区选择的外部/API 图像模型生成图片。"""
+def api_image_generate_tool(prompt, model=None, size="1024x1024", response_format="b64_json", negative_prompt="", quality=""):
+    """使用设置区选择的外部/API 图像模型生成图片。
+
+    参数:
+        prompt: 正向提示词
+        model: API 模型 ID（为空则用配置中的 image_model）
+        size: 输出尺寸，如 1024x1024、16:9 等
+        response_format: b64_json 或 url
+        negative_prompt: 负向提示词（YoboxAI gpt-image-2 支持）
+        quality: 质量档位，如 high/medium/low（YoboxAI gpt-image-2 支持）
+    """
     try:
         if not prompt or not str(prompt).strip():
             return None, {"status": "error", "error": "请提供图像生成提示词"}
@@ -1629,6 +1638,11 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
             "n": 1,
             "size": size,
         }
+        # YoboxAI gpt-image-2 支持扩展参数
+        if negative_prompt and str(negative_prompt).strip():
+            payload["negative_prompt"] = str(negative_prompt).strip()
+        if quality and str(quality).strip():
+            payload["quality"] = str(quality).strip()
         if response_format:
             payload["response_format"] = response_format
         request_headers = {
@@ -3727,13 +3741,15 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "api_image_generate",
-            "description": "外部/API 图像生成工具。当前图像生成模型选择远程 API 模型时，用它进行文生图，不需要用户输入 @模型标签。",
+            "description": "外部/API 图像生成工具。当前图像生成模型选择远程 API 模型时，用它进行文生图，不需要用户输入 @模型标签。支持 negative_prompt 和 quality 参数（YoboxAI gpt-image-2 等模型可用）。",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "prompt": {"type": "string", "description": "图像生成提示词"},
                     "model": {"type": "string", "description": "API 模型 ID，默认读取设置区当前图像生成模型"},
-                    "size": {"type": "string", "description": "输出尺寸，默认 1024x1024", "default": "1024x1024"},
+                    "size": {"type": "string", "description": "输出尺寸，如 1024x1024、16:9 等，默认 1024x1024", "default": "1024x1024"},
+                    "negative_prompt": {"type": "string", "description": "负向提示词，描述不希望出现的元素，如 'blurry, low resolution, ugly, deformed, watermark'（可选）", "default": ""},
+                    "quality": {"type": "string", "description": "生成质量档位：high/medium/low（可选，仅部分模型支持）", "default": ""},
                 },
                 "required": ["prompt"],
             },
