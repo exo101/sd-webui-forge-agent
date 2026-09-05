@@ -65,20 +65,14 @@ IMAGE_GENERATION_MODELS_BY_PROVIDER = {
         "Qwen/Qwen-Image-Edit-2511",
     ],
     "YoboxAI": [
-        "nano-banana",
-        "gemini-3-pro-image-preview",
-        "gemini-3.1-flash-image-preview",
-        "gemini-3.1-flash-lite-image",
-        "gpt-image-2",
+        "banana2",
+        "bananapro",
     ],
 }
 
 IMAGE_GENERATION_MODELS = [
-    "nano-banana",
-    "gemini-3-pro-image-preview",
-    "gemini-3.1-flash-image-preview",
-    "gemini-3.1-flash-lite-image",
-    "gpt-image-2",
+    "banana2",
+    "bananapro",
     "krea/Krea-2-Turbo",
     "Tongyi-MAI/Z-Image",
     "Qwen/Qwen-Image-2512",
@@ -129,11 +123,8 @@ MENTION_MAP = {
     "krea/Krea-2-Turbo": ("api_model", "krea/Krea-2-Turbo"),
     "Tongyi-MAI/Z-Image": ("api_model", "Tongyi-MAI/Z-Image"),
     "Qwen/Qwen-Image-2512": ("api_model", "Qwen/Qwen-Image-2512"),
-    "gpt-image-2": ("api_model", "gpt-image-2"),
-    "nano-banana": ("api_model", "nano-banana"),
-    "gemini-3-pro-image-preview": ("api_model", "gemini-3-pro-image-preview"),
-    "gemini-3.1-flash-lite-image": ("api_model", "gemini-3.1-flash-lite-image"),
-    "gemini-3.1-flash-image-preview": ("api_model", "gemini-3.1-flash-image-preview"),
+    "banana2": ("api_model", "banana2"),
+    "bananapro": ("api_model", "bananapro"),
 
     # 本地工具标签（type=local_tool）：只调用本地扩展或本地处理，不调用 API。
     "智能抠图": ("local_tool", "本地智能抠图 / Local smart background removal：使用 InSPyReNet-Base，调用 remove_background(mode=auto)，禁止调用远程 API。"),
@@ -1251,11 +1242,8 @@ def on_ui_tabs():
                         label="🌐 API 图像模型",
                         choices=[
                             ("默认/不指定", ""),
-                            ("🤖 YoboxAI · nano-banana", "YoboxAI|nano-banana"),
-                            ("🤖 YoboxAI · gemini-3-pro", "YoboxAI|gemini-3-pro-image-preview"),
-                            ("🤖 YoboxAI · gemini-3.1-flash", "YoboxAI|gemini-3.1-flash-image-preview"),
-                            ("🤖 YoboxAI · gemini-3.1-flash-lite", "YoboxAI|gemini-3.1-flash-lite-image"),
-                            ("🤖 YoboxAI · gpt-image-2", "YoboxAI|gpt-image-2"),
+                            ("🤖 YoboxAI · banana2", "YoboxAI|banana2"),
+                            ("🤖 YoboxAI · bananapro", "YoboxAI|bananapro"),
                             ("🧩 ModelScope · Krea-2-Turbo", "ModelScope|krea/Krea-2-Turbo"),
                             ("🧩 ModelScope · Z-Image", "ModelScope|Tongyi-MAI/Z-Image"),
                             ("🧩 ModelScope · Qwen-Image-2512", "ModelScope|Qwen/Qwen-Image-2512"),
