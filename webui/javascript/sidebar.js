@@ -128,7 +128,7 @@ window.__sdSidebarLoaded = true;
                 { label: '场景编辑器', tabId: 'txt2img', accordionId: 'RP_maint2i', subTabLabel: '🎯 区域提示' },
                 { label: 'ADetailer 面部修复', tabId: 'txt2img', accordionId: 'script_txt2img_adetailer_ad_main_accordion' },
                 { label: '高清修复', tabId: 'txt2img', accordionId: 'txt2img_hr' },
-                { label: '多图拼接参考', tabId: 'txt2img', accordionId: 'label:多图参考' },
+                { label: '多图拼接参考', tabId: 'txt2img', accordionId: 'txt2img_image_stitch_accordion' },
                 { label: '脚本', tabId: 'txt2img' },
             ]
         }
@@ -444,6 +444,8 @@ window.__sdSidebarLoaded = true;
         // the "场景编辑器" accordion (containing the camera angle selector) to
         // be directly visible on the txt2img/img2img pages.
         'controlnet',
+        'txt2img_image_stitch_accordion',
+        'img2img_image_stitch_accordion',
     ];
 
     var scriptContainerIds = [
@@ -502,12 +504,13 @@ window.__sdSidebarLoaded = true;
         target.style.display = '';
 
         // 展开 accordion 内容（如果还没展开）
-        var labelWrap = el.querySelector('.label-wrap');
-        if (labelWrap) {
-            // 检查 accordion 是否已经展开（Gradio 5 的 accordion 有 open 属性/aria-expanded）
-            var isOpen = el.classList.contains('open') || el.hasAttribute('open') || el.getAttribute('aria-expanded') === 'true';
+        // 兼容 InputAccordion (.label-wrap) 和 gr.Accordion (.header-wrap / button)
+        var headerEl = el.querySelector('.label-wrap') || el.querySelector('.header-wrap') || el.querySelector('button[aria-expanded]');
+        if (headerEl) {
+            // 检查 accordion 是否已经展开
+            var isOpen = el.classList.contains('open') || el.hasAttribute('open') || el.getAttribute('open') !== null || headerEl.getAttribute('aria-expanded') === 'true';
             if (!isOpen) {
-                labelWrap.dispatchEvent(new MouseEvent('click', {
+                headerEl.dispatchEvent(new MouseEvent('click', {
                     bubbles: true, cancelable: true, view: window
                 }));
             }
