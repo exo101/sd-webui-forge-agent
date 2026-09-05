@@ -1927,25 +1927,31 @@ def _select_image_api_key(cfg):
 def _get_image_api_base_url(cfg, model_id=""):
     """根据模型 ID 选择正确的 API Base URL。
 
-    YoboxAI 的 Gemini 图像模型需要专用端点 https://api.yoboxai.com/gemini，
+    YoboxAI 的 Gemini/banana 图像模型需要专用端点 https://api.yoboxai.com/gemini，
     不能用 OpenAI 兼容的 /v1 端点。
     """
     model_lower = str(model_id or "").lower()
-    if model_lower.startswith("gemini"):
+    if model_lower.startswith("gemini") or model_lower.startswith("banana"):
         # YoboxAI Gemini 专用端点
         return "https://api.yoboxai.com/gemini"
     return (cfg.get("image_base_url") or "").rstrip("/")
 
 
 def _is_gemini_image_model(model_id):
-    """判断是否为 Gemini 图像模型（需要 Google-native generateContent 格式）。"""
-    return str(model_id or "").lower().startswith("gemini")
+    """判断是否为 Gemini 图像模型（需要 Google-native generateContent 格式）。
+
+    banana2/bananapro 是 YoboxAI 对 Gemini 图像模型的别名，也需要走 Gemini 端点。
+    """
+    model_lower = str(model_id or "").lower()
+    return model_lower.startswith("gemini") or model_lower.startswith("banana")
 
 
-def _call_gemini_generate(base_url, api_key, model_id, prompt_text, image_b64=None, image_mime="image/png"):
+def _call_gemini_generate(base_url, api_key, model_id, prompt_text, image_b64=None, image_mime="image/png",
+                          aspect_ratio="1:1", image_size="1K"):
     """调用 Gemini generateContent API 生成/编辑图片。
 
     返回 (images_list, error_dict)，成功时 images_list 为 base64 图片列表，error_dict 为 None。
+    支持 imageConfig: aspectRatio (1:1, 16:9, 9:16, 4:3, 3:4), imageSize (1K, 2K, 4K)。
     """
     parts = []
     if image_b64:
@@ -1959,22 +1965,26 @@ def _call_gemini_generate(base_url, api_key, model_id, prompt_text, image_b64=No
 
     payload = {
         "contents": [{
+            "role": "user",
             "parts": parts,
         }],
         "generationConfig": {
-            "responseModalities": ["TEXT", "IMAGE"],
+            "responseModalities": ["IMAGE"],
+            "imageConfig": {
+                "aspectRatio": aspect_ratio or "1:1",
+                "imageSize": image_size or "1K",
+            },
         },
     }
 
-    # base_url 已经是 https://api.yoboxai.com/gemini
-    endpoint = f"{base_url}/v1beta/models/{model_id}:generateContent"
+    # 认证方式：?key= 查询参数（YoboxAI Gemini 端点要求）
+    endpoint = f"{base_url}/v1beta/models/{model_id}:generateContent?key={api_key}"
     req = urllib.request.Request(
         endpoint,
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
         method="POST",
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
         },
     )
 
