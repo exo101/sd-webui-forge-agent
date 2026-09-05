@@ -1639,7 +1639,7 @@ def on_ui_tabs():
 
         clear_btn.click(fn=lambda: [], outputs=[chatbot])
 
-        # 注入图片点击放大 lightbox
+        # 注入图片放大 lightbox 的 CSS 和 HTML 结构（Gradio 5.x 中 gr.HTML 内的 <script> 不会执行）
         gr.HTML("""
         <style>
         #agent-lightbox {
@@ -1675,77 +1675,46 @@ def on_ui_tabs():
             align-items: center;
             justify-content: center;
         }
+        /* 隐藏 Gradio 原生 fullscreen 按钮（button 元素），保留下载链接（a 元素） */
+        #agent-chatbot .icon-button-wrapper > button {
+            display: none !important;
+        }
+        /* 自定义放大图标 - 悬停时显示在图片右上角 */
+        #agent-chatbot .image-container {
+            position: relative;
+        }
+        #agent-chatbot .image-container::after {
+            content: "🔍";
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 18px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            z-index: 10;
+        }
+        #agent-chatbot .image-container:hover::after {
+            opacity: 1;
+        }
         #agent-chatbot img { cursor: zoom-in; transition: opacity 0.2s; }
-        #agent-chatbot img:hover { opacity: 0.85; }
+        #agent-chatbot img:hover { opacity: 0.9; }
         </style>
-        <div id="agent-lightbox"><span id="agent-lightbox-close">×</span><img id="agent-lightbox-img" src="" alt="放大预览"></div>
-        <script>
-        (function() {
-            console.log('[Agent Lightbox] 脚本已加载');
-            var lightbox = document.getElementById('agent-lightbox');
-            var lightboxImg = document.getElementById('agent-lightbox-img');
-            var closeBtn = document.getElementById('agent-lightbox-close');
-            if (!lightbox) { console.log('[Agent Lightbox] lightbox 元素未找到'); return; }
-
-            function openLightbox(src) {
-                lightboxImg.src = src;
-                lightbox.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            }
-            function closeLightbox() {
-                lightbox.classList.remove('active');
-                lightboxImg.src = '';
-                document.body.style.overflow = '';
-            }
-            lightbox.addEventListener('click', closeLightbox);
-            closeBtn.addEventListener('click', function(e) { e.stopPropagation(); closeLightbox(); });
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && lightbox.classList.contains('active')) closeLightbox();
-            });
-
-            function attachImageListeners(root) {
-                root.querySelectorAll('img').forEach(function(img) {
-                    if (!img.dataset.lightboxAttached) {
-                        img.dataset.lightboxAttached = '1';
-                        img.style.cursor = 'zoom-in';
-                        img.addEventListener('click', function(e) {
-                            e.stopPropagation();
-                            if (img.src) openLightbox(img.src);
-                        });
-                    }
-                });
-            }
-
-            // 轮询重试：Gradio 可能在 script 执行后才渲染 chatbot DOM
-            var attempts = 0;
-            var maxAttempts = 20;
-            var retryTimer = setInterval(function() {
-                attempts++;
-                var chatbotEl = document.getElementById('agent-chatbot');
-                if (chatbotEl) {
-                    console.log('[Agent Lightbox] chatbot 元素已找到，绑定事件');
-                    attachImageListeners(chatbotEl);
-                    var observer = new MutationObserver(function(mutations) {
-                        mutations.forEach(function(m) {
-                            m.addedNodes.forEach(function(node) {
-                                if (node.nodeType === 1) attachImageListeners(node);
-                            });
-                        });
-                    });
-                    observer.observe(chatbotEl, { childList: true, subtree: true });
-                    clearInterval(retryTimer);
-                } else if (attempts >= maxAttempts) {
-                    console.log('[Agent Lightbox] 超时未找到 chatbot 元素');
-                    clearInterval(retryTimer);
-                }
-            }, 500);
-        })();
-        </script>
         """)
 
-    # 防止浏览器密码管理器自动填充 API Key（安全防护）
+    # 安全防护：防止浏览器密码管理器自动填充 API Key
+    # 注意：lightbox 交互逻辑已完全移至 sidebar.js（gr.HTML 内 script 不执行，Blocks.load(js=) 也不可靠）
     agent_interface.load(
-        js="() => { document.querySelectorAll('input[type=password]').forEach(i => i.setAttribute('autocomplete', 'new-password')); }"
+        js="""() => {
+            document.querySelectorAll('input[type=password]').forEach(i => i.setAttribute('autocomplete', 'new-password'));
+        }"""
     )
 
     return [(agent_interface, "绘梦智能体助手", "sd_webui_agent")]

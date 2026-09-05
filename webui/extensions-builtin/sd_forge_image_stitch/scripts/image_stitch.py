@@ -356,8 +356,11 @@ class ImageStitch(scripts.Script):
                 info="降低编码时的显存占用；设为 0 表示不限制",
             )
 
-            # 自动设置尺寸
-            auto_size_btn = gr.Button("📏 从首图设置尺寸", size="sm", visible=False)
+            # 自动设置尺寸 - 从首图同步尺寸比例到主UI
+            auto_size_btn = gr.Button("📐 从首图同步尺寸比例", size="sm")
+            # 隐藏中转组件，用于将Python计算的尺寸传递给JS
+            sync_w_box = gr.Textbox(visible=False, elem_id=f"{tab}_sync_w_box")
+            sync_h_box = gr.Textbox(visible=False, elem_id=f"{tab}_sync_h_box")
 
             # Pose 素材库 - 折叠面板
             with gr.Accordion("📚 Pose 素材库", open=False):
@@ -803,6 +806,39 @@ class ImageStitch(scripts.Script):
                 fn=_clear_all,
                 outputs=[current_images_state, references, image_selector],
                 show_progress=False
+            )
+
+            # ===== 从首图同步尺寸比例到主UI =====
+            def _get_first_image_size(images):
+                """获取首张参考图的尺寸，对齐到8的倍数并限制范围"""
+                if not images or len(images) == 0:
+                    return "", ""
+                try:
+                    w, h = images[0].size
+                    w = max(64, min(2048, int(round(w / 8)) * 8))
+                    h = max(64, min(2048, int(round(h / 8)) * 8))
+                    return str(w), str(h)
+                except Exception:
+                    return "", ""
+
+            auto_size_btn.click(
+                fn=_get_first_image_size,
+                inputs=[current_images_state],
+                outputs=[sync_w_box, sync_h_box],
+                show_progress=False,
+                queue=False,
+            ).then(
+                fn=None,
+                _js=f"""(w, h) => {{
+                    if (window.syncSizeToMainUI && w && h) {{
+                        window.syncSizeToMainUI('{tab}', parseFloat(w), parseFloat(h));
+                    }} else if (!w || !h) {{
+                        alert('请先上传参考图片');
+                    }}
+                }}""",
+                inputs=[sync_w_box, sync_h_box],
+                show_progress=False,
+                queue=False,
             )
             
             # 页面加载时自动扫描素材库

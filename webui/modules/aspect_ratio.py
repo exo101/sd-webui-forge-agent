@@ -19,8 +19,6 @@ ASPECT_RATIOS = [
     ("3:4", 3, 4),
     ("16:9", 16, 9),
     ("9:16", 9, 16),
-    ("21:9", 21, 9),
-    ("9:21", 9, 21),
 ]
 
 # Slider bounds (match ui.py width/height slider min/max)
