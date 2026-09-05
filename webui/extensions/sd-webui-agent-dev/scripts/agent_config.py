@@ -7,6 +7,7 @@ import io
 import sys
 import json
 import time
+import uuid
 import base64
 import tempfile
 import traceback
@@ -236,15 +237,24 @@ def save_config(cfg):
 def _get_webui_output_dir():
     """获取 WebUI 的 outputs/agent 目录。"""
     try:
-        # agent_config.py 在 webui/extensions/sd-webui-agent-dev/scripts/
-        # WebUI 根目录 = 向上 4 级
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        webui_root = os.path.abspath(os.path.join(script_dir, "..", "..", "..", ".."))
+        # 使用 WebUI 标准路径模块获取根目录（webui/）
+        from modules import paths
+        webui_root = paths.script_path
         output_dir = os.path.join(webui_root, "outputs", "agent")
         os.makedirs(output_dir, exist_ok=True)
         return output_dir
     except Exception:
-        return tempfile.gettempdir()
+        try:
+            # 回退：手动计算路径
+            # agent_config.py 在 webui/extensions/sd-webui-agent-dev/scripts/
+            # 向上 3 级 = webui/
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            webui_root = os.path.abspath(os.path.join(script_dir, "..", "..", ".."))
+            output_dir = os.path.join(webui_root, "outputs", "agent")
+            os.makedirs(output_dir, exist_ok=True)
+            return output_dir
+        except Exception:
+            return tempfile.gettempdir()
 
 
 def _save_pil_to_tempfile(img):
@@ -255,7 +265,8 @@ def _save_pil_to_tempfile(img):
         # 优先保存到 WebUI output 目录
         output_dir = _get_webui_output_dir()
         timestamp = time.strftime("%Y%m%d-%H%M%S")
-        filename = f"agent-{timestamp}-{int(time.time()*1000)%10000}.png"
+        unique_id = uuid.uuid4().hex[:8]
+        filename = f"agent-{timestamp}-{unique_id}.png"
         filepath = os.path.join(output_dir, filename)
         img.save(filepath, format="PNG")
         print(f"[Agent] 图像已保存到: {filepath}")
