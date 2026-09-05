@@ -67,12 +67,14 @@ IMAGE_GENERATION_MODELS_BY_PROVIDER = {
     "YoboxAI": [
         "banana2",
         "bananapro",
+        "gpt-image-2",
     ],
 }
 
 IMAGE_GENERATION_MODELS = [
     "banana2",
     "bananapro",
+    "gpt-image-2",
     "krea/Krea-2-Turbo",
     "Tongyi-MAI/Z-Image",
     "Qwen/Qwen-Image-2512",
@@ -125,6 +127,7 @@ MENTION_MAP = {
     "Qwen/Qwen-Image-2512": ("api_model", "Qwen/Qwen-Image-2512"),
     "banana2": ("api_model", "banana2"),
     "bananapro": ("api_model", "bananapro"),
+    "gpt-image-2": ("api_model", "gpt-image-2"),
 
     # 本地工具标签（type=local_tool）：只调用本地扩展或本地处理，不调用 API。
     "智能抠图": ("local_tool", "本地智能抠图 / Local smart background removal：使用 InSPyReNet-Base，调用 remove_background(mode=auto)，禁止调用远程 API。"),
@@ -359,6 +362,7 @@ API_IMAGE_EDIT_MODELS = {
     "FireRedTeam/FireRed-Image-Edit-1.1",
     "banana2",
     "bananapro",
+    "gpt-image-2",
 }
 
 
@@ -1263,6 +1267,7 @@ def on_ui_tabs():
                             ("保持当前设置", ""),
                             ("🤖 YoboxAI · banana2", "YoboxAI|banana2"),
                             ("🤖 YoboxAI · bananapro", "YoboxAI|bananapro"),
+                            ("🤖 YoboxAI · gpt-image-2", "YoboxAI|gpt-image-2"),
                             ("🧩 ModelScope · Krea-2-Turbo", "ModelScope|krea/Krea-2-Turbo"),
                             ("🧩 ModelScope · Z-Image", "ModelScope|Tongyi-MAI/Z-Image"),
                             ("🧩 ModelScope · Qwen-Image-2512", "ModelScope|Qwen/Qwen-Image-2512"),

@@ -39,7 +39,7 @@ SYSTEM_PROMPT = """你是一个集成在 Stable Diffusion WebUI (Forge) 中的 A
 
 【API 生成模型 - 只使用远程 API，不切换本地 checkpoint】
 - API 供应商、Base URL、API Key、图像生成模型、视频生成模型均来自设置区。
-- 图像编辑/生成如果当前选择的是 banana2、bananapro、Qwen-Image-Edit-2511、FireRed-Image-Edit 等 API 图像模型，必须调用 `api_image_edit`/`api_image_generate`，不要改用本地 Klein、remove_background 或 change_background。
+- 图像编辑/生成如果当前选择的是 banana2、bananapro、gpt-image-2、Qwen-Image-Edit-2511、FireRed-Image-Edit 等 API 图像模型，必须调用 `api_image_edit`/`api_image_generate`，不要改用本地 Klein、remove_background 或 change_background。
 - 视频生成如果当前选择的是 dreamina-seedance-2-0-hc 或 dreamina-seedance-2-5-hc，必须调用 `dreamina_video_generate`；如果当前选择 MiniMax-H3，才调用 `h3_video_generate`。
 - 旧的 @API 模型标签只作为兼容入口，不再要求用户输入。
 - “将背景改为白色/纯白色/任意指定颜色”属于图像编辑，不等于抠图。只有用户明确要求“抠图/去背/透明背景/智能抠图”时才可调用 `remove_background`。
