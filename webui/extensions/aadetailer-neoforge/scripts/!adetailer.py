@@ -248,6 +248,15 @@ class AfterDetailerScript(scripts.Script):
                 if not adarg.need_skip():
                     not_none = True
                     break
+
+        # Fallback: 如果主开关未传递 True，但有 tab 明确启用且配置了模型，也视为启用
+        # 这可以防止 InputAccordion 状态同步问题导致 ADetailer 被意外跳过
+        if not ad_enabled and not_none:
+            for arg in arg_list:
+                if arg.get("ad_tab_enable") and arg.get("ad_model") and arg["ad_model"] != "None":
+                    ad_enabled = True
+                    break
+
         return ad_enabled and not_none
 
     def set_skip_img2img(self, p, *args_) -> None:
@@ -991,6 +1000,10 @@ class AfterDetailerScript(scripts.Script):
 
         p._ad_is_hr_pass = False
 
+        if not self.is_ad_enabled(*args_):
+            p._ad_disabled = True
+            return
+
         if is_img2img_inpaint(p) and is_all_black(self.get_image_mask(p)):
             p._ad_disabled = True
             msg = (
@@ -1185,11 +1198,12 @@ class AfterDetailerScript(scripts.Script):
 
 def on_after_component(component, **_kwargs):
     global txt2img_submit_button, img2img_submit_button
-    if getattr(component, "elem_id", None) == "txt2img_generate":
+    eid = getattr(component, "elem_id", None)
+    if eid == "txt2img_generate":
         txt2img_submit_button = component
         return
 
-    if getattr(component, "elem_id", None) == "img2img_generate":
+    if eid == "img2img_generate":
         img2img_submit_button = component
 
 
