@@ -862,7 +862,6 @@ def remove_background_tool(image, mode="auto", points=None, bg_color=None):
         bg_color: 背景颜色，如 'white'/'black'/'transparent'，默认 transparent
     """
     try:
-        from PIL import Image
         import numpy as np
 
         if image is None:
@@ -1203,7 +1202,6 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
             images_b64, err = _call_gemini_generate(base_url, api_key, model_id, instruction, img_b64, img_mime)
             if err:
                 return None, err
-            from PIL import Image
             images = []
             for b64_data in images_b64:
                 try:
@@ -1581,8 +1579,6 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
             if err:
                 return None, err
             # 将 base64 转为 PIL Image
-            from PIL import Image
-            import io
             images = []
             for b64_data in images_b64:
                 try:
