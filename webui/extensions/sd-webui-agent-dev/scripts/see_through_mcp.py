@@ -230,8 +230,10 @@ def see_through_remote(image: str, resolution: int = 1024, seed: int = 42, tblr_
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         job_dir = OUTPUT_DIR / f"run_{int(time.time())}"
         job_dir.mkdir(parents=True, exist_ok=True)
-        image_url = _upload_file(image)
-        result = _run(_call_mcp_tool({"image": image_url, "resolution": max(768, min(1600, int(resolution))), "seed": max(0, min(9999, int(seed))), "tblr_split": bool(tblr_split)}))
+        # Gradio MCP 支持 data URL，并会在服务端自动保存为临时 FileData。
+        # 直接传 Base64 可避免 API 网关返回的 /tmp/gradio 文件 URL 无法跨请求访问。
+        image_data_url = _image_data(image)["url"]
+        result = _run(_call_mcp_tool({"image": image_data_url, "resolution": max(768, min(1600, int(resolution))), "seed": max(0, min(9999, int(seed))), "tblr_split": bool(tblr_split)}))
         if getattr(result, "isError", False):
             detail = _mcp_result_error(result)
             return None, {"status": "error", "backend": "ModelScope MCP", "mcp_url": f"{SPACE_URL}{MCP_PATH}", "error": f"See-through MCP 工具执行失败：{detail}"}
