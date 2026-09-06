@@ -445,6 +445,11 @@ def _has_requested_remote_layer_separation(user_instruction):
     return any(token in text for token in ("mcp", "魔搭", "modelscope", "远程 see-through", "remote see-through", "远程图层"))
 
 
+def _has_requested_triposplat(user_instruction):
+    text = str(user_instruction or "").lower()
+    return "triposplat" in text or "tripo splat" in text or "图生 3d" in text or "图生3d" in text
+
+
 def _coerce_api_image_edit_tool(tool_name, tool_args, requested_api_model, user_instruction):
     """用户指定 API 图像编辑模型时，禁止误回退到本地抠图/Klein 工具。"""
     if not _should_protect_api_image_model(requested_api_model):
@@ -737,13 +742,14 @@ def chat_stream(history, uploaded_image=None, uploaded_video=None):
     primary_uploaded_image = uploaded_image_list[0] if uploaded_image_list else None
 
     remote_layer_requested = _has_requested_remote_layer_separation(user_message)
-    if (_has_requested_layer_separation(user_message) or remote_layer_requested) and primary_uploaded_image is not None:
+    triposplat_requested = _has_requested_triposplat(user_message)
+    if (_has_requested_layer_separation(user_message) or remote_layer_requested or triposplat_requested) and primary_uploaded_image is not None:
         remote_layer_separation = remote_layer_requested
-        separation_tool = "see_through_remote" if remote_layer_separation else "layer_separation"
+        separation_tool = "triposplat_remote" if triposplat_requested else ("see_through_remote" if remote_layer_separation else "layer_separation")
         yield history, f"🔧 正在执行: {separation_tool}..."
         result_str, images = _execute_tool(
             separation_tool,
-            ({"image": primary_uploaded_image, "resolution": 1024} if remote_layer_separation else {"output_format": "psd"}),
+            ({"image": primary_uploaded_image} if triposplat_requested else ({"image": primary_uploaded_image, "resolution": 1024} if remote_layer_separation else {"output_format": "psd"})),
             primary_uploaded_image,
             uploaded_video,
             [],
