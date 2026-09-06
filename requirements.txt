@@ -16,6 +16,7 @@ safetensors>=0.8.0
 
 # WebUI 框架
 gradio>=4.0.0,<5.0.0
+gradio_client>=1.0.0
 fastapi
 uvicorn[standard]
 
