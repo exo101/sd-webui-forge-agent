@@ -10,7 +10,6 @@
 图层拆分插件模型目录                           diffusers
 语音合成模型目录                                   qwen3-tts   
 语音识别模型目录                                   whisper-tiny
-唇形同步模型目录                                   LatentSync
 普通放大算法模型目录                           ESRGAN
 高精度放大算法模型目录                       SEEDVR2
 生图主模型目录                                     diffusion_models
