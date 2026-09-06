@@ -13,7 +13,9 @@ from typing import Any
 
 from scripts.agent_tools_registry import agent_tool
 
-SPACE_URL = os.getenv("SEE_THROUGH_SPACE_URL", "https://studio-ljsabc-see-through.api-inference.modelscope.net").rstrip("/")
+API_SPACE_URL = "https://studio-ljsabc-see-through.api-inference.modelscope.net"
+LEGACY_SPACE_URL = "https://ljsabc-see-through.ms.show"
+SPACE_URL = os.getenv("SEE_THROUGH_SPACE_URL", API_SPACE_URL).rstrip("/")
 MCP_PATH = "/gradio_api/mcp/"
 SPACE_TOKEN = os.getenv("SEE_THROUGH_SPACE_TOKEN", "").strip()
 OUTPUT_DIR = Path(__file__).resolve().parents[2] / "outputs" / "see_through_remote"
@@ -24,6 +26,11 @@ def configure_space_url(url: str, token: str | None = None) -> str:
     value = (url or "").strip().rstrip("/")
     if not value.startswith(("http://", "https://")):
         raise ValueError("MCP/Space 地址必须以 http:// 或 https:// 开头")
+    # 普通 .ms.show 地址会返回 403，不能用于 SDK Token 的 MCP 访问。
+    # 即使旧配置仍存在，也必须在真正发起请求前强制改成 API 专用地址。
+    if value == LEGACY_SPACE_URL or value.startswith(f"{LEGACY_SPACE_URL}/"):
+        value = API_SPACE_URL
+        print(f"[See-through MCP] 已将旧地址 {LEGACY_SPACE_URL} 强制迁移为 {API_SPACE_URL}")
     SPACE_URL = value
     if token is not None:
         SPACE_TOKEN = token.strip()
@@ -174,4 +181,4 @@ def see_through_remote(image: str, resolution: int = 1024, seed: int = 42, tblr_
     except Exception as exc:
         detail = _exception_text(exc)
         print(f"[See-through MCP] Tool call failed: {detail}")
-        return None, f"调用 See-through MCP 失败：{detail}"
+        return None, f"调用 See-through MCP 失败：{_mcp_error_message(exc)}"
