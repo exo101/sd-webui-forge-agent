@@ -64,7 +64,7 @@ DEFAULT_CONFIG = {
     "default_width": 1024,
     "default_height": 1024,
     "default_cfg_scale": 7.0,
-    "see_through_space_url": "https://ljsabc-see-through.ms.show",
+    "see_through_space_url": "https://studio-ljsabc-see-through.api-inference.modelscope.net",
     "see_through_space_token": "",
 }
 
@@ -178,6 +178,12 @@ def load_config(resolve_local=True):
             print(f"[Agent] 配置加载失败，使用默认配置: {e}")
 
     cfg["base_url"] = normalize_base_url(cfg.get("base_url"))
+
+    # ModelScope 的普通 Space 域名不允许 SDK Token 访问 MCP，自动迁移旧地址。
+    _old_see_through_url = str(cfg.get("see_through_space_url") or "").strip().rstrip("/")
+    if _old_see_through_url == "https://ljsabc-see-through.ms.show":
+        cfg["see_through_space_url"] = DEFAULT_CONFIG["see_through_space_url"]
+        print("[Agent] See-through MCP 地址已从普通 Space 地址迁移到 API 专用地址")
 
     # 供应商兼容：旧版 DashScope/Pixapi 已移除，回退到 ModelScope
     for _provider_key in ("api_provider", "image_api_provider", "video_api_provider"):
