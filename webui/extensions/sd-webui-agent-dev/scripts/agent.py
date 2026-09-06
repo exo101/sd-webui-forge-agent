@@ -33,6 +33,12 @@ from scripts.agent_tools import (
 )
 from scripts.agent_prompts import _get_system_prompt
 
+# 注册远程 See-through 工具。该模块只在启动时注册函数，不会立即调用网络。
+try:
+    import scripts.see_through_mcp  # noqa: F401
+except Exception as e:
+    print(f"[Agent] See-through 远程工具加载失败: {e}")
+
 
 # =============================================================================
 # 智能体大脑 LLM 模型列表
@@ -542,7 +548,7 @@ def _execute_tool(tool_name, tool_args, uploaded_image=None, uploaded_video=None
         # layer_separation 虽然不在旧注释列表中，但同样必须接收 image。
         if tool_name in (
             "img2img", "upscale", "apply_adetailer", "remove_background",
-            "layer_separation", "edit_image", "change_background", "api_image_edit",
+            "layer_separation", "see_through_remote", "edit_image", "change_background", "api_image_edit",
         ):
             if "image" not in tool_args or tool_args["image"] is None:
                 if uploaded_image is not None:
