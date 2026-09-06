@@ -1351,6 +1351,13 @@ def on_ui_tabs():
                         interactive=True,
                         scale=1,
                     )
+                    mcp_project_select = gr.Dropdown(
+                        label="🔌 MCP 项目列表",
+                        choices=list(MCP_PROJECT_PRESETS.keys()),
+                        value=cfg_init.get("mcp_project", "See-Through（官方）"),
+                        interactive=True,
+                        scale=1,
+                    )
 
                 with gr.Row():
                     msg_input = gr.Textbox(
@@ -1448,12 +1455,6 @@ def on_ui_tabs():
                     gr.Markdown(
                         "连接后，绘梦助手可调用该空间的图像工具。默认已填写 See-Through 空间；"
                         "图片会上传到远程空间进行处理。"
-                    )
-                    mcp_project_select = gr.Dropdown(
-                        label="MCP 项目列表",
-                        choices=list(MCP_PROJECT_PRESETS.keys()),
-                        value=cfg_init.get("mcp_project", "See-Through（官方）"),
-                        interactive=True,
                     )
                     see_through_url = gr.Textbox(
                         label="魔搭 Space 地址",
