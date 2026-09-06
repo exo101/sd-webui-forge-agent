@@ -67,6 +67,7 @@ DEFAULT_CONFIG = {
     "see_through_space_url": "https://ljsabc-see-through.ms.show",
     "see_through_space_token": "",
     "mcp_project": "See-Through（官方）",
+    "gradio_api_projects": [],
 }
 
 # 常用 ModelScope MCP Space 预设。地址为 API 专用域名，命名空间不能省略。

@@ -37,6 +37,7 @@ from scripts.agent_prompts import _get_system_prompt
 try:
     import scripts.see_through_mcp  # noqa: F401
     import scripts.trellis_mcp  # noqa: F401
+    import scripts.gradio_api_importer  # noqa: F401
 except Exception as e:
     print(f"[Agent] See-through 远程工具加载失败: {e}")
 
@@ -578,6 +579,13 @@ def _execute_tool(tool_name, tool_args, uploaded_image=None, uploaded_video=None
                 else:
                     tool_args["image"] = None
 
+        # 导入的 Gradio API 工具统一使用其示例中的图片参数名。
+        if tool_name.startswith("gradio_api_") and not _normalize_image_path(tool_args.get("image")):
+            if uploaded_image is not None:
+                tool_args["image"] = uploaded_image
+            elif last_tool_images:
+                tool_args["image"] = last_tool_images[-1]
+
         # H3 视频生成：自动注入参考图（首帧/参考图）
         if tool_name == "h3_video_generate":
             if ("first_frame" not in tool_args or tool_args["first_frame"] is None) and \
@@ -621,7 +629,7 @@ def _execute_tool(tool_name, tool_args, uploaded_image=None, uploaded_video=None
             result_str = json.dumps({"status": "success", "info": info, "image_count": len(images)}, ensure_ascii=False)
             return result_str, images
 
-        return json.dumps({"status": "success", "data": result}, ensure_ascii=False), []
+        return json.dumps({"status": "success", "data": result}, ensure_ascii=False, default=str), []
 
     except Exception as e:
         error_msg = f"{e}\n{traceback.format_exc()}"
@@ -1250,6 +1258,17 @@ def on_ui_tabs():
         print(f"[Agent] 启动恢复配置异常: {_e}")
 
     cfg_init = load_config()
+    # 恢复已导入的 Gradio API 工具，无需重启后重新粘贴示例。
+    try:
+        from scripts.gradio_api_importer import register_project
+        for _project in cfg_init.get("gradio_api_projects", []) or []:
+            _tool_name = register_project(_project)
+            _schema = next((x for x in get_registered_tools() if x["function"]["name"] == _tool_name), None)
+            if _schema and _tool_name not in TOOL_FUNCTIONS:
+                TOOLS.append(_schema)
+                TOOL_FUNCTIONS[_tool_name] = get_tool_function(_tool_name)
+    except Exception as _e:
+        print(f"[Agent] 恢复 Gradio API 项目失败: {_e}")
     with gr.Blocks(analytics_enabled=False) as agent_interface:
         # 辅助函数：生成 API 供应商切换时自动更新 Base URL（需在 UI 定义前声明）
         def on_provider_change(provider, current_url):
@@ -1266,11 +1285,44 @@ def on_ui_tabs():
 
         def on_mcp_project_change(project, current_url):
             preset_url = MCP_PROJECT_PRESETS.get(project, "")
+            for item in cfg_init.get("gradio_api_projects", []) or []:
+                if item.get("name") == project:
+                    return item.get("url", current_url or "")
             return preset_url or current_url or ""
+
+        def import_gradio_api_example(example, current_projects):
+            try:
+                from scripts.gradio_api_importer import import_and_register
+                project, tool_name = import_and_register(example)
+                cfg = load_config(resolve_local=False)
+                projects = list(cfg.get("gradio_api_projects", []) or [])
+                projects = [p for p in projects if p.get("tool_name") != tool_name]
+                projects.append(project)
+                cfg["gradio_api_projects"] = projects
+                save_config(cfg)
+                schema = next((x for x in get_registered_tools() if x["function"]["name"] == tool_name), None)
+                if schema and tool_name not in TOOL_FUNCTIONS:
+                    TOOLS.append(schema)
+                    TOOL_FUNCTIONS[tool_name] = get_tool_function(tool_name)
+                choices = list(MCP_PROJECT_PRESETS.keys()) + [p["name"] for p in projects]
+                return gr.update(choices=choices, value=project["name"]), f"✅ 已导入：{project['name']}（{project['api_name']}）"
+            except Exception as exc:
+                return gr.update(), f"❌ 导入失败：{exc}"
 
         def save_see_through_settings(project, url, token):
             cfg = load_config(resolve_local=False)
             try:
+                imported = next((p for p in cfg.get("gradio_api_projects", []) or [] if p.get("name") == project), None)
+                if imported:
+                    from scripts.gradio_api_importer import check_project
+                    check_result = check_project(imported)
+                    if check_result.get("status") not in ("connected", "reachable"):
+                        return f"❌ Gradio API 检测失败：{check_result.get('message', '未知错误')}"
+                    cfg["mcp_project"] = project
+                    cfg["see_through_space_url"] = imported.get("url", "")
+                    ok = save_config(cfg)
+                    prefix = "✅ 已保存并连接" if check_result.get("status") == "connected" else "✅ 已保存（地址可达，接口将在调用时验证）"
+                    return f"{prefix}：{imported.get('url', '')}" if ok else "❌ 配置保存失败"
                 from scripts.see_through_mcp import configure_space_url
                 active_url = configure_space_url(url, token)
                 from scripts.trellis_mcp import configure_token
@@ -1294,6 +1346,12 @@ def on_ui_tabs():
 
         def test_see_through_settings(project, url, token):
             try:
+                cfg = load_config(resolve_local=False)
+                imported = next((p for p in cfg.get("gradio_api_projects", []) or [] if p.get("name") == project), None)
+                if imported:
+                    from scripts.gradio_api_importer import check_project
+                    result = check_project(imported)
+                    return ("✅ " if result.get("status") == "connected" else "❌ ") + result.get("message", "未知结果")
                 from scripts.see_through_mcp import check_space
                 if project == "TRELLIS.2":
                     from scripts.trellis_mcp import check_space as check_trellis_space
@@ -1367,11 +1425,17 @@ def on_ui_tabs():
                     )
                     mcp_project_select = gr.Dropdown(
                         label="🔌 MCP 项目列表",
-                        choices=list(MCP_PROJECT_PRESETS.keys()),
+                        choices=list(MCP_PROJECT_PRESETS.keys()) + [p.get("name") for p in (cfg_init.get("gradio_api_projects", []) or [])],
                         value=cfg_init.get("mcp_project", "See-Through（官方）"),
                         interactive=True,
                         scale=1,
                     )
+                    gradio_api_example = gr.Textbox(
+                        label="导入陌生 Gradio API 示例（可选）",
+                        placeholder="粘贴 Client(...) 和 client.predict(...) 示例代码",
+                        lines=3,
+                    )
+                    import_gradio_api_btn = gr.Button("📥 导入 API 示例", size="sm")
 
                 with gr.Row():
                     msg_input = gr.Textbox(
@@ -1818,6 +1882,11 @@ def on_ui_tabs():
             fn=on_mcp_project_change,
             inputs=[mcp_project_select, see_through_url],
             outputs=[see_through_url],
+        )
+        import_gradio_api_btn.click(
+            fn=import_gradio_api_example,
+            inputs=[gradio_api_example, mcp_project_select],
+            outputs=[mcp_project_select, see_through_status],
         )
         test_see_through_btn.click(fn=test_see_through_settings, inputs=[mcp_project_select, see_through_url, see_through_token], outputs=[see_through_status])
         save_see_through_btn.click(fn=save_see_through_settings, inputs=[mcp_project_select, see_through_url, see_through_token], outputs=[see_through_status])
