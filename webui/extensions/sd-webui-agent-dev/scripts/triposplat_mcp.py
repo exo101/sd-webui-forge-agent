@@ -6,6 +6,7 @@ import asyncio
 import base64
 import mimetypes
 import os
+import urllib.parse
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,28 @@ def _image_data_url(path: str) -> str:
     raw = Path(path).read_bytes()
     mime = mimetypes.guess_type(path)[0] or "image/png"
     return f"data:{mime};base64,{base64.b64encode(raw).decode('ascii')}"
+
+
+def _upload_file_to_gradio(path: str) -> str:
+    """等价实现 Gradio 官方 upload-mcp 的 upload_file_to_gradio。"""
+    import httpx
+
+    upload_url = f"{TRIPOSPLAT_URL}/gradio_api/upload"
+    mime = mimetypes.guess_type(path)[0] or "application/octet-stream"
+    with open(path, "rb") as handle:
+        response = httpx.post(
+            upload_url,
+            headers=_headers(),
+            files={"files": (Path(path).name, handle, mime)},
+            timeout=120,
+        )
+    response.raise_for_status()
+    values = response.json()
+    if not isinstance(values, list) or not values or not isinstance(values[0], str):
+        raise RuntimeError(f"upload_file_to_gradio 返回格式异常：{values}")
+    remote_path = values[0]
+    # 官方 upload-mcp 使用 /gradio_api/file=，不是 /file=。
+    return f"{TRIPOSPLAT_URL}/gradio_api/file={urllib.parse.quote(remote_path, safe='/')}"
 
 
 async def _call_generate(args: dict[str, Any]) -> Any:
@@ -76,7 +99,7 @@ def triposplat_remote(image: str, seed: int = 42, steps: float = 20, guidance_sc
         return None, "找不到输入图片，请先上传一张图片。"
     try:
         result = _run(_call_generate({
-            "prepared": _image_data_url(image),
+            "prepared": _upload_file_to_gradio(image),
             "seed": int(seed),
             "steps": steps,
             "guidance_scale": guidance_scale,
