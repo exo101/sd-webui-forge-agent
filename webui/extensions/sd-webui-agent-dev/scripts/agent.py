@@ -484,9 +484,15 @@ def _coerce_generation_tool_by_selected_model(tool_name, tool_args, user_instruc
     # 诊断日志：路由决策可见
     print(f"[Agent] 路由检查: tool={tool_name}, image_model={image_model!r}, is_api_model={_is_api_model}, has_key={_can_use_api}, provider={_cfg.get('image_api_provider')}")
 
-    # 没有匹配的可用 key 时，不强制转换到 API 工具，保持本地生图避免 401
+    # 没有 Key 也不能切换到本地工具或其他 API 模型；保持当前模型进入 API 工具，
+    # 由 API 工具直接返回“未配置 Key”错误。
     if not _can_use_api and _is_api_model:
-        print(f"[Agent] ⚠️ 未配置与当前图像供应商匹配的 API Key，跳过 API 工具强制转换，保持本地工具: {tool_name}")
+        tool_args["model"] = image_model
+        if tool_name == "txt2img":
+            return "api_image_generate", {"model": image_model, "prompt": tool_args.get("prompt") or user_instruction}
+        if tool_name in ("edit_image", "change_background", "img2img", "api_image_edit"):
+            return "api_image_edit", {"model": image_model, "instruction": tool_args.get("instruction") or tool_args.get("prompt") or user_instruction}
+        print(f"[Agent] ⚠️ 当前 API 模型未配置 Key，保留工具调用并由工具返回错误: {image_model}")
         return tool_name, tool_args
 
     # API 图像模型由 UI/持久化配置决定。模型可能自行把 api_image_edit
