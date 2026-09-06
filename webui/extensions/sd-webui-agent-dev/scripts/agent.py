@@ -36,7 +36,7 @@ from scripts.agent_prompts import _get_system_prompt
 # 注册远程 See-through 工具。该模块只在启动时注册函数，不会立即调用网络。
 try:
     import scripts.see_through_mcp  # noqa: F401
-    import scripts.triposplat_mcp  # noqa: F401
+    import scripts.trellis_mcp  # noqa: F401
 except Exception as e:
     print(f"[Agent] See-through 远程工具加载失败: {e}")
 
@@ -445,9 +445,9 @@ def _has_requested_remote_layer_separation(user_instruction):
     return any(token in text for token in ("mcp", "魔搭", "modelscope", "远程 see-through", "remote see-through", "远程图层"))
 
 
-def _has_requested_triposplat(user_instruction):
+def _has_requested_trellis(user_instruction):
     text = str(user_instruction or "").lower()
-    return "triposplat" in text or "tripo splat" in text or "图生 3d" in text or "图生3d" in text
+    return "trellis" in text or "图生 3d" in text or "图生3d" in text
 
 
 def _coerce_api_image_edit_tool(tool_name, tool_args, requested_api_model, user_instruction):
@@ -566,7 +566,7 @@ def _execute_tool(tool_name, tool_args, uploaded_image=None, uploaded_video=None
         # layer_separation 虽然不在旧注释列表中，但同样必须接收 image。
         if tool_name in (
             "img2img", "upscale", "apply_adetailer", "remove_background",
-            "layer_separation", "see_through_remote", "triposplat_remote", "edit_image", "change_background", "api_image_edit",
+            "layer_separation", "see_through_remote", "trellis_remote", "edit_image", "change_background", "api_image_edit",
         ):
             # LLM 可能会生成空字符串或无效占位路径，也视为未提供图片。
             if not _normalize_image_path(tool_args.get("image")):
@@ -742,14 +742,14 @@ def chat_stream(history, uploaded_image=None, uploaded_video=None):
     primary_uploaded_image = uploaded_image_list[0] if uploaded_image_list else None
 
     remote_layer_requested = _has_requested_remote_layer_separation(user_message)
-    triposplat_requested = _has_requested_triposplat(user_message)
-    if (_has_requested_layer_separation(user_message) or remote_layer_requested or triposplat_requested) and primary_uploaded_image is not None:
+    trellis_requested = _has_requested_trellis(user_message)
+    if (_has_requested_layer_separation(user_message) or remote_layer_requested or trellis_requested) and primary_uploaded_image is not None:
         remote_layer_separation = remote_layer_requested
-        separation_tool = "triposplat_remote" if triposplat_requested else ("see_through_remote" if remote_layer_separation else "layer_separation")
+        separation_tool = "trellis_remote" if trellis_requested else ("see_through_remote" if remote_layer_separation else "layer_separation")
         yield history, f"🔧 正在执行: {separation_tool}..."
         result_str, images = _execute_tool(
             separation_tool,
-            ({"image": primary_uploaded_image} if triposplat_requested else ({"image": primary_uploaded_image, "resolution": 1024} if remote_layer_separation else {"output_format": "psd"})),
+            ({"image": primary_uploaded_image} if trellis_requested else ({"image": primary_uploaded_image, "resolution": 1024} if remote_layer_separation else {"output_format": "psd"})),
             primary_uploaded_image,
             uploaded_video,
             [],
@@ -1202,7 +1202,7 @@ def on_ui_tabs():
                 _boot_cfg.get("see_through_space_url", "https://studio-ljsabc-see-through.api-inference.modelscope.net"),
                 _boot_cfg.get("see_through_space_token", ""),
             )
-            from scripts.triposplat_mcp import configure_token
+            from scripts.trellis_mcp import configure_token
             configure_token(_boot_cfg.get("see_through_space_token", ""))
         except Exception as _e:
             print(f"[Agent] See-through MCP 配置恢复失败: {_e}")
@@ -1273,11 +1273,15 @@ def on_ui_tabs():
             try:
                 from scripts.see_through_mcp import configure_space_url
                 active_url = configure_space_url(url, token)
-                from scripts.triposplat_mcp import configure_token
+                from scripts.trellis_mcp import configure_token
                 configure_token(token or "")
                 from scripts.see_through_mcp import check_space
-                expected_tool = "generate" if project == "TripoSplat Demo" else ("inference" if project == "See-Through（官方）" else "")
-                check_result = check_space(active_url, token or "", expected_tool=expected_tool)
+                if project == "TRELLIS.2":
+                    from scripts.trellis_mcp import check_space as check_trellis_space
+                    check_result = check_trellis_space()
+                else:
+                    expected_tool = "inference" if project == "See-Through（官方）" else ""
+                    check_result = check_space(active_url, token or "", expected_tool=expected_tool)
                 if check_result.get("status") != "connected":
                     return f"❌ MCP 握手失败：{check_result.get('message', '未知错误')}"
                 cfg["see_through_space_url"] = active_url
@@ -1291,8 +1295,12 @@ def on_ui_tabs():
         def test_see_through_settings(project, url, token):
             try:
                 from scripts.see_through_mcp import check_space
-                expected_tool = "generate" if project == "TripoSplat Demo" else ("inference" if project == "See-Through（官方）" else "")
-                result = check_space(url, token or "", expected_tool=expected_tool)
+                if project == "TRELLIS.2":
+                    from scripts.trellis_mcp import check_space as check_trellis_space
+                    result = check_trellis_space()
+                else:
+                    expected_tool = "inference" if project == "See-Through（官方）" else ""
+                    result = check_space(url, token or "", expected_tool=expected_tool)
                 return ("✅ " if result.get("status") == "connected" else "❌ ") + result.get("message", "未知结果")
             except Exception as e:
                 return f"❌ MCP/Space 检测失败：{e}"
