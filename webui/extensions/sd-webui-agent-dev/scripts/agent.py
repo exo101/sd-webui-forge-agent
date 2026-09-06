@@ -489,6 +489,13 @@ def _coerce_generation_tool_by_selected_model(tool_name, tool_args, user_instruc
         print(f"[Agent] ⚠️ 未配置与当前图像供应商匹配的 API Key，跳过 API 工具强制转换，保持本地工具: {tool_name}")
         return tool_name, tool_args
 
+    # API 图像模型由 UI/持久化配置决定。模型可能自行把 api_image_edit
+    # 参数填成 banana2 等旧默认值，不能让该值覆盖用户当前选择。
+    if _is_api_model and tool_name in ("api_image_edit", "api_image_generate"):
+        tool_args["model"] = image_model
+        print(f"[Agent] 强制使用当前选择的 API 图像模型: {image_model}")
+        return tool_name, tool_args
+
     if _is_api_model and tool_name == "txt2img":
         prompt = tool_args.get("prompt") or user_instruction
         print(f"[Agent] 路由: txt2img -> api_image_generate (model={image_model})")
