@@ -8,6 +8,7 @@ import json
 import mimetypes
 import os
 import time
+import urllib.parse
 from pathlib import Path
 from typing import Any
 
@@ -136,6 +137,31 @@ def _image_data(path: str) -> dict:
     return {"path": None, "url": f"data:{mime};base64,{base64.b64encode(raw).decode('ascii')}", "size": len(raw), "orig_name": Path(path).name, "mime_type": mime, "is_stream": False, "meta": {"_type": "gradio.FileData"}}
 
 
+def _upload_file(path: str) -> str:
+    """上传到 Gradio，再返回 MCP inference 要求的公网文件 URL。"""
+    import httpx
+
+    upload_url = f"{SPACE_URL}/gradio_api/upload"
+    mime = mimetypes.guess_type(path)[0] or "application/octet-stream"
+    with open(path, "rb") as handle:
+        response = httpx.post(
+            upload_url,
+            headers=_headers(),
+            files={"files": (Path(path).name, handle, mime)},
+            timeout=120,
+        )
+    response.raise_for_status()
+    uploaded = response.json()
+    if isinstance(uploaded, list):
+        uploaded = uploaded[0] if uploaded else ""
+    if not isinstance(uploaded, str) or not uploaded:
+        raise RuntimeError(f"Gradio 上传返回格式异常：{uploaded}")
+    if uploaded.startswith(("http://", "https://")):
+        return uploaded
+    # Gradio 文件服务格式：/file=/tmp/gradio/...
+    return f"{SPACE_URL}/file={urllib.parse.quote(uploaded, safe='/')}"
+
+
 def _save_mcp_content(result: Any, job_dir: Path) -> tuple[list[str], str]:
     files: list[str] = []
     texts: list[str] = []
@@ -194,7 +220,8 @@ def see_through_remote(image: str, resolution: int = 1024, seed: int = 42, tblr_
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         job_dir = OUTPUT_DIR / f"run_{int(time.time())}"
         job_dir.mkdir(parents=True, exist_ok=True)
-        result = _run(_call_mcp_tool({"image": _image_data(image), "resolution": max(768, min(1600, int(resolution))), "seed": max(0, min(9999, int(seed))), "tblr_split": bool(tblr_split)}))
+        image_url = _upload_file(image)
+        result = _run(_call_mcp_tool({"image": image_url, "resolution": max(768, min(1600, int(resolution))), "seed": max(0, min(9999, int(seed))), "tblr_split": bool(tblr_split)}))
         if getattr(result, "isError", False):
             detail = _mcp_result_error(result)
             return None, {"status": "error", "backend": "ModelScope MCP", "mcp_url": f"{SPACE_URL}{MCP_PATH}", "error": f"See-through MCP 工具执行失败：{detail}"}
