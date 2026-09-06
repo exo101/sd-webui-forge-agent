@@ -72,7 +72,7 @@ DEFAULT_CONFIG = {
 # 常用 ModelScope MCP Space 预设。地址为 API 专用域名，命名空间不能省略。
 MCP_PROJECT_PRESETS = {
     "See-Through（官方）": "https://studio-ljsabc-see-through.api-inference.modelscope.net",
-    "TripoSplat Demo": "https://studio-vast-ai-research-triposplat-demo.api-inference.modelscope.net",
+    "TRELLIS.2": "https://xmccln-trellis-2.ms.show",
     "自定义 MCP Space": "",
 }
 
