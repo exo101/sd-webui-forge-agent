@@ -13,7 +13,7 @@ from typing import Any
 
 from scripts.agent_tools_registry import agent_tool
 
-SPACE_URL = os.getenv("SEE_THROUGH_SPACE_URL", "https://ljsabc-see-through.ms.show").rstrip("/")
+SPACE_URL = os.getenv("SEE_THROUGH_SPACE_URL", "https://studio-ljsabc-see-through.api-inference.modelscope.net").rstrip("/")
 MCP_PATH = "/gradio_api/mcp/"
 SPACE_TOKEN = os.getenv("SEE_THROUGH_SPACE_TOKEN", "").strip()
 OUTPUT_DIR = Path(__file__).resolve().parents[2] / "outputs" / "see_through_remote"
@@ -56,6 +56,35 @@ def _run(coro):
     return asyncio.run(coro)
 
 
+def _exception_text(exc: BaseException) -> str:
+    """展开 ExceptionGroup，避免 MCP 只显示笼统的 TaskGroup 错误。"""
+    parts: list[str] = []
+    nested = getattr(exc, "exceptions", None)
+    if nested:
+        for item in nested:
+            text = _exception_text(item)
+            if text:
+                parts.append(text)
+    direct = str(exc).strip()
+    if direct and direct not in parts:
+        parts.insert(0, direct)
+    return "；".join(dict.fromkeys(parts)) or exc.__class__.__name__
+
+
+def _mcp_error_message(exc: BaseException) -> str:
+    detail = _exception_text(exc)
+    lower = detail.lower()
+    if "403" in lower or "sdk token" in lower or "api 专用地址" in detail:
+        return (
+            "MCP 返回 HTTP 403：当前普通 Space 地址不支持 SDK Token，"
+            "请使用 ModelScope API 专用地址："
+            "https://studio-ljsabc-see-through.api-inference.modelscope.net"
+        )
+    if "401" in lower or "authentication failed" in lower or "invalid token" in lower:
+        return "MCP 返回 HTTP 401：请填写有效的 ModelScope 访问令牌。"
+    return f"MCP 握手失败：{detail}"
+
+
 def check_space(url: str, token: str = "") -> dict:
     """Perform a real MCP initialize + tools/list handshake."""
     configure_space_url(url, token)
@@ -66,9 +95,9 @@ def check_space(url: str, token: str = "") -> dict:
             return {"status": "error", "message": f"MCP 已连接，但没有 inference 工具：{names}"}
         return {"status": "connected", "message": f"MCP 已连接，已发现 inference 工具（共 {len(names)} 个）", "url": f"{SPACE_URL}{MCP_PATH}", "tools": names}
     except Exception as exc:
-        if "403" in str(exc):
-            return {"status": "forbidden", "message": "MCP 返回 403，请填写有效令牌或确认空间权限", "url": SPACE_URL}
-        return {"status": "error", "message": f"MCP 握手失败：{exc}", "url": SPACE_URL}
+        detail = _mcp_error_message(exc)
+        status = "forbidden" if "HTTP 403" in detail else ("unauthorized" if "HTTP 401" in detail else "error")
+        return {"status": status, "message": detail, "url": SPACE_URL}
 
 
 def _image_data(path: str) -> dict:
@@ -143,5 +172,6 @@ def see_through_remote(image: str, resolution: int = 1024, seed: int = 42, tblr_
         psd = next((p for p in files if p.lower().endswith(".psd")), None)
         return previews[:12], {"status": "success", "backend": "ModelScope MCP", "mcp_url": f"{SPACE_URL}{MCP_PATH}", "psd_path": psd, "files": files, "message": text}
     except Exception as exc:
-        print(f"[See-through MCP] Tool call failed: {exc}")
-        return None, f"调用 See-through MCP 失败：{exc}"
+        detail = _exception_text(exc)
+        print(f"[See-through MCP] Tool call failed: {detail}")
+        return None, f"调用 See-through MCP 失败：{detail}"
