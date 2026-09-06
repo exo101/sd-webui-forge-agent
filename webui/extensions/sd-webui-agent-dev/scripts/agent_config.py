@@ -64,6 +64,8 @@ DEFAULT_CONFIG = {
     "default_width": 1024,
     "default_height": 1024,
     "default_cfg_scale": 7.0,
+    "see_through_space_url": "https://ljsabc-see-through.ms.show",
+    "see_through_space_token": "",
 }
 
 API_PROVIDERS = {

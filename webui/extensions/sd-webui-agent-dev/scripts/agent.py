@@ -1173,6 +1173,14 @@ def on_ui_tabs():
     # 导致重启后 Forge 处于 API 模式但无有效 key，首次生图 401
     try:
         _boot_cfg = load_config(resolve_local=False)
+        try:
+            from scripts.see_through_mcp import configure_space_url
+            configure_space_url(
+                _boot_cfg.get("see_through_space_url", "https://ljsabc-see-through.ms.show"),
+                _boot_cfg.get("see_through_space_token", ""),
+            )
+        except Exception as _e:
+            print(f"[Agent] See-through MCP 配置恢复失败: {_e}")
         _restore_key = _boot_cfg.get("image_api_key") or _boot_cfg.get("api_key") or ""
         _image_model = str(_boot_cfg.get("image_model") or "").strip()
         _current_mode = getattr(shared.opts, "forge_model_mode", "") or ""
@@ -1229,6 +1237,26 @@ def on_ui_tabs():
             # 如果当前模型不在新供应商列表中，回退到该供应商第一个模型
             new_value = current_model if current_model in llm_models else (llm_models[0] if llm_models else current_model)
             return url, gr.update(choices=llm_models, value=new_value, allow_custom_value=True)
+
+        def save_see_through_settings(url, token):
+            cfg = load_config(resolve_local=False)
+            try:
+                from scripts.see_through_mcp import configure_space_url
+                active_url = configure_space_url(url, token)
+                cfg["see_through_space_url"] = active_url
+                cfg["see_through_space_token"] = token or ""
+                ok = save_config(cfg)
+                return f"✅ 已保存并连接：{active_url}" if ok else "❌ 配置保存失败"
+            except Exception as e:
+                return f"❌ MCP 连接失败：{e}"
+
+        def test_see_through_settings(url, token):
+            try:
+                from scripts.see_through_mcp import check_space
+                result = check_space(url, token or "")
+                return ("✅ " if result.get("status") == "connected" else "❌ ") + result.get("message", "未知结果")
+            except Exception as e:
+                return f"❌ MCP/Space 检测失败：{e}"
 
         gr.HTML("""
         <div style="text-align:center; margin-bottom: 10px;">
@@ -1380,6 +1408,30 @@ def on_ui_tabs():
                     )
                     save_image_settings_btn = gr.Button("💾 保存生成 API 设置", variant="secondary")
                     image_settings_status = gr.Textbox(show_label=False, interactive=False)
+
+                    gr.Markdown("### 🔌 魔搭 MCP / Space 工具")
+                    gr.Markdown(
+                        "连接后，绘梦助手可调用该空间的图像工具。默认已填写 See-Through 空间；"
+                        "图片会上传到远程空间进行处理。"
+                    )
+                    see_through_url = gr.Textbox(
+                        label="魔搭 Space 地址",
+                        value=cfg_init.get("see_through_space_url", "https://ljsabc-see-through.ms.show"),
+                        placeholder="https://你的空间.ms.show",
+                    )
+                    see_through_token = gr.Textbox(
+                        label="魔搭访问令牌（可选）",
+                        value=cfg_init.get("see_through_space_token", ""),
+                        type="password",
+                        placeholder="空间返回 403 时填写",
+                    )
+                    with gr.Row():
+                        test_see_through_btn = gr.Button("🔎 测试 MCP/Space", size="sm")
+                        save_see_through_btn = gr.Button("💾 保存并连接", variant="secondary", size="sm")
+                    see_through_status = gr.Textbox(
+                        label="连接状态", show_label=False, interactive=False,
+                        value="未测试；点击‘测试 MCP/Space’检查连接",
+                    )
 
                 with gr.Accordion("📖 使用提示", open=False):
                     gr.Markdown("""
@@ -1685,6 +1737,8 @@ def on_ui_tabs():
 
         save_settings_btn.click(fn=save_settings, inputs=[api_provider, api_key, base_url, model_name, local_mode], outputs=[settings_status])
         save_image_settings_btn.click(fn=save_image_settings, inputs=[image_api_provider, image_api_key, image_base_url], outputs=[image_settings_status])
+        test_see_through_btn.click(fn=test_see_through_settings, inputs=[see_through_url, see_through_token], outputs=[see_through_status])
+        save_see_through_btn.click(fn=save_see_through_settings, inputs=[see_through_url, see_through_token], outputs=[see_through_status])
         clear_api_key_btn.click(fn=clear_api_key, outputs=[api_key, settings_status])
         clear_image_api_key_btn.click(fn=clear_image_api_key, outputs=[image_api_key, image_settings_status])
         detect_btn.click(fn=detect_local, inputs=[local_mode], outputs=[detect_status, model_name, base_url, api_key, api_provider])

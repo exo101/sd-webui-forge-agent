@@ -21,7 +21,42 @@ SPACE_URL = os.getenv(
     "SEE_THROUGH_SPACE_URL",
     "https://ljsabc-see-through.ms.show",
 ).rstrip("/")
+SPACE_TOKEN = os.getenv("SEE_THROUGH_SPACE_TOKEN", "").strip()
 OUTPUT_DIR = Path(__file__).resolve().parents[2] / "outputs" / "see_through_remote"
+
+
+def configure_space_url(url: str, token: str | None = None) -> str:
+    """Set the active Space URL for the current WebUI process."""
+    global SPACE_URL, SPACE_TOKEN
+    value = (url or "").strip().rstrip("/")
+    if not value.startswith(("http://", "https://")):
+        raise ValueError("MCP/Space 地址必须以 http:// 或 https:// 开头")
+    SPACE_URL = value
+    if token is not None:
+        SPACE_TOKEN = token.strip()
+    return SPACE_URL
+
+
+def check_space(url: str, token: str = "") -> dict:
+    """Check the Space public API and report its available endpoint."""
+    import httpx
+
+    value = configure_space_url(url, token)
+    headers = {"Authorization": f"Bearer {SPACE_TOKEN}"} if SPACE_TOKEN else None
+    response = httpx.get(f"{value}/gradio_api/info", headers=headers, timeout=20)
+    if response.status_code == 403:
+        return {"status": "forbidden", "message": "空间返回 403，请填写有效的魔搭访问令牌或确认空间权限", "url": value}
+    response.raise_for_status()
+    info = response.json()
+    endpoint = info.get("named_endpoints", {}).get("/inference")
+    if not endpoint:
+        return {"status": "error", "message": "未找到 /inference 接口"}
+    params = [p.get("parameter_name") for p in endpoint.get("parameters", [])]
+    return {
+        "status": "connected",
+        "message": f"已连接，可用接口 /inference，参数：{', '.join(params)}",
+        "url": value,
+    }
 
 
 def _find_path(value: Any) -> list[str]:
@@ -90,7 +125,8 @@ def see_through_remote(
         from gradio_client import Client
 
         print(f"[See-through] Calling remote Space: {SPACE_URL}")
-        client = Client(SPACE_URL)
+        headers = {"Authorization": f"Bearer {SPACE_TOKEN}"} if SPACE_TOKEN else None
+        client = Client(SPACE_URL, headers=headers)
         result = client.predict(
             image=image,
             resolution=resolution,
