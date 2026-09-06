@@ -1430,12 +1430,6 @@ def on_ui_tabs():
                         interactive=True,
                         scale=1,
                     )
-                    gradio_api_example = gr.Textbox(
-                        label="导入陌生 Gradio API 示例（可选）",
-                        placeholder="粘贴 Client(...) 和 client.predict(...) 示例代码",
-                        lines=3,
-                    )
-                    import_gradio_api_btn = gr.Button("📥 导入 API 示例", size="sm")
 
                 with gr.Row():
                     msg_input = gr.Textbox(
@@ -1882,11 +1876,6 @@ def on_ui_tabs():
             fn=on_mcp_project_change,
             inputs=[mcp_project_select, see_through_url],
             outputs=[see_through_url],
-        )
-        import_gradio_api_btn.click(
-            fn=import_gradio_api_example,
-            inputs=[gradio_api_example, mcp_project_select],
-            outputs=[mcp_project_select, see_through_status],
         )
         test_see_through_btn.click(fn=test_see_through_settings, inputs=[mcp_project_select, see_through_url, see_through_token], outputs=[see_through_status])
         save_see_through_btn.click(fn=save_see_through_settings, inputs=[mcp_project_select, see_through_url, see_through_token], outputs=[see_through_status])
