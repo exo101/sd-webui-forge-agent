@@ -1465,10 +1465,10 @@ def on_ui_tabs():
                     save_image_settings_btn = gr.Button("💾 保存生成 API 设置", variant="secondary")
                     image_settings_status = gr.Textbox(show_label=False, interactive=False)
 
-                    gr.Markdown("### 🔌 魔搭 MCP / Space 工具")
+                    gr.Markdown("### 🔌 魔搭 Gradio API / Space 工具")
                     gr.Markdown(
-                        "连接后，绘梦助手可调用该空间的图像工具。默认已填写 See-Through 空间；"
-                        "图片会上传到远程空间进行处理。"
+                        "选择项目后，绘梦助手会自动使用该空间的 Gradio API；"
+                        "图片会通过官方 Python 客户端上传并调用。"
                     )
                     see_through_url = gr.Textbox(
                         label="魔搭 Space 地址",
@@ -1482,11 +1482,11 @@ def on_ui_tabs():
                         placeholder="空间返回 403 时填写",
                     )
                     with gr.Row():
-                        test_see_through_btn = gr.Button("🔎 测试 MCP/Space", size="sm")
+                        test_see_through_btn = gr.Button("🔎 测试 API/Space", size="sm")
                         save_see_through_btn = gr.Button("💾 保存并连接", variant="secondary", size="sm")
                     see_through_status = gr.Textbox(
                         label="连接状态", show_label=False, interactive=False,
-                        value="未测试；点击‘测试 MCP/Space’检查连接",
+                        value="未测试；点击‘测试 API/Space’检查连接",
                     )
 
                 with gr.Accordion("📖 使用提示", open=False):
