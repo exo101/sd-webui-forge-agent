@@ -438,6 +438,12 @@ def _has_requested_layer_separation(user_instruction):
     return any(token in text for token in ("图层分离", "分层", "psd 图层", "psd图层", "@图层分离"))
 
 
+def _has_requested_remote_layer_separation(user_instruction):
+    """用户明确要求远程 MCP 时，禁止切换到本地图层分离。"""
+    text = str(user_instruction or "").lower()
+    return any(token in text for token in ("mcp", "魔搭", "modelscope", "远程 see-through", "remote see-through", "远程图层"))
+
+
 def _coerce_api_image_edit_tool(tool_name, tool_args, requested_api_model, user_instruction):
     """用户指定 API 图像编辑模型时，禁止误回退到本地抠图/Klein 工具。"""
     if not _should_protect_api_image_model(requested_api_model):
@@ -729,11 +735,14 @@ def chat_stream(history, uploaded_image=None, uploaded_video=None):
     uploaded_image_list = uploaded_image if isinstance(uploaded_image, (list, tuple)) else ([uploaded_image] if uploaded_image is not None else [])
     primary_uploaded_image = uploaded_image_list[0] if uploaded_image_list else None
 
-    if _has_requested_layer_separation(user_message) and primary_uploaded_image is not None:
-        yield history, "🔧 正在执行: layer_separation..."
+    remote_layer_requested = _has_requested_remote_layer_separation(user_message)
+    if (_has_requested_layer_separation(user_message) or remote_layer_requested) and primary_uploaded_image is not None:
+        remote_layer_separation = remote_layer_requested
+        separation_tool = "see_through_remote" if remote_layer_separation else "layer_separation"
+        yield history, f"🔧 正在执行: {separation_tool}..."
         result_str, images = _execute_tool(
-            "layer_separation",
-            {"output_format": "psd"},
+            separation_tool,
+            ({"image": primary_uploaded_image, "resolution": 1024} if remote_layer_separation else {"output_format": "psd"}),
             primary_uploaded_image,
             uploaded_video,
             [],
@@ -756,13 +765,13 @@ def chat_stream(history, uploaded_image=None, uploaded_video=None):
                         "role": "assistant",
                         "content": {"path": img_path, "alt_text": f"分离图层预览 {i + 1}"},
                     })
-            yield final_history, "✅ layer_separation 完成"
+            yield final_history, f"✅ {separation_tool} 完成"
         else:
             info = result_data.get("info") or result_data
             error = info.get("error") if isinstance(info, dict) else str(info)
             final_history = list(history)
             final_history.append({"role": "assistant", "content": f"图层分离失败：{error}"})
-            yield final_history, "❌ layer_separation 失败"
+            yield final_history, f"❌ {separation_tool} 失败：{error}"
         return
 
     # 构建 OpenAI 消息格式
