@@ -1199,7 +1199,7 @@ def on_ui_tabs():
         try:
             from scripts.see_through_mcp import configure_space_url
             configure_space_url(
-                _boot_cfg.get("see_through_space_url", "https://studio-ljsabc-see-through.api-inference.modelscope.net"),
+                _boot_cfg.get("see_through_space_url", "https://ljsabc-see-through.ms.show"),
                 _boot_cfg.get("see_through_space_token", ""),
             )
             from scripts.trellis_mcp import configure_token
@@ -1472,7 +1472,7 @@ def on_ui_tabs():
                     )
                     see_through_url = gr.Textbox(
                         label="魔搭 Space 地址",
-                        value=cfg_init.get("see_through_space_url", "https://studio-ljsabc-see-through.api-inference.modelscope.net"),
+                        value=cfg_init.get("see_through_space_url", "https://ljsabc-see-through.ms.show"),
                         placeholder="https://你的空间.ms.show",
                     )
                     see_through_token = gr.Textbox(
