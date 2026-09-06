@@ -23,7 +23,7 @@ from modules.processing import process_images
 # =============================================================================
 from scripts.agent_config import (
     load_config, save_config, _save_pil_to_tempfile, _detect_local_llama,
-    API_PROVIDERS, normalize_base_url, provider_base_url,
+    API_PROVIDERS, MCP_PROJECT_PRESETS, normalize_base_url, provider_base_url,
     _local_detection_cache, _local_detection_time,
     _REGISTRY_AVAILABLE, get_registered_tools, get_tool_function, list_registered_tools,
 )
@@ -1255,7 +1255,11 @@ def on_ui_tabs():
             new_value = current_model if current_model in llm_models else (llm_models[0] if llm_models else current_model)
             return url, gr.update(choices=llm_models, value=new_value, allow_custom_value=True)
 
-        def save_see_through_settings(url, token):
+        def on_mcp_project_change(project, current_url):
+            preset_url = MCP_PROJECT_PRESETS.get(project, "")
+            return preset_url or current_url or ""
+
+        def save_see_through_settings(project, url, token):
             cfg = load_config(resolve_local=False)
             try:
                 from scripts.see_through_mcp import configure_space_url
@@ -1266,12 +1270,13 @@ def on_ui_tabs():
                     return f"❌ MCP 握手失败：{check_result.get('message', '未知错误')}"
                 cfg["see_through_space_url"] = active_url
                 cfg["see_through_space_token"] = token or ""
+                cfg["mcp_project"] = project or "自定义 MCP Space"
                 ok = save_config(cfg)
                 return f"✅ 已保存并连接：{active_url}" if ok else "❌ 配置保存失败"
             except Exception as e:
                 return f"❌ MCP 连接失败：{e}"
 
-        def test_see_through_settings(url, token):
+        def test_see_through_settings(project, url, token):
             try:
                 from scripts.see_through_mcp import check_space
                 result = check_space(url, token or "")
@@ -1436,6 +1441,12 @@ def on_ui_tabs():
                     gr.Markdown(
                         "连接后，绘梦助手可调用该空间的图像工具。默认已填写 See-Through 空间；"
                         "图片会上传到远程空间进行处理。"
+                    )
+                    mcp_project_select = gr.Dropdown(
+                        label="MCP 项目列表",
+                        choices=list(MCP_PROJECT_PRESETS.keys()),
+                        value=cfg_init.get("mcp_project", "See-Through（官方）"),
+                        interactive=True,
                     )
                     see_through_url = gr.Textbox(
                         label="魔搭 Space 地址",
@@ -1781,8 +1792,13 @@ def on_ui_tabs():
 
         save_settings_btn.click(fn=save_settings, inputs=[api_provider, api_key, base_url, model_name, local_mode], outputs=[settings_status])
         save_image_settings_btn.click(fn=save_image_settings, inputs=[image_api_provider, image_api_key, image_base_url], outputs=[image_settings_status])
-        test_see_through_btn.click(fn=test_see_through_settings, inputs=[see_through_url, see_through_token], outputs=[see_through_status])
-        save_see_through_btn.click(fn=save_see_through_settings, inputs=[see_through_url, see_through_token], outputs=[see_through_status])
+        mcp_project_select.change(
+            fn=on_mcp_project_change,
+            inputs=[mcp_project_select, see_through_url],
+            outputs=[see_through_url],
+        )
+        test_see_through_btn.click(fn=test_see_through_settings, inputs=[mcp_project_select, see_through_url, see_through_token], outputs=[see_through_status])
+        save_see_through_btn.click(fn=save_see_through_settings, inputs=[mcp_project_select, see_through_url, see_through_token], outputs=[see_through_status])
         clear_api_key_btn.click(fn=clear_api_key, outputs=[api_key, settings_status])
         clear_image_api_key_btn.click(fn=clear_image_api_key, outputs=[image_api_key, image_settings_status])
         detect_btn.click(fn=detect_local, inputs=[local_mode], outputs=[detect_status, model_name, base_url, api_key, api_provider])
