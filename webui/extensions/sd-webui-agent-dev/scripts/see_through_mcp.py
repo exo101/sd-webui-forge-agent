@@ -159,7 +159,17 @@ def _upload_file(path: str) -> str:
     if uploaded.startswith(("http://", "https://")):
         return uploaded
     # Gradio 文件服务格式：/file=/tmp/gradio/...
-    return f"{SPACE_URL}/file={urllib.parse.quote(uploaded, safe='/')}"
+    file_url = f"{SPACE_URL}/file={urllib.parse.quote(uploaded, safe='/')}"
+    # API 专用域名可能只代理 MCP/upload，不代理 Gradio 文件路由；提前检查，
+    # 避免 inference 等待数分钟后才返回笼统的上游异常。
+    response = httpx.get(file_url, headers=_headers(), timeout=30)
+    if response.status_code != 200:
+        raise RuntimeError(
+            f"图片上传成功，但远程文件 URL 不可访问（HTTP {response.status_code}）：{file_url}。"
+            "当前 ModelScope API 专用地址没有向 inference 暴露该上传文件，"
+            "需要 Space 同时提供 upload_file_to_gradio 工具或公开文件访问。"
+        )
+    return file_url
 
 
 def _save_mcp_content(result: Any, job_dir: Path) -> tuple[list[str], str]:

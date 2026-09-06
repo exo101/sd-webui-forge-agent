@@ -1260,6 +1260,10 @@ def on_ui_tabs():
             try:
                 from scripts.see_through_mcp import configure_space_url
                 active_url = configure_space_url(url, token)
+                from scripts.see_through_mcp import check_space
+                check_result = check_space(active_url, token or "")
+                if check_result.get("status") != "connected":
+                    return f"❌ MCP 握手失败：{check_result.get('message', '未知错误')}"
                 cfg["see_through_space_url"] = active_url
                 cfg["see_through_space_token"] = token or ""
                 ok = save_config(cfg)
