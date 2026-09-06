@@ -10,7 +10,7 @@ from typing import Any
 
 from scripts.agent_tools_registry import agent_tool
 
-SEE_THROUGH_URL = "https://studio-ljsabc-see-through.api-inference.modelscope.net"
+SEE_THROUGH_URL = "https://ljsabc-see-through.ms.show"
 OUTPUT_DIR = Path(__file__).resolve().parents[2] / "outputs" / "see_through_remote"
 
 
