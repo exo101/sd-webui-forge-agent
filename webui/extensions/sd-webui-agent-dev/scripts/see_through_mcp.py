@@ -81,15 +81,38 @@ def _exception_text(exc: BaseException) -> str:
 def _mcp_error_message(exc: BaseException) -> str:
     detail = _exception_text(exc)
     lower = detail.lower()
-    if "403" in lower or "sdk token" in lower or "api 专用地址" in detail:
-        return (
-            "MCP 返回 HTTP 403：当前普通 Space 地址不支持 SDK Token，"
-            "请使用 ModelScope API 专用地址："
-            "https://studio-ljsabc-see-through.api-inference.modelscope.net"
-        )
+    if "403" in lower:
+        if LEGACY_SPACE_URL in SPACE_URL:
+            return (
+                "MCP 返回 HTTP 403：当前普通 Space 地址不支持 SDK Token，"
+                "请使用 ModelScope API 专用地址："
+                f"{API_SPACE_URL}"
+            )
+        return f"MCP 返回 HTTP 403：API 专用地址已连接，但服务端拒绝了本次请求。原始信息：{detail}"
     if "401" in lower or "authentication failed" in lower or "invalid token" in lower:
         return "MCP 返回 HTTP 401：请填写有效的 ModelScope 访问令牌。"
     return f"MCP 握手失败：{detail}"
+
+
+def _mcp_result_error(result: Any) -> str:
+    """提取 call_tool 返回的 isError 内容，保留服务端真实错误。"""
+    parts: list[str] = []
+    for block in getattr(result, "content", []) or []:
+        block_type = getattr(block, "type", None)
+        if block_type == "text":
+            value = str(getattr(block, "text", "") or "").strip()
+            if value:
+                try:
+                    parsed = json.loads(value)
+                    parts.append(json.dumps(parsed, ensure_ascii=False))
+                except Exception:
+                    parts.append(value)
+        elif block_type == "resource":
+            resource = getattr(block, "resource", None)
+            value = getattr(resource, "text", None) or getattr(resource, "uri", None)
+            if value:
+                parts.append(str(value))
+    return "；".join(dict.fromkeys(parts)) or "服务端未返回具体错误信息"
 
 
 def check_space(url: str, token: str = "") -> dict:
@@ -173,7 +196,8 @@ def see_through_remote(image: str, resolution: int = 1024, seed: int = 42, tblr_
         job_dir.mkdir(parents=True, exist_ok=True)
         result = _run(_call_mcp_tool({"image": _image_data(image), "resolution": max(768, min(1600, int(resolution))), "seed": max(0, min(9999, int(seed))), "tblr_split": bool(tblr_split)}))
         if getattr(result, "isError", False):
-            return None, "See-through MCP 工具执行失败。"
+            detail = _mcp_result_error(result)
+            return None, {"status": "error", "backend": "ModelScope MCP", "mcp_url": f"{SPACE_URL}{MCP_PATH}", "error": f"See-through MCP 工具执行失败：{detail}"}
         files, text = _save_mcp_content(result, job_dir)
         previews = [p for p in files if p.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))]
         psd = next((p for p in files if p.lower().endswith(".psd")), None)
