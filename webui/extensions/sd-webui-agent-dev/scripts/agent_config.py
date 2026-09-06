@@ -66,6 +66,14 @@ DEFAULT_CONFIG = {
     "default_cfg_scale": 7.0,
     "see_through_space_url": "https://studio-ljsabc-see-through.api-inference.modelscope.net",
     "see_through_space_token": "",
+    "mcp_project": "See-Through（官方）",
+}
+
+# 常用 ModelScope MCP Space 预设。地址为 API 专用域名，命名空间不能省略。
+MCP_PROJECT_PRESETS = {
+    "See-Through（官方）": "https://studio-ljsabc-see-through.api-inference.modelscope.net",
+    "TripoSplat Demo": "https://studio-vast-ai-research-triposplat-demo.api-inference.modelscope.net",
+    "自定义 MCP Space": "",
 }
 
 API_PROVIDERS = {
