@@ -539,23 +539,16 @@ def _execute_tool(tool_name, tool_args, uploaded_image=None, uploaded_video=None
     if last_tool_images is None:
         last_tool_images = []
 
-    if tool_name not in TOOL_FUNCTIONS:
-        # 检查注册系统
-        registered_func = get_tool_function(tool_name) if _REGISTRY_AVAILABLE else None
-        if registered_func:
-            try:
-                result = registered_func(**tool_args)
-                if isinstance(result, tuple) and len(result) == 2:
-                    images, info = result
-                    return json.dumps({"status": "success", "info": info}, ensure_ascii=False), images
-                return json.dumps({"status": "success", "data": result}, ensure_ascii=False), []
-            except Exception as e:
-                return json.dumps({"status": "error", "error": str(e)}, ensure_ascii=False), []
+    # 内置工具和动态注册工具都必须经过下面的参数注入流程。
+    func = TOOL_FUNCTIONS.get(tool_name)
+    registered_func = None
+    if func is None and _REGISTRY_AVAILABLE:
+        registered_func = get_tool_function(tool_name)
+        func = registered_func
+    if func is None:
         return json.dumps({"error": f"未知工具: {tool_name}"}, ensure_ascii=False), []
 
     try:
-        func = TOOL_FUNCTIONS[tool_name]
-
         # ===== 自动注入图片参数（优先级：用户上传 > 上次工具生成） =====
         # 单图工具：需要自动注入上传图片或上一步输出图片。
         # layer_separation 虽然不在旧注释列表中，但同样必须接收 image。
@@ -563,7 +556,8 @@ def _execute_tool(tool_name, tool_args, uploaded_image=None, uploaded_video=None
             "img2img", "upscale", "apply_adetailer", "remove_background",
             "layer_separation", "see_through_remote", "edit_image", "change_background", "api_image_edit",
         ):
-            if "image" not in tool_args or tool_args["image"] is None:
+            # LLM 可能会生成空字符串或无效占位路径，也视为未提供图片。
+            if not _normalize_image_path(tool_args.get("image")):
                 if uploaded_image is not None:
                     tool_args["image"] = uploaded_image
                 elif last_tool_images:
