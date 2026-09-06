@@ -36,6 +36,7 @@ from scripts.agent_prompts import _get_system_prompt
 # 注册远程 See-through 工具。该模块只在启动时注册函数，不会立即调用网络。
 try:
     import scripts.see_through_mcp  # noqa: F401
+    import scripts.triposplat_mcp  # noqa: F401
 except Exception as e:
     print(f"[Agent] See-through 远程工具加载失败: {e}")
 
@@ -560,7 +561,7 @@ def _execute_tool(tool_name, tool_args, uploaded_image=None, uploaded_video=None
         # layer_separation 虽然不在旧注释列表中，但同样必须接收 image。
         if tool_name in (
             "img2img", "upscale", "apply_adetailer", "remove_background",
-            "layer_separation", "see_through_remote", "edit_image", "change_background", "api_image_edit",
+            "layer_separation", "see_through_remote", "triposplat_remote", "edit_image", "change_background", "api_image_edit",
         ):
             # LLM 可能会生成空字符串或无效占位路径，也视为未提供图片。
             if not _normalize_image_path(tool_args.get("image")):
@@ -1195,6 +1196,8 @@ def on_ui_tabs():
                 _boot_cfg.get("see_through_space_url", "https://studio-ljsabc-see-through.api-inference.modelscope.net"),
                 _boot_cfg.get("see_through_space_token", ""),
             )
+            from scripts.triposplat_mcp import configure_token
+            configure_token(_boot_cfg.get("see_through_space_token", ""))
         except Exception as _e:
             print(f"[Agent] See-through MCP 配置恢复失败: {_e}")
         _restore_key = _boot_cfg.get("image_api_key") or _boot_cfg.get("api_key") or ""
@@ -1264,6 +1267,8 @@ def on_ui_tabs():
             try:
                 from scripts.see_through_mcp import configure_space_url
                 active_url = configure_space_url(url, token)
+                from scripts.triposplat_mcp import configure_token
+                configure_token(token or "")
                 from scripts.see_through_mcp import check_space
                 check_result = check_space(active_url, token or "")
                 if check_result.get("status") != "connected":

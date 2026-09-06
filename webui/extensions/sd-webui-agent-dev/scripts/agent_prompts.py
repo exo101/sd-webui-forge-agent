@@ -275,7 +275,7 @@ Anima→qwen_3_06b_base + qwen_image_vae
 Z-Image→qwen_3_4b + flux-ae
 热切换，无需重启！
 
-【工具列表】txt2img, img2img, upscale, apply_adetailer, stitch_images, remove_background, layer_separation, see_through_remote, api_image_edit, edit_image, change_background, video_keyframe_extract, video_to_frames, h3_video_generate, dreamina_video_generate, list_models, set_model_components, switch_model, set_vae, set_text_encoder, get_model_guide, list_samplers, list_upscalers, list_loras, list_preprocessors, list_controlnet, list_extensions, research_extension, explore_webui, read_workspace_file, analyze_document, audit_extensions, get_current_settings, update_settings
+【工具列表】txt2img, img2img, upscale, apply_adetailer, stitch_images, remove_background, layer_separation, see_through_remote, triposplat_remote, api_image_edit, edit_image, change_background, video_keyframe_extract, video_to_frames, h3_video_generate, dreamina_video_generate, list_models, set_model_components, switch_model, set_vae, set_text_encoder, get_model_guide, list_samplers, list_upscalers, list_loras, list_preprocessors, list_controlnet, list_extensions, research_extension, explore_webui, read_workspace_file, analyze_document, audit_extensions, get_current_settings, update_settings
 
 图片/视频自动传入工具。用英文写提示词。用中文回答，简洁专业。
 """
