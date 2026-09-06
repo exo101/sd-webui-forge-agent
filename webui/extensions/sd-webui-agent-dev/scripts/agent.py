@@ -1270,7 +1270,8 @@ def on_ui_tabs():
                 from scripts.triposplat_mcp import configure_token
                 configure_token(token or "")
                 from scripts.see_through_mcp import check_space
-                check_result = check_space(active_url, token or "")
+                expected_tool = "generate" if project == "TripoSplat Demo" else ("inference" if project == "See-Through（官方）" else "")
+                check_result = check_space(active_url, token or "", expected_tool=expected_tool)
                 if check_result.get("status") != "connected":
                     return f"❌ MCP 握手失败：{check_result.get('message', '未知错误')}"
                 cfg["see_through_space_url"] = active_url
@@ -1284,7 +1285,8 @@ def on_ui_tabs():
         def test_see_through_settings(project, url, token):
             try:
                 from scripts.see_through_mcp import check_space
-                result = check_space(url, token or "")
+                expected_tool = "generate" if project == "TripoSplat Demo" else ("inference" if project == "See-Through（官方）" else "")
+                result = check_space(url, token or "", expected_tool=expected_tool)
                 return ("✅ " if result.get("status") == "connected" else "❌ ") + result.get("message", "未知结果")
             except Exception as e:
                 return f"❌ MCP/Space 检测失败：{e}"

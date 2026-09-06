@@ -116,14 +116,14 @@ def _mcp_result_error(result: Any) -> str:
     return "；".join(dict.fromkeys(parts)) or "服务端未返回具体错误信息"
 
 
-def check_space(url: str, token: str = "") -> dict:
+def check_space(url: str, token: str = "", expected_tool: str = "inference") -> dict:
     """Perform a real MCP initialize + tools/list handshake."""
     configure_space_url(url, token)
     try:
         tools = _run(_list_mcp_tools())
         names = [tool.name for tool in tools]
-        if "inference" not in names:
-            return {"status": "error", "message": f"MCP 已连接，但没有 inference 工具：{names}"}
+        if expected_tool and expected_tool not in names:
+            return {"status": "error", "message": f"MCP 已连接，但没有 {expected_tool} 工具：{names}"}
         return {"status": "connected", "message": f"MCP 已连接，已发现 inference 工具（共 {len(names)} 个）", "url": f"{SPACE_URL}{MCP_PATH}", "tools": names}
     except Exception as exc:
         detail = _mcp_error_message(exc)
