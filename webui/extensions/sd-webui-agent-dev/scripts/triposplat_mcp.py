@@ -54,7 +54,7 @@ def _upload_file_to_gradio(path: str) -> str:
     return f"{TRIPOSPLAT_URL}/gradio_api/file={urllib.parse.quote(remote_path, safe='/')}"
 
 
-async def _call_generate(args: dict[str, Any]) -> Any:
+async def _call_tool(tool_name: str, args: dict[str, Any]) -> Any:
     from mcp import ClientSession
     from mcp.client.streamable_http import streamablehttp_client
 
@@ -63,7 +63,7 @@ async def _call_generate(args: dict[str, Any]) -> Any:
     ) as (read_stream, write_stream, _):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
-            return await session.call_tool("generate", args)
+            return await session.call_tool(tool_name, args)
 
 
 def _run(coro):
@@ -76,6 +76,15 @@ def _content_text(result: Any) -> str:
         if getattr(block, "type", None) == "text" and getattr(block, "text", None):
             values.append(block.text)
     return "\n".join(values) or "TripoSplat 未返回文本结果。"
+
+
+def _prepared_data_url(result: Any) -> str | None:
+    """把 on_image_change 返回的 MCP 图片块转换为下一步可接受的 Data URL。"""
+    for block in getattr(result, "content", []) or []:
+        if getattr(block, "type", None) == "image" and getattr(block, "data", None):
+            mime = getattr(block, "mimeType", None) or "image/webp"
+            return f"data:{mime};base64,{block.data}"
+    return None
 
 
 @agent_tool(
@@ -98,8 +107,18 @@ def triposplat_remote(image: str, seed: int = 42, steps: float = 20, guidance_sc
     if not image or not os.path.isfile(image):
         return None, "找不到输入图片，请先上传一张图片。"
     try:
-        result = _run(_call_generate({
-            "prepared": _upload_file_to_gradio(image),
+        # TripoSplat 的 generate 必须使用 on_image_change 产生的 prepared 图，
+        # 不能把原图直接传给 generate。
+        prepared_result = _run(_call_tool("on_image_change", {
+            "image": _image_data_url(image),
+        }))
+        if getattr(prepared_result, "isError", False):
+            return None, {"status": "error", "backend": "ModelScope MCP", "stage": "on_image_change", "error": _content_text(prepared_result)}
+        prepared = _prepared_data_url(prepared_result)
+        if not prepared:
+            return None, {"status": "error", "backend": "ModelScope MCP", "stage": "on_image_change", "error": "未返回 prepared 预处理图。"}
+        result = _run(_call_tool("generate", {
+            "prepared": prepared,
             "seed": int(seed),
             "steps": steps,
             "guidance_scale": guidance_scale,
