@@ -2210,6 +2210,68 @@ def analyze_document_tool(path, question="", max_chars=16000):
     return result
 
 
+def _workspace_backup_path(webui_root, target):
+    """Create a recoverable backup path for an agent edit."""
+    backup_dir = os.path.join(webui_root, ".agent_backups")
+    os.makedirs(backup_dir, exist_ok=True)
+    stamp = time.strftime("%Y%m%d_%H%M%S")
+    relative = os.path.relpath(target, webui_root).replace(os.sep, "__")
+    return os.path.join(backup_dir, f"{stamp}_{relative}.bak")
+
+
+def repair_workspace_file_tool(path, old_text, new_text, reason=""):
+    """Safely patch one WebUI text file after inspecting the current contents.
+
+    The exact old_text match prevents the agent from overwriting a file based on
+    stale context. A timestamped backup is created before every edit.
+    """
+    try:
+        webui_root, target = _resolve_webui_path(path)
+        if not os.path.isfile(target):
+            return {"status": "error", "error": f"文件不存在: {path}"}
+        if os.path.splitext(target)[1].lower() not in _TEXT_FILE_EXTENSIONS:
+            return {"status": "error", "error": "只允许修改文本、代码和配置文件"}
+        if any(secret in os.path.basename(target).lower() for secret in ("token", "secret", "credential")):
+            return {"status": "error", "error": "为保护密钥，不允许直接修改凭据文件"}
+        if not isinstance(old_text, str) or not old_text:
+            return {"status": "error", "error": "old_text 不能为空；必须基于当前文件内容进行精确修改"}
+        with open(target, "r", encoding="utf-8", errors="replace") as handle:
+            current = handle.read()
+        occurrences = current.count(old_text)
+        if occurrences != 1:
+            return {"status": "error", "error": f"精确匹配失败：找到 {occurrences} 处，要求恰好 1 处；请先重新读取文件"}
+        backup = _workspace_backup_path(webui_root, target)
+        with open(backup, "w", encoding="utf-8", newline="") as handle:
+            handle.write(current)
+        updated = current.replace(old_text, new_text, 1)
+        with open(target, "w", encoding="utf-8", newline="") as handle:
+            handle.write(updated)
+        return {"status": "success", "path": os.path.relpath(target, webui_root),
+                "backup": os.path.relpath(backup, webui_root), "reason": reason or "未提供"}
+    except Exception as exc:
+        return {"status": "error", "error": str(exc), "traceback": traceback.format_exc()}
+
+
+def diagnose_workspace_tool(path="."):
+    """Run lightweight, non-destructive diagnostics for a WebUI path."""
+    try:
+        webui_root, target = _resolve_webui_path(path)
+        if os.path.isfile(target) and target.lower().endswith(".py"):
+            command = [sys.executable, "-m", "py_compile", target]
+        elif os.path.isdir(target):
+            command = [sys.executable, "-m", "compileall", "-q", target]
+        else:
+            return {"status": "error", "error": "诊断目标必须是 Python 文件或目录"}
+        completed = subprocess.run(command, cwd=webui_root, capture_output=True, text=True, timeout=120)
+        return {"status": "success" if completed.returncode == 0 else "error",
+                "path": os.path.relpath(target, webui_root), "returncode": completed.returncode,
+                "stdout": completed.stdout[-4000:], "stderr": completed.stderr[-4000:]}
+    except subprocess.TimeoutExpired:
+        return {"status": "error", "error": "诊断超时（超过 120 秒）"}
+    except Exception as exc:
+        return {"status": "error", "error": str(exc), "traceback": traceback.format_exc()}
+
+
 def audit_extensions_tool(include_readme=True):
     """整理所有已安装扩展的状态、关键脚本和 README 摘要。"""
     try:
@@ -3936,6 +3998,36 @@ TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "repair_workspace_file",
+            "description": "修复 WebUI 根目录内的代码、配置或文本文件。必须先读取当前文件，再用 old_text 精确替换为 new_text；修改前自动创建可恢复备份。仅在用户授权修复、安装或调整 WebUI 时使用，不修改密钥文件，不允许路径越界。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "WebUI 根目录内的相对文件路径"},
+                    "old_text": {"type": "string", "description": "从当前文件读取到的、需要替换的完整原文，必须恰好匹配一处"},
+                    "new_text": {"type": "string", "description": "替换后的完整文本"},
+                    "reason": {"type": "string", "description": "本次修复原因"},
+                },
+                "required": ["path", "old_text", "new_text"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "diagnose_workspace",
+            "description": "对 WebUI 根目录或指定 Python 文件执行无破坏诊断（Python 语法/编译检查），用于定位并验证报错。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "WebUI 根目录内的 Python 文件或目录，默认为 '.'"},
+                },
+            },
+        },
+    },
 ]
 
 TOOL_FUNCTIONS = {
@@ -3976,5 +4068,7 @@ TOOL_FUNCTIONS = {
     "read_workspace_file": read_workspace_file_tool,
     "analyze_document": analyze_document_tool,
     "audit_extensions": audit_extensions_tool,
+    "repair_workspace_file": repair_workspace_file_tool,
+    "diagnose_workspace": diagnose_workspace_tool,
 }
 
