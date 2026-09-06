@@ -1172,7 +1172,7 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
 
         cfg = load_config()
         # 当前 UI 选择是唯一模型来源，禁止 LLM 工具参数覆盖它。
-        model_id = (cfg.get("image_model") or model or "").strip()
+        model_id = str(cfg.get("image_model") or "").strip()
         if not model_id:
             return None, {"status": "error", "error": "未指定 API 图像模型"}
         # 根据模型选择正确的 base URL（Gemini 模型使用专用端点）
@@ -1602,7 +1602,7 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
 
         cfg = load_config()
         # 当前 UI 选择是唯一模型来源，禁止 LLM 工具参数覆盖它。
-        model_id = (cfg.get("image_model") or model or "").strip()
+        model_id = str(cfg.get("image_model") or "").strip()
         # 根据模型选择正确的 base URL（Gemini 模型使用专用端点）
         base_url = _get_image_api_base_url(cfg, model_id)
         # 根据供应商选择正确的 key：避免跨供应商混用导致 401

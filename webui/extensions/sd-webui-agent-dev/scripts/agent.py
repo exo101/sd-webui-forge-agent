@@ -1237,6 +1237,7 @@ def on_ui_tabs():
     except Exception as _e:
         print(f"[Agent] 启动恢复配置异常: {_e}")
 
+    cfg_init = load_config()
     with gr.Blocks(analytics_enabled=False) as agent_interface:
         # 辅助函数：生成 API 供应商切换时自动更新 Base URL（需在 UI 定义前声明）
         def on_provider_change(provider, current_url):
@@ -1311,7 +1312,7 @@ def on_ui_tabs():
                     api_model_select = gr.Dropdown(
                         label="🌐 API 图像模型（选择后立即生效）",
                         choices=[
-                            ("保持当前设置", ""),
+                            ("不使用 API 模型", ""),
                             ("🤖 YoboxAI · banana2", "YoboxAI|banana2"),
                             ("🤖 YoboxAI · bananapro", "YoboxAI|bananapro"),
                             ("🤖 YoboxAI · gpt-image-2", "YoboxAI|gpt-image-2"),
@@ -1324,7 +1325,10 @@ def on_ui_tabs():
                             ("🎬 YoboxAI · dreamina-seedance-2-5", "video|dreamina-seedance-2-5-hc"),
                             ("🎬 YoboxAI · MiniMax-H3", "video|MiniMax-H3"),
                         ],
-                        value="",
+                        value=(
+                            f"{cfg_init.get('image_api_provider')}|{cfg_init.get('image_model')}"
+                            if cfg_init.get("image_model") in IMAGE_GENERATION_MODELS else ""
+                        ),
                         interactive=True,
                         scale=1,
                     )
@@ -1362,7 +1366,6 @@ def on_ui_tabs():
                 clear_video_btn = gr.Button("清除视频", size="sm")
 
                 with gr.Accordion("⚙️ API 设置", open=False):
-                    cfg_init = load_config()
                     gr.Markdown("### Agent 大脑设置")
                     local_mode = gr.Checkbox(
                         label="启用本地 llama-server（仅勾选时检测；关闭则仅用云端）",
@@ -1727,9 +1730,29 @@ def on_ui_tabs():
         api_provider.change(fn=on_llm_provider_change, inputs=[api_provider, base_url, model_name], outputs=[base_url, model_name])
 
         # 首页 API 模型下拉切换 — 即时保存 provider 和 model
+        def on_local_model_select(local_model_value):
+            # 选择任何本地模型/工具都会关闭 API 图像模型。
+            if not local_model_value or not str(local_model_value).strip():
+                return gr.update(), ""
+            cfg = load_config(resolve_local=False)
+            cfg["image_model"] = ""
+            save_config(cfg)
+            try:
+                shared.opts.set("forge_model_mode", "local")
+            except Exception:
+                pass
+            return gr.update(value=""), "✅ 已切换本地模式，API 图像模型已关闭"
+
         def on_api_model_select(api_model_value):
             if not api_model_value or "|" not in str(api_model_value):
-                return ""
+                cfg = load_config(resolve_local=False)
+                cfg["image_model"] = ""
+                save_config(cfg)
+                try:
+                    shared.opts.set("forge_model_mode", "local")
+                except Exception:
+                    pass
+                return "✅ 已关闭 API 图像模型，当前为本地模式", gr.update(value="")
             parts = str(api_model_value).split("|", 1)
             provider, model = parts[0].strip(), parts[1].strip()
             if provider == "video":
@@ -1737,16 +1760,17 @@ def on_ui_tabs():
                 cfg = load_config()
                 cfg["video_model"] = model
                 save_config(cfg)
-                return f"✅ 视频模型已切换: {model}"
+                return f"✅ 视频模型已切换: {model}", gr.update()
             elif provider and model:
                 # 图像模型
                 cfg = load_config()
                 cfg["image_api_provider"] = provider
                 cfg["image_model"] = model
                 save_config(cfg)
-                return f"✅ API 图像模型已切换: {provider} · {model}"
-            return ""
-        api_model_select.change(fn=on_api_model_select, inputs=[api_model_select], outputs=[image_settings_status])
+                return f"✅ API 图像模型已切换: {provider} · {model}", gr.update(value="")
+            return "", gr.update()
+        local_model_select.change(fn=on_local_model_select, inputs=[local_model_select], outputs=[api_model_select, image_settings_status])
+        api_model_select.change(fn=on_api_model_select, inputs=[api_model_select], outputs=[image_settings_status, local_model_select])
 
         save_settings_btn.click(fn=save_settings, inputs=[api_provider, api_key, base_url, model_name, local_mode], outputs=[settings_status])
         save_image_settings_btn.click(fn=save_image_settings, inputs=[image_api_provider, image_api_key, image_base_url], outputs=[image_settings_status])
