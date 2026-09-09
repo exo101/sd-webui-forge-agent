@@ -1,6 +1,0 @@
-board
-chessboard
-cards
-chess piece
-dice
-living piece

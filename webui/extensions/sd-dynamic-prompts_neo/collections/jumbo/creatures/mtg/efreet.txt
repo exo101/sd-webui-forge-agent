@@ -1,3 +1,0 @@
-__creatures/mtg/efreet/efreet_general__
-__creatures/mtg/efreet/efreet_monk__
-__creatures/mtg/efreet/efreet_shaman__

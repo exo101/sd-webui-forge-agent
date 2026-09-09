@@ -93,7 +93,7 @@ def multimodal_media_tab():
         
         with gr.Tabs(elem_id="multimodal_media_tabs"):
             # Qwen3-TTS 语音合成标签页
-            with gr.TabItem("1. Qwen3-TTS 语音合成"):
+            with gr.TabItem("1. Qwen3-TTS 语音合成", elem_id="multimodal_tts_tab"):
                 try:
                     from scripts.qwen3_tts_ui import create_qwen3_tts_ui
                     # 创建并添加 Qwen3-TTS 功能
@@ -104,7 +104,7 @@ def multimodal_media_tab():
                     traceback.print_exc()
 
             # 视频关键帧提取标签页
-            with gr.TabItem("2. 视频关键帧提取"):
+            with gr.TabItem("2. 视频关键帧提取", elem_id="multimodal_frame_extract_tab"):
                 try:
                     from scripts.video_frame_extractor import create_video_frame_extractor
                     # 创建并添加视频分帧组件
@@ -130,19 +130,8 @@ def multimodal_media_tab():
                     import traceback
                     traceback.print_exc()
 
-            # Kling 可灵视频生成标签页
-            with gr.TabItem("3. Kling 可灵视频生成"):
-                try:
-                    from scripts.kling_video.main_ui import create_kling_video_gen_ui
-                    # 创建 Kling 可灵视频生成 UI 组件
-                    kling_video_gen_ui = create_kling_video_gen_ui()
-                except Exception as e:
-                    gr.Markdown(f"❌ Kling 可灵视频模块初始化错误：{e}")
-                    import traceback
-                    traceback.print_exc()
-
             # ACE-Step 音乐生成标签页
-            with gr.TabItem("5. ACE-Step 音乐生成"):
+            with gr.TabItem("5. ACE-Step 音乐生成", elem_id="multimodal_music_tab"):
                 try:
                     from scripts.ace_step_ui import create_ace_step_ui
                     # 创建并添加 ACE-Step 音乐生成功能

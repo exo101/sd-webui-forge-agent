@@ -1,6 +1,0 @@
-balancing
-crawling
-jumping
-running
-walking
-wallwalking

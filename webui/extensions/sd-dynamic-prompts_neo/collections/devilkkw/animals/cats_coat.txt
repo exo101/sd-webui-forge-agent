@@ -1,9 +1,0 @@
-black cat
-brown cat
-calico
-grey cat
-orange cat
-pink cat
-purple cat
-tortoiseshell cat
-white cat

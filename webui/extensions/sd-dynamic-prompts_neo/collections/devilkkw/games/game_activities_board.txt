@@ -1,9 +1,0 @@
-board game
-chess
-go
-mahjong
-monopoly
-reversi
-shogi
-tabletop rpg
-tic-tac-toe

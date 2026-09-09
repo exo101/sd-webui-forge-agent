@@ -21,7 +21,7 @@ MODELS_DIR = WEBUI_ROOT / "models" / "ace-step"
 os.environ["ACESTEP_CHECKPOINTS_DIR"] = str(MODELS_DIR)
 
 # 打印调试信息
-print(f"[ACE-Step-1.5] Checkpoints 目录: {MODELS_DIR}")
+# print(f"[ACE-Step-1.5] Checkpoints 目录: {MODELS_DIR}")
 
 # 模型版本配置
 # display_name: UI 显示名称

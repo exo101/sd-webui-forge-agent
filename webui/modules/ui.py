@@ -861,6 +861,33 @@ def create_ui():
             outputs=[html, generation_info, html2],
         )
 
+        with gr.Accordion("图像对比", open=False, elem_id="pnginfo_compare"):
+            with gr.Row(elem_id="pnginfo_compare_uploads"):
+                gr.Image(
+                    elem_id="pnginfo_compare_before",
+                    label="原图",
+                    source="upload",
+                    interactive=True,
+                    type="pil",
+                    height=220,
+                )
+                gr.Image(
+                    elem_id="pnginfo_compare_after",
+                    label="对比图",
+                    source="upload",
+                    interactive=True,
+                    type="pil",
+                    height=220,
+                )
+            gr.HTML(
+                """
+                <div id="pnginfo_compare_viewer" class="pnginfo-compare-viewer">
+                    <div class="pnginfo-compare-empty">请上传两张图片进行对比</div>
+                </div>
+                """,
+                elem_id="pnginfo_compare_viewer_host",
+            )
+
     modelmerger_ui = ui_checkpoint_merger.UiCheckpointMerger()
 
     loadsave = ui_loadsave.UiLoadsave(cmd_opts.ui_config_file)

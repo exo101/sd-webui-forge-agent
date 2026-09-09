@@ -1,3 +1,0 @@
-Ship
-Battleship
-Submarine

@@ -3,9 +3,30 @@ import gradio as gr
 from pathlib import Path
 import logging
 import sys
-from modules import script_callbacks
+import base64
+import io
+import json
+import random
+import glob
+import requests
+from modules import script_callbacks, shared
+from modules.llama_port import get_llama_url
+from PIL import Image
 
 logger = logging.getLogger(__name__)
+
+# OpenAI API 客户端（用于视觉 API 模式 - ModelScope 等）
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+    logger.info("✅ OpenAI 模块加载成功，API 视觉模式可用")
+except ImportError:
+    OPENAI_AVAILABLE = False
+    logger.warning("openai 模块未安装，API 视觉模式不可用（pip install openai）")
+
+# 默认 API 视觉模型配置
+DEFAULT_API_VISION_MODEL = "Qwen/Qwen3.8-27B"
+DEFAULT_API_BASE_URL = "https://api-inference.modelscope.cn/v1"
 
 # Qwen 模块可用性检查标志
 QWEN_MODULE_AVAILABLE = False
@@ -33,6 +54,24 @@ try:
         logger.warning(f"❌ qwen_analysis_ui.py 文件不存在：{qwen_file}")
 except Exception as e:
     logger.error(f"❌ Qwen 分析模块检查失败：{e}", exc_info=True)
+
+# 检查打光辅助模块
+LIGHTING_ASSISTANT_AVAILABLE = False
+try:
+    import lighting_assistant_module
+    LIGHTING_ASSISTANT_AVAILABLE = True
+    logger.info("✅ 打光辅助模块加载成功")
+except Exception as e:
+    logger.error(f"❌ 打光辅助模块加载失败：{e}", exc_info=True)
+
+# 检查人物与场景分析模块
+PROPORTION_GUIDE_AVAILABLE = False
+try:
+    import proportion_guide_module
+    PROPORTION_GUIDE_AVAILABLE = True
+    logger.info("✅ 人物与场景分析模块加载成功")
+except Exception as e:
+    logger.error(f"❌ 人物与场景分析模块加载失败：{e}", exc_info=True)
 
 # 获取素材目录路径
 SCRIPTS_DIR = Path(__file__).parent
@@ -365,58 +404,7 @@ def get_composition_images():
     return sorted(image_files, key=lambda x: x["title"])
 
 
-# ==================== 打光技巧模块 ====================
 
-# 打光类型映射
-LIGHTING_TITLES = {
-    "丁达尔光.png": "丁达尔光",
-    "丁达尔光2.png": "丁达尔光 2",
-    "伦勃朗光.png": "伦勃朗光",
-    "侧逆光.png": "侧逆光",
-    "侧顺光.png": "侧顺光",
-    "光源构图.png": "光源构图",
-    "底光.png": "底光",
-    "正逆光.png": "正逆光",
-    "顶光.png": "顶光",
-    "顺光.png": "顺光",
-    "鬼光.png": "鬼光",
-}
-
-# 打光说明
-LIGHTING_DESCRIPTIONS = {
-    "丁达尔光": "光线穿过介质产生的光束效果，增强空间层次感",
-    "伦勃朗光": "经典的三角光照明，塑造立体感和戏剧性",
-    "侧逆光": "从侧后方照射，勾勒轮廓，分离主体与背景",
-    "侧顺光": "从侧前方照射，均匀照亮主体，展现细节",
-    "底光": "从下方照射，营造神秘或恐怖氛围",
-    "正逆光": "从正后方照射，形成剪影或轮廓光效果",
-    "顶光": "从上方照射，模拟自然光或聚光灯效果",
-    "顺光": "正面照射，亮度均匀但缺乏层次",
-    "鬼光": "特殊角度的诡异照明，营造阴森氛围",
-    "光源构图": "利用光源位置引导视觉焦点",
-}
-
-
-def get_lighting_images():
-    """获取所有打光素材图片路径"""
-    lighting_dir = AESTHETIC_ENHANCEMENT_DIR / "打光技巧"
-    
-    if not lighting_dir.exists():
-        logger.warning(f"打光技巧素材目录不存在：{lighting_dir}")
-        return []
-    
-    image_files = []
-    for img_path in lighting_dir.glob("*.png"):
-        filename = img_path.name
-        title = LIGHTING_TITLES.get(filename, filename.replace(".png", ""))
-        image_files.append({
-            "path": str(img_path),
-            "title": title,
-            "description": LIGHTING_DESCRIPTIONS.get(title, "")
-        })
-    
-    logger.info(f"加载了 {len(image_files)} 个打光素材")
-    return sorted(image_files, key=lambda x: x["title"])
 
 
 # ==================== UI 组件创建 ====================
@@ -445,28 +433,7 @@ def create_composition_card(image_info, index):
         """)
 
 
-def create_lighting_card(image_info, index):
-    """创建单个打光卡片"""
-    # 将路径转换为 URL 格式以在 HTML 中使用
-    img_url = f"file={image_info['path']}"
-    
-    with gr.Group():
-        # 使用 HTML img 标签以便绑定点击事件
-        gr.HTML(f"""
-        <div class="gallery-card" data-index="{index}" data-title="{image_info['title']}" data-description="{image_info['description']}" data-src="{image_info['path']}">
-            <div class="gallery-image-container">
-                <img src="{img_url}" alt="{image_info['title']}" class="gallery-image" />
-                <div class="gallery-overlay">
-                    <span class="gallery-zoom-icon">🔍</span>
-                    <span class="gallery-zoom-text">点击放大</span>
-                </div>
-            </div>
-            <div class="gallery-info">
-                <div class="gallery-title">{image_info['title']}</div>
-                <div class="gallery-description">{image_info['description']}</div>
-            </div>
-        </div>
-        """)
+
 
 
 def create_composition_tab():
@@ -640,186 +607,469 @@ def create_composition_tab():
         """)
 
 
-def create_lighting_tab():
-    """创建打光技巧标签页"""
+
+_LLAMA_URL = get_llama_url()
+_DEFAULT_VISION_MODEL = "Qwen3.5-2B-Q6_K.gguf"
+
+# 全局变量存储聊天历史
+_vision_chat_history = []
+
+
+def _call_llamacpp_vision(message, image_path, model_name):
+    """调用 llama.cpp 视觉模型"""
+    try:
+        if image_path:
+            with open(image_path, 'rb') as f:
+                base64_image = base64.b64encode(f.read()).decode('utf-8')
+            messages = [{
+                'role': 'user',
+                'content': [
+                    {'type': 'text', 'text': message or "请描述这张图片"},
+                    {'type': 'image_url', 'image_url': {'url': f'data:image/png;base64,{base64_image}'}}
+                ]
+            }]
+        else:
+            messages = [{'role': 'user', 'content': message}]
+
+        api_url = f"{_LLAMA_URL.rstrip('/')}/v1/chat/completions"
+        resp = requests.post(api_url, json={
+            'model': model_name,
+            'messages': messages,
+            'stream': False
+        }, timeout=300)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get('choices', [{}])[0].get('message', {}).get('content', '')
+    except Exception as e:
+        logger.error(f"LVM API error: {e}")
+        return f"请求出错: {str(e)}"
+
+
+def _get_llamacpp_vision_models():
+    """获取可用的视觉模型列表"""
+    try:
+        api_url = f"{_LLAMA_URL.rstrip('/')}/v1/models"
+        resp = requests.get(api_url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        models = [m['id'] for m in data.get('data', [])]
+        return models if models else [_DEFAULT_VISION_MODEL]
+    except:
+        return [_DEFAULT_VISION_MODEL]
+
+
+def get_response_vision_api(message: str, image_path: str = None,
+                             api_key: str = None,
+                             model: str = DEFAULT_API_VISION_MODEL,
+                             base_url: str = DEFAULT_API_BASE_URL,
+                             timeout: int = 600) -> str:
+    """使用 OpenAI 兼容 API 进行视觉分析（支持 ModelScope 等）"""
+    if not OPENAI_AVAILABLE:
+        return "openai 模块未安装，请执行: pip install openai"
+    if not api_key:
+        return "API Key 未配置，请在 WebUI 设置中配置 API Key"
+
+    try:
+        client = OpenAI(
+            base_url=base_url,
+            api_key=api_key,
+            timeout=timeout
+        )
+
+        content = []
+        if message:
+            content.append({"type": "text", "text": message})
+        else:
+            content.append({"type": "text", "text": "请详细描述这张图片"})
+
+        if image_path and os.path.exists(image_path):
+            with open(image_path, "rb") as f:
+                img_b64 = base64.b64encode(f.read()).decode("utf-8")
+            ext = os.path.splitext(image_path)[1].lower()
+            mime = "image/png" if ext == ".png" else "image/jpeg"
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{mime};base64,{img_b64}"
+                }
+            })
+
+        messages = [{"role": "user", "content": content}]
+
+        logger.info(f"Vision API: 调用模型 {model}")
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            stream=False,
+            max_tokens=4096
+        )
+        result = response.choices[0].message.content or ""
+        logger.info(f"Vision API: 响应完成，长度={len(result)}字符")
+        return result
+    except Exception as e:
+        err_msg = f"视觉 API 请求失败: {str(e)}"
+        logger.error(err_msg)
+        return err_msg
+
+
+def create_vision_chat_tab():
+    """创建图像识别聊天标签页"""
     gr.Markdown("""
-    # 💡 打光技巧
-    
-    掌握光影艺术，塑造画面氛围。光线是摄影和绘画的灵魂，决定了作品的情感表达和视觉效果。
-    
-    **使用建议**：
-    - 理解不同光位的特点和情感表达
-    - 学会组合多种光源创造丰富层次
-    - 根据主题选择合适的布光方案
-    """)
-    
-    # 获取所有打光图片
-    lighting_images = get_lighting_images()
-    
-    if not lighting_images:
-        gr.Markdown("⚠️ 未找到打光素材，请检查素材目录是否正确配置。")
-        return
-    
-    # 生成打光卡片 HTML
-    import html
-    
-    # 添加模态框 HTML 和 JavaScript
-    modal_html = """
-    <div id="lightingModal" style="
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.9);
-        z-index: 9999;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
-    " onclick="closeLightingModal()">
-        <span style="
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            color: white;
-            font-size: 40px;
-            font-weight: bold;
-            cursor: pointer;
-        ">&times;</span>
-        <img id="lightingModalImg" src="" style="
-            max-width: 90%;
-            max-height: 90%;
-            object-fit: contain;
-        ">
+    <div style="margin-bottom:10px;font-size:14px;color:#666;">
+        🖼 上传图片并输入文字描述，AI 将分析图片内容并回复
     </div>
-    <script>
-        function openLightingModal(imgSrc) {
-            document.getElementById('lightingModalImg').src = imgSrc;
-            document.getElementById('lightingModal').style.display = 'flex';
-        }
-        function closeLightingModal() {
-            document.getElementById('lightingModal').style.display = 'none';
-        }
-    </script>
-    """
-    
-    html_parts = [modal_html, "<div style='display: flex; flex-wrap: wrap; gap: 32px; padding: 20px;'>"]
-    
-    for i, img_info in enumerate(lighting_images):
-        title = html.escape(img_info['title'])
-        desc = html.escape(img_info['description'] or '暂无介绍')
-        img_path = img_info['path']
-        
-        card_html = f"""
-        <div style="
-            width: 500px;
-            border: 1px solid #444;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-            background: #2a2a2a;
-        ">
-            <div style="height: 280px; overflow: hidden; position: relative;">
-                <img src="file={img_path}" alt="{title}" style="
-                    width: 100%;
-                    height: 100%;
-                    object-fit: contain;
-                    cursor: pointer;
-                " onclick="event.stopPropagation(); openLightingModal('file={img_path}')">
-            </div>
-            <div style="padding: 20px; background: #2a2a2a;">
-                <input type="text" value="{title}" readonly style="
-                    width: 100%;
-                    font-weight: bold;
-                    border: none;
-                    background: transparent;
-                    font-size: 24px;
-                    margin-bottom: 8px;
-                    color: #fff;
-                " onclick="this.select(); document.execCommand('copy'); this.style.backgroundColor='#333'; setTimeout(() => this.style.backgroundColor='transparent', 500);">
-                <textarea readonly style="
-                    width: 100%;
-                    height: 100px;
-                    border: 1px solid #555;
-                    background: #333;
-                    font-size: 18px;
-                    resize: none;
-                    color: #ddd;
-                " onclick="this.select(); document.execCommand('copy'); this.style.backgroundColor='#444'; setTimeout(() => this.style.backgroundColor='#333', 500);">{desc}</textarea>
-            </div>
-        </div>
-        """
-        
-        html_parts.append(card_html)
-    
-    html_parts.append("</div>")
-    
-    # 渲染 HTML
-    gr.HTML(''.join(html_parts))
-    
-    # 打光技巧详解
-    with gr.Accordion("💡 打光技巧详解", open=False):
+    """)
+
+    # 模型选择
+    models = _get_llamacpp_vision_models()
+    model_dropdown = gr.Dropdown(
+        choices=models,
+        value=models[0] if models else _DEFAULT_VISION_MODEL,
+        label="🤖 视觉模型",
+        interactive=True
+    )
+
+    # 后端选择
+    backend_selector = gr.Radio(
+        choices=[
+            ("🦙 llama.cpp", "llamacpp"),
+            ("☁️ API (ModelScope)", "api"),
+        ],
+        value="llamacpp",
+        label="选择模型后端",
+        info="llama.cpp 使用本地模型，API 模式使用 ModelScope 免费 API"
+    )
+
+    # API 配置信息（仅 API 模式显示）
+    with gr.Group(visible=False) as api_config_info:
+        api_vision_model_input = gr.Textbox(
+            label="API Vision Model (视觉模型)",
+            value=lambda: DEFAULT_API_VISION_MODEL,
+            placeholder="例如: Qwen/Qwen3.8-27B",
+        )
         gr.Markdown("""
-        ## 常见光位与效果
-        
-        ### 1. 顺光 (正面光)
-        - **特点**: 光线从正面照射被摄体
-        - **效果**: 亮度均匀，色彩饱和，但缺乏立体感
-        - **适用**: 证件照、产品拍摄
-        
-        ### 2. 侧顺光 (前侧光)
-        - **特点**: 光线从侧前方 45°照射
-        - **效果**: 展现明暗过渡，增强立体感
-        - **适用**: 人像、静物、建筑
-        
-        ### 3. 侧逆光 (后侧光)
-        - **特点**: 光线从侧后方照射
-        - **效果**: 勾勒轮廓，分离主体与背景
-        - **适用**: 人像发丝光、物体轮廓强调
-        
-        ### 4. 逆光
-        - **特点**: 光线从正后方照射
-        - **效果**: 形成剪影或明亮轮廓
-        - **适用**: 剪影摄影、透明物体
-        
-        ### 5. 顶光
-        - **特点**: 光线从上方垂直照射
-        - **效果**: 模拟正午阳光或聚光灯
-        - **适用**: 舞台摄影、特殊氛围
-        
-        ### 6. 底光
-        - **特点**: 光线从下方照射
-        - **效果**: 营造诡异、神秘氛围
-        - **适用**: 恐怖片、特殊创意
-        
-        ### 7. 伦勃朗光
-        - **特点**: 侧上方 45°，面部形成三角光斑
-        - **效果**: 经典戏剧性用光，立体感强
-        - **适用**: 人像摄影、古典油画
-        
-        ### 8. 丁达尔效应
-        - **特点**: 光线穿过介质形成可见光束
-        - **效果**: 增强空间层次，营造梦幻氛围
-        - **适用**: 森林、教堂、舞台
-        
-        ## 布光原则
-        1. **主光**: 确定主要光源方向和强度
-        2. **辅光**: 补充阴影，降低反差
-        3. **轮廓光**: 分离主体，增强层次
-        4. **背景光**: 营造环境氛围
-        5. **装饰光**: 点缀细节，画龙点睛
-        
-        ## 实践建议
-        - 从单灯开始练习，理解光的基本特性
-        - 逐步增加灯位，掌握多灯配合
-        - 善用反光板和柔光设备
-        - 观察自然光的变化规律
+        **API 模式配置说明：**
+        1. 在 WebUI 设置中切换到 **API 模型** 模式
+        2. 配置 **API Key**（魔搭 Token）
+        3. 在上方输入框填写视觉模型名称
+        4. 默认模型：`Qwen/Qwen3.8-27B`
         """)
+
+    with gr.Row(equal_height=False):
+        # 左侧面板
+        with gr.Column(scale=1, min_width=320):
+            image_input = gr.Image(
+                type="pil",
+                label="📤 上传图片（可选）",
+                height=200
+            )
+
+            # 快捷指令 - 显示文字标签
+            with gr.Accordion("⚡ 快捷指令", open=False):
+                quick_btns = []
+                quick_prompts = [
+                    ("📝 自然描述", "自然语言描述这张图片的细节"),
+                    ("🎨 MidJourney", "MidJourney 提示词：根据这张图片生成类似风格"),
+                    ("📐 构图分析", "分析这张图片的分镜构图"),
+                    ("🎬 图生视频", "图生视频描述：根据这张图片生成视频场景"),
+                    ("🔖 SEO 关键词", "生成 SEO 关键词和标签"),
+                    ("📋 简单描述", "简单描述这张图片的内容")
+                ]
+                for label, prompt in quick_prompts:
+                    btn = gr.Button(label, size="sm")
+                    quick_btns.append((btn, prompt))
+
+            # 标签管理
+            with gr.Accordion("🏷 标签管理", open=False):
+                gr.Markdown("管理文件夹中 .txt 文件的关键词标签")
+                tag_folder = gr.Textbox(
+                    label="📁 文件夹路径",
+                    placeholder="输入文件夹路径...",
+                    scale=1
+                )
+                with gr.Row():
+                    refresh_btn = gr.Button("🔄 刷新文件列表", size="sm", scale=1)
+                    tag_files = gr.Dropdown(
+                        choices=[],
+                        label="选择文件",
+                        interactive=True,
+                        scale=2
+                    )
+                tag_keyword = gr.Textbox(
+                    label="关键词",
+                    placeholder="输入要添加/删除的关键词...",
+                    scale=1
+                )
+                with gr.Row():
+                    tag_position = gr.Radio(
+                        choices=["开头", "结尾", "随机位置"],
+                        value="开头",
+                        label="添加位置",
+                        interactive=True
+                    )
+                with gr.Row():
+                    tag_add = gr.Button("➕ 添加", size="sm", scale=1)
+                    tag_remove = gr.Button("➖ 删除", size="sm", scale=1)
+                    tag_add_all = gr.Button("➕ 全部添加", size="sm", scale=1)
+                    tag_remove_all = gr.Button("➖ 全部删除", size="sm", scale=1)
+                tag_result = gr.Textbox(label="操作结果", interactive=False, lines=2)
+
+            # 批量识别
+            with gr.Accordion("🖼 批量识别", open=False):
+                gr.Markdown("批量识别目录中的图片")
+                batch_dir = gr.Textbox(
+                    label="📁 图片目录路径",
+                    placeholder="输入图片目录路径...",
+                    scale=1
+                )
+                with gr.Row():
+                    load_images_btn = gr.Button("🔄 加载图片", size="sm", scale=1)
+                    batch_recognize_btn = gr.Button("🚀 开始批量识别", variant="primary", size="sm", scale=2)
+                batch_gallery = gr.Gallery(
+                    label="图片列表",
+                    columns=4,
+                    height=200,
+                    object_fit="contain",
+                    show_label=False
+                )
+                batch_progress = gr.Textbox(
+                    label="进度",
+                    interactive=False,
+                    lines=2
+                )
+
+        # 右侧：聊天区域
+        with gr.Column(scale=2):
+            chatbot = gr.Chatbot(
+                label="💬 对话",
+                height=450,
+                show_copy_button=True,
+                bubble_full_width=False,
+                avatar_images=(None, None)
+            )
+            with gr.Row():
+                msg_input = gr.Textbox(
+                    label="输入消息",
+                    placeholder="输入消息...",
+                    scale=4,
+                    container=False
+                )
+                send_btn = gr.Button("发送", variant="primary", scale=1)
+                clear_btn = gr.Button("清空", scale=1)
+
+    # ========== 事件绑定 ==========
+
+    # 后端选择切换
+    def update_backend_ui(backend):
+        if backend == "api":
+            return gr.update(visible=True)
+        else:
+            return gr.update(visible=False)
+
+    backend_selector.change(
+        fn=update_backend_ui,
+        inputs=[backend_selector],
+        outputs=[api_config_info]
+    )
+
+    # 发送消息
+    def respond(message, history, pil_image, model_name, backend, api_vision_model):
+        if not message and not pil_image:
+            return "", history, history
+        if not message:
+            message = "请描述这张图片"
+        history = history or []
+        user_msg = message
+        if pil_image:
+            user_msg = f"[图片] {message}"
+        history.append((user_msg, None))
+
+        # 保存 PIL 图片到临时文件
+        temp_path = None
+        if pil_image is not None:
+            try:
+                temp_dir = os.path.join(str(SCRIPTS_DIR), "tmp", "vision")
+                os.makedirs(temp_dir, exist_ok=True)
+                temp_path = os.path.join(temp_dir, f"img_{os.urandom(4).hex()}.png")
+                if pil_image.mode == 'RGBA':
+                    pil_image = pil_image.convert('RGB')
+                pil_image.save(temp_path)
+            except Exception as e:
+                logger.error(f"Save temp image error: {e}")
+
+        if backend == "api":
+            # API 模式
+            api_key = getattr(shared.opts, 'forge_api_key', '')
+            api_model = api_vision_model or DEFAULT_API_VISION_MODEL
+            response = get_response_vision_api(
+                message=message,
+                image_path=temp_path,
+                api_key=api_key,
+                model=api_model,
+                timeout=600
+            )
+        else:
+            # llama.cpp 本地模式
+            response = _call_llamacpp_vision(message, temp_path, model_name)
+
+        # 清理临时文件
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except:
+                pass
+
+        history[-1] = (user_msg, response)
+        return "", history, history
+
+    def clear_history():
+        return "", [], []
+
+    send_btn.click(respond, [msg_input, chatbot, image_input, model_dropdown, backend_selector, api_vision_model_input], [msg_input, chatbot, chatbot])
+    msg_input.submit(respond, [msg_input, chatbot, image_input, model_dropdown, backend_selector, api_vision_model_input], [msg_input, chatbot, chatbot])
+    clear_btn.click(clear_history, None, [msg_input, chatbot, chatbot])
+
+    # 保存 API Vision Model 配置
+    def on_api_vision_model_change(model_name: str):
+        if model_name:
+            try:
+                shared.opts.set("forge_api_vision_model", model_name)
+            except Exception as e:
+                logger.warning(f"保存视觉模型配置失败: {e}")
+
+    api_vision_model_input.change(
+        fn=on_api_vision_model_change,
+        inputs=[api_vision_model_input],
+        queue=False,
+        show_progress=False,
+    )
+
+    # 快捷指令按钮
+    for btn, prompt in quick_btns:
+        btn.click(lambda p=prompt: p, None, msg_input)
+
+    # ========== 标签管理事件 ==========
+
+    def refresh_files(folder_path):
+        if not folder_path or not os.path.isdir(folder_path):
+            return gr.Dropdown(choices=[], value=None), "❌ 无效的文件夹路径"
+        txt_files = [f for f in os.listdir(folder_path) if f.endswith('.txt')]
+        return gr.Dropdown(choices=txt_files, value=txt_files[0] if txt_files else None), \
+               f"✅ 找到 {len(txt_files)} 个 .txt 文件"
+
+    def tag_operation(action, folder, file, keyword, position):
+        if not folder or not file or not keyword:
+            return "❌ 请填写完整信息"
+        file_path = os.path.join(folder, file)
+        if not os.path.exists(file_path):
+            return "❌ 文件不存在"
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            if action == "add":
+                if position == "开头":
+                    content = keyword + '\n' + content
+                elif position == "结尾":
+                    content = content + '\n' + keyword
+                else:
+                    lines = content.split('\n')
+                    idx = random.randint(0, len(lines))
+                    lines.insert(idx, keyword)
+                    content = '\n'.join(lines)
+            else:
+                content = content.replace(keyword, "")
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            return f"✅ 关键词已{'添加' if action == 'add' else '删除'}到 {file}"
+        except Exception as e:
+            return f"❌ 错误: {str(e)}"
+
+    def tag_operation_all(action, folder, keyword, position):
+        if not folder or not keyword or not os.path.isdir(folder):
+            return "❌ 请填写完整信息"
+        txt_files = [f for f in os.listdir(folder) if f.endswith('.txt')]
+        success = 0
+        failed = 0
+        for fname in txt_files:
+            file_path = os.path.join(folder, fname)
+            if not os.path.exists(file_path):
+                failed += 1
+                continue
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                if action == "add_all":
+                    if position == "开头":
+                        content = keyword + '\n' + content
+                    elif position == "结尾":
+                        content = content + '\n' + keyword
+                    else:
+                        lines = content.split('\n')
+                        idx = random.randint(0, len(lines))
+                        lines.insert(idx, keyword)
+                        content = '\n'.join(lines)
+                else:
+                    content = content.replace(keyword, "")
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                success += 1
+            except:
+                failed += 1
+        return f"操作完成: 成功 {success} 个, 失败 {failed} 个"
+
+    refresh_btn.click(refresh_files, tag_folder, [tag_files, tag_result])
+    tag_add.click(lambda f, fi, k, p: tag_operation("add", f, fi, k, p),
+                  [tag_folder, tag_files, tag_keyword, tag_position], tag_result)
+    tag_remove.click(lambda f, fi, k, p: tag_operation("remove", f, fi, k, p),
+                     [tag_folder, tag_files, tag_keyword, tag_position], tag_result)
+    tag_add_all.click(lambda f, k, p: tag_operation_all("add_all", f, k, p),
+                      [tag_folder, tag_keyword, tag_position], tag_result)
+    tag_remove_all.click(lambda f, k, p: tag_operation_all("remove_all", f, k, p),
+                         [tag_folder, tag_keyword, tag_position], tag_result)
+
+    # ========== 批量识别事件 ==========
+
+    def load_batch_images(dir_path):
+        if not dir_path or not os.path.isdir(dir_path):
+            return [], "❌ 无效的目录路径"
+        supported = [".png", ".jpg", ".jpeg", ".webp", ".bmp"]
+        images = []
+        for ext in supported:
+            for f in sorted(glob.glob(os.path.join(dir_path, f"*{ext}"))):
+                try:
+                    img = Image.open(f)
+                    img.verify()
+                    images.append(f)
+                except:
+                    pass
+        return images, f"✅ 加载 {len(images)} 张图片"
+
+    def batch_recognize(dir_path, images, model_name, progress):
+        if not images:
+            return progress, "❌ 没有图片可识别"
+        results = []
+        for i, item in enumerate(images):
+            # Gallery 可能返回 (path, caption) 元组或直接路径
+            img_path = item[0] if isinstance(item, (list, tuple)) else item
+            progress = f"🔄 正在识别 ({i+1}/{len(images)}): {os.path.basename(img_path)}"
+            try:
+                resp = _call_llamacpp_vision("简单描述这张图片的内容", img_path, model_name)
+                results.append(f"✅ {os.path.basename(img_path)}: {resp[:50]}...")
+            except Exception as e:
+                results.append(f"❌ {os.path.basename(img_path)}: {str(e)}")
+        batch_result = "\n".join(results)
+        return f"✅ 识别完成 ({len(images)} 张)", batch_result
+
+    load_images_btn.click(load_batch_images, batch_dir, [batch_gallery, batch_progress])
+    batch_recognize_btn.click(
+        batch_recognize,
+        [batch_dir, batch_gallery, model_dropdown, batch_progress],
+        [batch_progress, batch_progress]
+    )
 
 
 def aesthetic_enhancement_ui():
-    """创建美学提升模块 UI（包含构图和打光两个子标签）"""
+    """创建美学提升模块 UI"""
     
     # 添加自定义 CSS（v2.0 - 网格布局）
     custom_css = """
@@ -1376,69 +1626,25 @@ def aesthetic_enhancement_ui():
 
     # 创建标签页
     with gr.Blocks(css=custom_css) as demo:
-        with gr.Tab("📐 构图技巧"):
-            create_composition_tab()
-        with gr.Tab("💡 打光技巧"):
-            create_lighting_tab()
-        with gr.Tab("🎨 画师百科"):
-            create_artist_tab()
-        
-        # AI 智能分析 Tab
-        if QWEN_MODULE_AVAILABLE:
-            try:
-                from qwen_analysis_ui import create_qwen_analysis_ui
+        with gr.Tab("🖼 图像识别", elem_id="aesthetic_image_recognition_tab"):
+            create_vision_chat_tab()
 
-                with gr.Tab("🎬 AI 智能分析"):
-                    create_qwen_analysis_ui()
-            except Exception as e:
-                logger.error(f"❌ Qwen 分析模块加载失败：{e}")
-                with gr.Tab("🎬 AI 智能分析"):
-                    gr.Markdown(f"""
-                    ### ❌ Qwen 分析模块加载失败
-                    
-                    错误信息：{str(e)}
-                    
-                    请检查以下事项：
-                    
-                    1. **文件存在**: 确认 `qwen_analysis_ui.py` 文件位于 scripts 目录中
-                    2. **依赖安装**: 运行 `pip install requests opencv-python`
-                    3. **Ollama 服务**: 确保 Ollama 已启动且 Qwen3.5 模型已安装
-                    
-                    **安装步骤**:
-                    ```bash
-                    # 1. 安装 Ollama
-                    访问 https://ollama.com 下载安装
-                    
-                    # 2. 安装 Qwen3.5 模型
-                    ollama run qwen3.5:4b
-                    
-                    # 3. 安装 Python 依赖
-                    pip install requests opencv-python
-                    ```
-                    """)
-        else:
-            with gr.Tab("🎬 AI 智能分析"):
-                gr.Markdown("""
-                ### ⚠️ Qwen 分析模块未正确安装
-                
-                请检查以下事项：
-                
-                1. **文件存在**: 确认 `qwen_analysis_ui.py` 文件位于 scripts 目录中
-                2. **依赖安装**: 运行 `pip install requests opencv-python`
-                3. **Ollama 服务**: 确保 Ollama 已启动且 Qwen3.5 模型已安装
-                
-                **安装步骤**:
-                ```bash
-                # 1. 安装 Ollama
-                访问 https://ollama.com 下载安装
-                
-                # 2. 安装 Qwen3.5 模型
-                ollama run qwen3.5:4b
-                
-                # 3. 安装 Python 依赖
-                pip install requests opencv-python
-                ```
-                """)
+        with gr.Tab("💡 打光辅助", elem_id="aesthetic_lighting_tab"):
+            if LIGHTING_ASSISTANT_AVAILABLE:
+                lighting_assistant_module.create_ui()
+            else:
+                gr.Markdown("⚠️ 打光辅助模块未加载")
+        
+        with gr.Tab("人物与场景分析", elem_id="aesthetic_character_scene_tab"):
+            if PROPORTION_GUIDE_AVAILABLE:
+                proportion_guide_module.create_proportion_guide_ui()
+            else:
+                gr.Markdown("⚠️ 人物与场景分析模块未加载")
+        
+        with gr.Tab("📐 构图技巧", elem_id="aesthetic_composition_tab"):
+            create_composition_tab()
+        with gr.Tab("🎨 画师百科", elem_id="aesthetic_artist_tab"):
+            create_artist_tab()
     
     return demo
 
@@ -1446,7 +1652,7 @@ def aesthetic_enhancement_ui():
 def MultiModal_tab():
     """注册到 WebUI 的标签页"""
     ui = aesthetic_enhancement_ui()
-    return [(ui, "🎨 美学提升", "aesthetic_enhancement_tab")]
+    return [(ui, "图像识别", "aesthetic_enhancement_tab")]
 
 
 # 注册到 WebUI

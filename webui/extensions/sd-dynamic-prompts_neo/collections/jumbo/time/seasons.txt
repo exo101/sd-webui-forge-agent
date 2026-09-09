@@ -1,4 +1,0 @@
-summer
-{autumn|fall}
-winter
-spring

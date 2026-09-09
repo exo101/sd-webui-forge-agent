@@ -11,9 +11,6 @@
   "xformers": false,
   "lowvram": false,
   "neveroom": true,
-  "no_half": false,
-  "no_half_vae": false,
-  "precision_full": false,
   "api": true,
   "share": false,
   "skip_install": true,
@@ -21,7 +18,7 @@
   "skip_torch": true,
   "show_console": false,
   "gpu_device": "",
-  "disable_sage": false,
+  "disable_sage": true,
   "reserve_vram": 1,
   "extra_args": "",
   "wallpaper": "",
@@ -33,10 +30,10 @@
     "host": "0.0.0.0"
   },
   "comfyui": {
-    "enabled": true,
-    "path": "D:\\ai\\sd-webui-forge-neo-v3.5\\ComfyUI-aki-v2.1",
-    "port": 8188,
-    "python": "D:\\ai\\sd-webui-forge-neo-v3.5\\ComfyUI-aki-v2.1\\python\\python.exe"
+    "enabled": false,
+    "path": "D:\\ai\\sd-webui-forge-neo-v3.6.2\\ComfyUI-aki-v2.2",
+    "port": 8186,
+    "python": "D:\\ai\\sd-webui-forge-neo-v3.6.2\\ComfyUI-aki-v2.2\\python\\python.exe"
   },
   "paths": {
     "ckpt_dir": "webui\\models\\Stable-diffusion",
@@ -57,6 +54,9 @@
     "birefnet_dir": "webui\\models\\BiRefNet"
   },
   "presets": {},
+  "no_half": false,
+  "no_half_vae": false,
+  "precision_full": false,
   "proxy": {
     "mode": "none",
     "address": "",

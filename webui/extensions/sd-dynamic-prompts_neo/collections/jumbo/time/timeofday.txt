@@ -1,9 +1,0 @@
-night
-dawn
-morning
-midday
-noon
-afternoon
-{dusk|twightlight}
-evening
-midnight

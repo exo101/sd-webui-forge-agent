@@ -1,8 +1,0 @@
-blue-tinted eyewear
-brown-tinted eyewear
-green-tinted eyewear
-orange-tinted eyewear
-pink-tinted eyewear
-purple-tinted eyewear
-red-tinted eyewear
-yellow-tinted eyewear
