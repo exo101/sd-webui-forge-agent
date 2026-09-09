@@ -23,6 +23,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "startup_timeout": 180,
     "request_timeout": 30,
     "output_prefix": "video/Forge_H3_Studio",
+    "minimax_api_key": "",
+    "minimax_api_base": "https://api.minimaxi.com",
 }
 
 _lock = threading.RLock()

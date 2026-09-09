@@ -74,6 +74,7 @@ def make_checkpoint_manager_ui():
         choices=["开源模型", "API模型"],
         value=lambda: "API模型" if shared.opts.forge_model_mode == "api" else "开源模型",
         elem_id="forge_model_mode",
+        visible=False,
     )
 
     # --- Local (open source) model section ---
@@ -140,12 +141,14 @@ def make_checkpoint_manager_ui():
         choices=[],
         value=None,
         elem_id="forge_api_model",
+        visible=False,
     )
 
     ui_api_model_refresh = ui_common.ToolButton(
         value=ui_common.refresh_symbol,
         elem_id="forge_api_model_refresh",
         tooltip="从 API 刷新模型列表",
+        visible=False,
     )
 
     # Apply initial visibility based on saved mode
@@ -157,8 +160,8 @@ def make_checkpoint_manager_ui():
     ui_forge_unet_dtype.visible = not is_api_mode
     ui_api_provider.visible = is_api_mode
     ui_api_key.visible = is_api_mode
-    ui_api_model.visible = is_api_mode
-    ui_api_model_refresh.visible = is_api_mode
+    ui_api_model.visible = False
+    ui_api_model_refresh.visible = False
 
     # --- Wire mode toggle ---
     def on_mode_change(mode: str):
@@ -172,8 +175,8 @@ def make_checkpoint_manager_ui():
             gr.update(visible=is_local),                                    # ui_forge_unet_dtype
             gr.update(visible=not is_local),                                # ui_api_provider
             gr.update(visible=not is_local),                                # ui_api_key
-            gr.update(visible=not is_local),                                # ui_api_model
-            gr.update(visible=not is_local),                                # ui_api_model_refresh
+            gr.update(visible=False),                                       # ui_api_model
+            gr.update(visible=False),                                       # ui_api_model_refresh
         ]
 
     ui_model_mode.change(

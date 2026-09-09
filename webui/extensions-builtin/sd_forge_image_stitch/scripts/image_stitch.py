@@ -3,9 +3,15 @@ import numpy as np
 import torch
 from PIL import Image
 from dataclasses import dataclass
+from typing import Optional
 import os
 import glob
 import time
+import threading
+import base64
+import io
+import uuid
+import queue as queue_module
 
 from backend.args import dynamic_args
 from modules import images, scripts, sd_models, shared
@@ -44,6 +50,247 @@ i2i_info = """
 插件仅支持编辑模型：Klein，Qwen-Image-Edit，NanoBanana，gpt-image-2，Krea 2
 """
 
+# ==================== 批量任务管理器 ====================
+
+@dataclass
+class BatchTask:
+    """单个批量任务的数据结构"""
+    id: str
+    prompt: str
+    reference_image: Image.Image
+    status: str = "waiting"  # waiting, processing, completed, failed
+    result_image: Optional[Image.Image] = None
+    error_message: str = ""
+
+
+class BatchTaskManager:
+    """批量任务队列管理器"""
+
+    def __init__(self):
+        self.tasks: list[BatchTask] = []
+        self._lock = threading.Lock()
+        self._is_running = False
+        self._stop_requested = False
+
+    def add_task(self, prompt: str, reference_image: Image.Image) -> BatchTask:
+        """添加一个任务到队列"""
+        task = BatchTask(
+            id=str(uuid.uuid4())[:8],
+            prompt=prompt,
+            reference_image=reference_image,
+        )
+        with self._lock:
+            self.tasks.append(task)
+        print(f"[Image Stitch Batch] 添加任务 {task.id}: {prompt[:40]}...")
+        return task
+
+    def get_status(self) -> list[dict]:
+        """获取所有任务的状态"""
+        with self._lock:
+            return [
+                {
+                    "id": t.id,
+                    "prompt": t.prompt[:40],
+                    "status": t.status,
+                    "error": t.error_message[:100] if t.error_message else "",
+                    "has_result": t.result_image is not None,
+                }
+                for t in self.tasks
+            ]
+
+    def get_statistics(self) -> dict:
+        """获取队列统计信息"""
+        with self._lock:
+            waiting = sum(1 for t in self.tasks if t.status == "waiting")
+            processing = sum(1 for t in self.tasks if t.status == "processing")
+            completed = sum(1 for t in self.tasks if t.status == "completed")
+            failed = sum(1 for t in self.tasks if t.status == "failed")
+            return {
+                "total": len(self.tasks),
+                "waiting": waiting,
+                "processing": processing,
+                "completed": completed,
+                "failed": failed,
+            }
+
+    def clear_completed(self):
+        """清除已完成和失败的任务"""
+        with self._lock:
+            self.tasks = [t for t in self.tasks if t.status in ("waiting", "processing")]
+
+    def clear_all(self):
+        """清除所有任务"""
+        with self._lock:
+            self.tasks = []
+
+    def get_next_pending(self) -> Optional[BatchTask]:
+        """获取下一个等待中的任务"""
+        with self._lock:
+            for t in self.tasks:
+                if t.status == "waiting":
+                    t.status = "processing"
+                    return t
+            return None
+
+    def mark_completed(self, task_id: str, result_image: Image.Image):
+        """标记任务为已完成"""
+        with self._lock:
+            for t in self.tasks:
+                if t.id == task_id:
+                    t.status = "completed"
+                    t.result_image = result_image
+                    break
+
+    def mark_failed(self, task_id: str, error_message: str):
+        """标记任务为失败"""
+        with self._lock:
+            for t in self.tasks:
+                if t.id == task_id:
+                    t.status = "failed"
+                    t.error_message = error_message
+                    break
+
+    def is_running(self) -> bool:
+        return self._is_running
+
+    def stop(self):
+        """请求停止批量处理"""
+        self._stop_requested = True
+
+    def start_processing(self, progress: gr.Progress = gr.Progress()):
+        """开始批量处理所有等待中的任务"""
+        self._is_running = True
+        self._stop_requested = False
+
+        all_tasks = []
+        with self._lock:
+            # 收集所有等待中的任务
+            for t in self.tasks:
+                if t.status == "waiting":
+                    all_tasks.append(t)
+                    t.status = "processing"
+
+        total = len(all_tasks)
+        print(f"[Image Stitch Batch] 开始批量处理，共 {total} 个任务")
+
+        completed_results = []
+        failed_results = []
+
+        for i, task in enumerate(all_tasks):
+            if self._stop_requested:
+                print(f"[Image Stitch Batch] 批量处理已停止（第 {i+1}/{total} 个任务）")
+                # 将未处理的任务恢复为 waiting
+                with self._lock:
+                    for remaining in all_tasks[i:]:
+                        if remaining.status == "processing":
+                            remaining.status = "waiting"
+                break
+
+            progress((i + 1) / total, desc=f"正在处理任务 {i+1}/{total}: {task.prompt[:30]}...")
+            print(f"[Image Stitch Batch] 处理任务 {task.id}: {task.prompt[:40]}...")
+
+            try:
+                result = self._process_single_task(task)
+                if result:
+                    task.result_image = result
+                    task.status = "completed"
+                    completed_results.append(result)
+                    print(f"[Image Stitch Batch] ✅ 任务 {task.id} 完成")
+                else:
+                    raise RuntimeError("生成失败，未返回图片")
+            except Exception as e:
+                task.status = "failed"
+                task.error_message = str(e)
+                failed_results.append(task)
+                print(f"[Image Stitch Batch] ❌ 任务 {task.id} 失败: {e}")
+
+        self._is_running = False
+        print(f"[Image Stitch Batch] 批量处理完成: {len(completed_results)} 成功, {len(failed_results)} 失败")
+        return completed_results, failed_results
+
+    def _process_single_task(self, task: BatchTask) -> Optional[Image.Image]:
+        """处理单个任务：使用 txt2img + image_stitch 参考图生成"""
+        from modules.sd_models import FakeInitialModel
+        forge_model_mode = getattr(shared.opts, 'forge_model_mode', 'local')
+        is_api_mode = forge_model_mode == "api" or isinstance(shared.sd_model, FakeInitialModel)
+
+        if not is_api_mode and isinstance(shared.sd_model, FakeInitialModel):
+            # 本地模式但模型未加载：尝试加载模型
+            from modules.sd_models import forge_model_reload
+            try:
+                from modules_forge import main_entry
+                checkpoint = getattr(shared.opts, 'sd_model_checkpoint', '')
+                if checkpoint:
+                    main_entry.checkpoint_change(checkpoint, preset=None, save=False, refresh=True)
+                forge_model_reload()
+            except Exception as e:
+                print(f"[Image Stitch Batch] 尝试加载模型失败: {e}")
+                raise RuntimeError("模型未加载，请先在 WebUI 中选择并加载模型")
+
+        # 获取当前主界面参数
+        width = getattr(txt2img_w_slider, "value", 512) if txt2img_w_slider else 512
+        height = getattr(txt2img_h_slider, "value", 512) if txt2img_h_slider else 512
+        if callable(width):
+            width = width()
+        if callable(height):
+            height = height()
+
+        # 创建处理对象
+        p = StableDiffusionProcessingTxt2Img(
+            sd_model=shared.sd_model,
+            prompt=task.prompt,
+            negative_prompt=shared.opts.negative_prompt if hasattr(shared.opts, 'negative_prompt') else "",
+            width=width,
+            height=height,
+            do_not_save_samples=True,
+            do_not_save_grid=True,
+            outpath_samples=shared.opts.outdir_samples or shared.opts.outdir_txt2img_samples or "",
+            outpath_grids=shared.opts.outdir_grids or shared.opts.outdir_txt2img_grids or "",
+        )
+
+        if is_api_mode:
+            # API 模式：通过 api_providers 传参考图，不用本地编码
+            from modules_forge.api_providers import set_reference_images, get_session_api_key
+            api_key = get_session_api_key()
+            print(f"[Image Stitch Batch] API Key check: key='{api_key[:4] if api_key else '(empty)'}...', forge_model_mode='{forge_model_mode}'")
+            if not api_key:
+                # 尝试从 shared.opts 读取
+                fallback_key = getattr(shared.opts, 'forge_api_key', '')
+                if fallback_key:
+                    from modules_forge.api_providers import set_session_api_key
+                    set_session_api_key(fallback_key)
+                    print(f"[Image Stitch Batch] 已从 opts 恢复 API Key")
+                    api_key = fallback_key
+            set_reference_images([task.reference_image])
+            processed = process_images(p)
+            set_reference_images([])  # 清理
+        else:
+            # 本地模式：编码参考图到模型
+            p.clear_prompt_cache()
+            p.sd_model.clear_references()
+            dynamic_args.is_referencing = True
+
+            ref = ImageStitch.preprocess(ImageStitch, task.reference_image, 1024)
+            image = images.flatten(ref, opts.img2img_background_color)
+            image = np.array(image, dtype=np.float32) / 255.0
+            image = np.moveaxis(image, 2, 0)
+            image = torch.from_numpy(image).to(device=device).unsqueeze(0)
+            images_tensor_to_samples(image, 0, p.sd_model)
+
+            dynamic_args.is_referencing = False
+
+            processed = process_images(p)
+
+        # 提取结果图片
+        for img in processed.images:
+            if isinstance(img, Image.Image):
+                return img
+        return None
+
+
+# 全局批量任务管理器实例
+batch_manager = BatchTaskManager()
+
 
 class ImageStitch(scripts.Script):
     sorting_priority = 529
@@ -58,7 +305,10 @@ class ImageStitch(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        with InputAccordion(value=False, label=self.title()) as enable:
+        tab = 'img2img' if is_img2img else 'txt2img'
+        with gr.Accordion(self.title(), open=False, elem_id=f"{tab}_image_stitch_accordion"):
+            # 显式勾选框，始终可见，不依赖 InputAccordion 的 JS 动态创建
+            enable = gr.Checkbox(label="启用多图参考（上传参考图后勾选此框生效）", value=True, elem_id=f"{tab}_image_stitch_enable")
             gr.HTML(i2i_info if is_img2img else t2i_info)
 
             # 使用 State 存储当前图片列表
@@ -86,8 +336,6 @@ class ImageStitch(scripts.Script):
                 interactive=False,
                 show_label=False,
                 container=False,
-                show_download_button=False,
-                show_share_button=False,
                 label="参考潜空间",
                 min_width=384,
                 height=384,
@@ -108,8 +356,11 @@ class ImageStitch(scripts.Script):
                 info="降低编码时的显存占用；设为 0 表示不限制",
             )
 
-            # 自动设置尺寸
-            auto_size_btn = gr.Button("📏 从首图设置尺寸", size="sm", visible=False)
+            # 自动设置尺寸 - 从首图同步尺寸比例到主UI
+            auto_size_btn = gr.Button("📐 从首图同步尺寸比例", size="sm")
+            # 隐藏中转组件，用于将Python计算的尺寸传递给JS
+            sync_w_box = gr.Textbox(visible=False, elem_id=f"{tab}_sync_w_box")
+            sync_h_box = gr.Textbox(visible=False, elem_id=f"{tab}_sync_h_box")
 
             # Pose 素材库 - 折叠面板
             with gr.Accordion("📚 Pose 素材库", open=False):
@@ -120,8 +371,6 @@ class ImageStitch(scripts.Script):
                     interactive=False,
                     show_label=True,
                     container=True,
-                    show_download_button=False,
-                    show_share_button=False,
                     min_width=384,
                     height=400,
                     columns=6,
@@ -170,6 +419,72 @@ class ImageStitch(scripts.Script):
                     value="💡 使用方法：从下拉列表选择提示词后点击'🗑️ 删除选中提示词'即可删除",
                     interactive=False
                 )
+
+            # ========== 批量任务 ==========
+            with gr.Accordion("📋 批量任务", open=False):
+                gr.HTML(
+                    """
+                    <div style="margin-bottom: 8px; font-size: 13px; color: #666;">
+                    每组任务包含：一张参考图 + 一条关键词。点击"添加到队列"后，任务会进入队列等待处理。
+                    </div>
+                    """
+                )
+
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        batch_image_upload = gr.UploadButton(
+                            "📤 上传参考图", 
+                            file_types=["image"], 
+                            type="binary",
+                            size="sm",
+                        )
+                        batch_image_preview = gr.Image(
+                            label="参考图预览",
+                            type="pil",
+                            height=200,
+                            interactive=False,
+                        )
+
+                    with gr.Column(scale=2):
+                        batch_prompt = gr.Textbox(
+                            label="关键词",
+                            placeholder="输入编辑关键词，例如：改为3d灰模，去除背景，生成三视图...",
+                            lines=3,
+                        )
+                        with gr.Row():
+                            add_batch_btn = gr.Button("➕ 添加到队列", variant="primary", size="sm", scale=2)
+                            batch_clear_input_btn = gr.Button("清空输入", size="sm", scale=1)
+
+                # 任务队列状态
+                with gr.Row():
+                    batch_stats = gr.HTML(
+                        value="<div style='font-size:13px; color:#888;'>队列为空</div>",
+                    )
+                    batch_refresh_btn = gr.Button("🔄 刷新状态", size="sm", scale=1)
+                    batch_start_btn = gr.Button("▶ 开始批量生成", variant="primary", size="sm", scale=1)
+                    batch_stop_btn = gr.Button("⏹ 停止", variant="stop", size="sm", scale=1)
+                    batch_clear_btn = gr.Button("🗑️ 清空已完成", size="sm", scale=1)
+
+                # 任务列表
+                batch_task_list = gr.HTML(
+                    value="<div style='font-size:13px; color:#888;'>暂无任务</div>",
+                )
+
+                # 结果画廊
+                batch_gallery = gr.Gallery(
+                    label="生成结果",
+                    value=[],
+                    type="pil",
+                    columns=4,
+                    rows=2,
+                    height=400,
+                    object_fit="contain",
+                    interactive=False,
+
+                )
+
+                # 用于存储任务结果的 State
+                batch_results_state = gr.State(value=[])
 
             # ========== 事件绑定 ==========
 
@@ -492,6 +807,39 @@ class ImageStitch(scripts.Script):
                 outputs=[current_images_state, references, image_selector],
                 show_progress=False
             )
+
+            # ===== 从首图同步尺寸比例到主UI =====
+            def _get_first_image_size(images):
+                """获取首张参考图的尺寸，对齐到8的倍数并限制范围"""
+                if not images or len(images) == 0:
+                    return "", ""
+                try:
+                    w, h = images[0].size
+                    w = max(64, min(2048, int(round(w / 8)) * 8))
+                    h = max(64, min(2048, int(round(h / 8)) * 8))
+                    return str(w), str(h)
+                except Exception:
+                    return "", ""
+
+            auto_size_btn.click(
+                fn=_get_first_image_size,
+                inputs=[current_images_state],
+                outputs=[sync_w_box, sync_h_box],
+                show_progress=False,
+                queue=False,
+            ).then(
+                fn=None,
+                _js=f"""(w, h) => {{
+                    if (window.syncSizeToMainUI && w && h) {{
+                        window.syncSizeToMainUI('{tab}', parseFloat(w), parseFloat(h));
+                    }} else if (!w || !h) {{
+                        alert('请先上传参考图片');
+                    }}
+                }}""",
+                inputs=[sync_w_box, sync_h_box],
+                show_progress=False,
+                queue=False,
+            )
             
             # 页面加载时自动扫描素材库
             try:
@@ -554,6 +902,187 @@ class ImageStitch(scripts.Script):
 
         
 
+        # ===== 批量任务事件绑定 =====
+
+            # 渲染帮助函数
+            def _render_stats(stats: dict, extra_msg: str = "") -> str:
+                parts = [
+                    f"<span style='color:#666;'>总计: {stats['total']}</span>",
+                ]
+                if stats['waiting'] > 0:
+                    parts.append(f"<span style='color:#f0ad4e;'>⏳ 等待: {stats['waiting']}</span>")
+                if stats['processing'] > 0:
+                    parts.append(f"<span style='color:#5bc0de;'>🔄 处理中: {stats['processing']}</span>")
+                if stats['completed'] > 0:
+                    parts.append(f"<span style='color:#5cb85c;'>✅ 已完成: {stats['completed']}</span>")
+                if stats['failed'] > 0:
+                    parts.append(f"<span style='color:#d9534f;'>❌ 失败: {stats['failed']}</span>")
+                if extra_msg:
+                    parts.append(f"<span>{extra_msg}</span>")
+                return f"<div style='font-size:13px; display:flex; gap:12px;'>{' | '.join(parts)}</div>"
+
+            def _render_task_list(tasks: list[dict]) -> str:
+                if not tasks:
+                    return "<div style='font-size:13px; color:#888;'>暂无任务</div>"
+                rows = []
+                for t in tasks:
+                    status_icon = {
+                        "waiting": "⏳",
+                        "processing": "🔄",
+                        "completed": "✅",
+                        "failed": "❌",
+                    }.get(t["status"], "❓")
+                    error_text = f"<span style='color:red; font-size:11px;'>{t['error']}</span>" if t["error"] else ""
+                    rows.append(
+                        f"<div style='display:flex; gap:8px; padding:4px 0; border-bottom:1px solid #eee; font-size:13px;'>"
+                        f"<span>{status_icon}</span>"
+                        f"<span style='color:#888; width:60px;'>{t['id']}</span>"
+                        f"<span style='flex:1;'>{t['prompt']}</span>"
+                        f"<span style='color:#666;'>{t['status']}</span>"
+                        f"{error_text}"
+                        f"</div>"
+                    )
+                return f"<div style='max-height:300px; overflow-y:auto;'>{''.join(rows)}</div>"
+
+            # 批量任务 - 上传图片预览
+            def _upload_batch_image(img_bytes):
+                if img_bytes is None:
+                    return None
+                from io import BytesIO
+                try:
+                    return Image.open(BytesIO(img_bytes))
+                except Exception:
+                    return None
+
+            batch_image_upload.upload(
+                fn=_upload_batch_image,
+                inputs=[batch_image_upload],
+                outputs=[batch_image_preview],
+                show_progress=False,
+            )
+
+            # 批量任务 - 添加到队列
+            def _add_batch_task(image, prompt_text):
+                if image is None:
+                    return (
+                        "<div style='font-size:13px; color:red;'>请先上传参考图</div>",
+                        "<div style='font-size:13px; color:#888;'>暂无任务</div>",
+                        None,
+                        [],
+                    )
+                if not prompt_text or not prompt_text.strip():
+                    return (
+                        "<div style='font-size:13px; color:red;'>请输入关键词</div>",
+                        "<div style='font-size:13px; color:#888;'>暂无任务</div>",
+                        None,
+                        [],
+                    )
+                batch_manager.add_task(prompt_text.strip(), image)
+
+                stats = batch_manager.get_statistics()
+                tasks_html = _render_task_list(batch_manager.get_status())
+                stats_html = _render_stats(stats)
+                return stats_html, tasks_html, None, []
+
+            add_batch_btn.click(
+                fn=_add_batch_task,
+                inputs=[batch_image_preview, batch_prompt],
+                outputs=[batch_stats, batch_task_list, batch_image_preview, batch_gallery],
+                show_progress=False,
+            )
+
+            # 批量任务 - 清空输入
+            batch_clear_input_btn.click(
+                fn=lambda: (None, ""),
+                outputs=[batch_image_preview, batch_prompt],
+                show_progress=False,
+            )
+
+            # 批量任务 - 刷新状态
+            def _refresh_batch():
+                stats = batch_manager.get_statistics()
+                tasks = batch_manager.get_status()
+                # 收集结果图片
+                results = []
+                for t in batch_manager.tasks:
+                    if t.status == "completed" and t.result_image:
+                        results.append(t.result_image)
+                return _render_stats(stats), _render_task_list(tasks), results
+
+            batch_refresh_btn.click(
+                fn=_refresh_batch,
+                inputs=[],
+                outputs=[batch_stats, batch_task_list, batch_gallery],
+                show_progress=False,
+            )
+
+            # 批量任务 - 开始批量生成
+            def _start_batch(progress: gr.Progress = gr.Progress()):
+                if batch_manager.is_running():
+                    return (
+                        "<div style='font-size:13px; color:orange;'>批量处理正在进行中...</div>",
+                        "<div style='font-size:13px; color:#888;'>暂无任务</div>",
+                        [],
+                    )
+                completed, failed = batch_manager.start_processing(progress)
+                stats = batch_manager.get_statistics()
+                tasks = batch_manager.get_status()
+                results = []
+                for t in batch_manager.tasks:
+                    if t.status == "completed" and t.result_image:
+                        results.append(t.result_image)
+                msg = f"✅ 完成: {len(completed)} 个, ❌ 失败: {len(failed)} 个"
+                return _render_stats(stats, msg), _render_task_list(tasks), results
+
+            batch_start_btn.click(
+                fn=_start_batch,
+                inputs=[],
+                outputs=[batch_stats, batch_task_list, batch_gallery],
+                show_progress=False,
+            )
+
+            # 批量任务 - 停止
+            def _stop_batch():
+                if batch_manager.is_running():
+                    batch_manager.stop()
+                    return "<div style='font-size:13px; color:orange;'>正在停止...</div>"
+                return "<div style='font-size:13px; color:#888;'>没有正在进行的批量任务</div>"
+
+            batch_stop_btn.click(
+                fn=_stop_batch,
+                inputs=[],
+                outputs=[batch_stats],
+                show_progress=False,
+            )
+
+            # 批量任务 - 清空已完成
+            def _clear_completed():
+                batch_manager.clear_completed()
+                stats = batch_manager.get_statistics()
+                tasks = batch_manager.get_status()
+                results = []
+                for t in batch_manager.tasks:
+                    if t.status == "completed" and t.result_image:
+                        results.append(t.result_image)
+                return _render_stats(stats), _render_task_list(tasks), results
+
+            batch_clear_btn.click(
+                fn=_clear_completed,
+                inputs=[],
+                outputs=[batch_stats, batch_task_list, batch_gallery],
+                show_progress=False,
+            )
+
+            # 定时刷新任务状态
+            batch_refresh_btn.click(
+                fn=_refresh_batch,
+                inputs=[],
+                outputs=[batch_stats, batch_task_list, batch_gallery],
+                show_progress=False,
+            )
+
+        
+
         return [enable, references, max_dim]
 
     @staticmethod
@@ -563,7 +1092,10 @@ class ImageStitch(scripts.Script):
         p.sd_model.clear_references()
 
     def process(self, p: StableDiffusionProcessing, enable: bool, references: list[str | tuple[Image.Image, str]], max_dim: int):
-        if not (enable and references and any(getattr(dynamic_args, key) for key in ("kontext", "edit", "klein", "wan", "krea2"))):
+        # Fallback: 即使 InputAccordion 状态同步失败，只要有参考图就视为启用
+        has_edit_model = any(getattr(dynamic_args, key) for key in ("kontext", "edit", "klein", "wan", "krea2"))
+        effective_enable = enable or bool(references)
+        if not (effective_enable and references and has_edit_model):
             if self.cached_parameters is None:
                 return
 

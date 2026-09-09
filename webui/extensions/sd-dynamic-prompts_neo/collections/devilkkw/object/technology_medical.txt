@@ -1,7 +1,0 @@
-Bandages
-Electrodes
-Gauze
-Pill
-Stretcher
-Syringe
-X-ray

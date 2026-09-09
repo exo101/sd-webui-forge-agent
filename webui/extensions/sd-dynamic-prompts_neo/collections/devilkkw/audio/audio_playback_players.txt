@@ -1,9 +1,0 @@
-cd player
-digital media player
-ipod
-iphone
-phonograph
-turntable
-radio
-stereo
-walkman

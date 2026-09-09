@@ -1,3 +1,0 @@
-cassette tape
-cd
-record

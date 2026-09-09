@@ -1,3 +1,0 @@
-__vedalken/artificer__
-__vedalken/rogue__
-__vedalken/soldier__

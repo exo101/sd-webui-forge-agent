@@ -1,7 +1,0 @@
-branch
-leaf
-log
-petals
-roots
-stick
-tree stump

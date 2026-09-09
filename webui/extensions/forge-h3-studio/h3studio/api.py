@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import json
+import mimetypes
 import time
+import uuid
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
 from fastapi import Body, FastAPI, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 
 from .backend_manager import backend_manager
+from .cloud_client import CLOUD_UPLOAD_DIR
 from .comfy_client import ComfyClient, normalize_base_url
 from .config import (
     DEFAULT_CONFIG,
@@ -44,7 +48,10 @@ def _asset_url(item: dict[str, Any]) -> str:
 
 def _public_config() -> dict[str, Any]:
     config = load_config()
-    return {key: config.get(key) for key in DEFAULT_CONFIG}
+    public = {key: config.get(key) for key in DEFAULT_CONFIG}
+    public["minimax_api_key"] = ""
+    public["minimax_api_key_set"] = bool(str(config.get("minimax_api_key") or "").strip())
+    return public
 
 
 def _public_job(job: dict[str, Any]) -> dict[str, Any]:
@@ -61,7 +68,7 @@ def _validate_settings(payload: dict[str, Any]) -> dict[str, Any]:
         raise H3StudioError("设置格式无效")
     cleaned: dict[str, Any] = {}
     if "backend_mode" in payload:
-        if payload["backend_mode"] not in {"managed", "external"}:
+        if payload["backend_mode"] not in {"managed", "external", "api"}:
             raise H3StudioError("后端模式无效")
         cleaned["backend_mode"] = payload["backend_mode"]
     for key in ("comfy_path", "python_executable", "extra_args", "output_prefix"):
@@ -80,6 +87,17 @@ def _validate_settings(payload: dict[str, Any]) -> dict[str, Any]:
         cleaned["request_timeout"] = max(3, min(int(payload["request_timeout"]), 600))
     if "auto_start_on_tab" in payload:
         cleaned["auto_start_on_tab"] = bool(payload["auto_start_on_tab"])
+    if payload.get("clear_minimax_api_key") and "minimax_api_key" not in payload:
+        cleaned["minimax_api_key"] = ""
+    elif "minimax_api_key" in payload:
+        api_key = str(payload["minimax_api_key"] or "").strip()
+        clear_key = bool(payload.get("clear_minimax_api_key"))
+        # Key 字段明确提交为空时代表用户要求清空，不能静默保留旧值。
+        cleaned["minimax_api_key"] = "" if clear_key or not api_key else api_key
+    if "minimax_api_base" in payload:
+        cleaned["minimax_api_base"] = (
+            str(payload["minimax_api_base"] or "").strip() or "https://api.minimaxi.com"
+        )
     mode = cleaned.get("backend_mode", load_config().get("backend_mode"))
     port = cleaned.get("port", load_config().get("port", 8189))
     if mode == "managed":
@@ -108,7 +126,8 @@ def register_api(_: Any, app: FastAPI) -> None:
     @app.post(f"{API_ROOT}/settings")
     def update_settings(payload: dict[str, Any] = Body(...)):
         try:
-            return save_config(_validate_settings(payload))
+            save_config(_validate_settings(payload))
+            return _public_config()
         except Exception as exc:
             _fail(exc)
 
@@ -136,10 +155,14 @@ def register_api(_: Any, app: FastAPI) -> None:
 
     @app.get(f"{API_ROOT}/catalog")
     def catalog():
-        try:
-            return ComfyClient().catalog()
-        except Exception as exc:
-            _fail(exc, 503)
+        return {
+            "models": ["MiniMax-H3"],
+            "cloud_models": [
+                {"id": "MiniMax-H3", "name": "MiniMax-H3", "provider": "MiniMax", "type": "cloud"}
+            ],
+            "h3_ready": True,
+            "cloud": True,
+        }
 
     @app.post(f"{API_ROOT}/assets/upload")
     def upload_asset(file: UploadFile = File(...)):
@@ -148,6 +171,25 @@ def register_api(_: Any, app: FastAPI) -> None:
             suffix = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
             if suffix not in ASSET_EXTENSIONS:
                 raise H3StudioError("只允许上传常见的图片、视频或音频文件")
+            if load_config().get("backend_mode") == "api":
+                # Cloud mode has no local ComfyUI input endpoint. Keep a private
+                # local copy so the cloud client can send it as a data URL.
+                CLOUD_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+                safe_name = f"{uuid.uuid4().hex}{suffix}"
+                target = CLOUD_UPLOAD_DIR / safe_name
+                with target.open("wb") as output:
+                    while True:
+                        chunk = file.file.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        output.write(chunk)
+                return {
+                    "name": safe_name,
+                    "subfolder": "",
+                    "type": "input",
+                    "file": safe_name,
+                    "url": _asset_url({"name": safe_name, "type": "input"}),
+                }
             result = ComfyClient().upload(file.file, file.filename or "asset.bin", file.content_type)
             result["file"] = "/".join(part for part in (result.get("subfolder"), result.get("name")) if part)
             result["url"] = _asset_url(result)
@@ -168,6 +210,14 @@ def register_api(_: Any, app: FastAPI) -> None:
         type: str = Query("output"),
     ):
         try:
+            # Cloud mode: serve files from data/cloud_uploads locally first
+            local_path = CLOUD_UPLOAD_DIR / Path(filename).name
+            if local_path.is_file():
+                return FileResponse(
+                    str(local_path),
+                    media_type=mimetypes.guess_type(local_path.name)[0] or "application/octet-stream",
+                    filename=local_path.name,
+                )
             response, iterator = ComfyClient().open_media(
                 filename,
                 subfolder,

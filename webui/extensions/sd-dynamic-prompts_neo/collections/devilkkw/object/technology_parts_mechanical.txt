@@ -1,9 +1,0 @@
-Bolt
-Crank
-Gears
-Mechanical parts
-Nut
-Piston
-Rotary switch
-Screw
-Tube

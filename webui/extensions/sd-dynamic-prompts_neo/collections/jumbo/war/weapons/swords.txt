@@ -1,3 +1,0 @@
-__war/weapons/swords/european__
-__war/weapons/swords/african__
-__war/weapons/swords/asian__
