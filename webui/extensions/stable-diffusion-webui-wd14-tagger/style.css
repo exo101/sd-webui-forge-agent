@@ -1,7 +1,0 @@
-#rating-confidents .output-label>div:not(:first-child) {
-    cursor: pointer;
-}
-
-#tag-confidents .output-label>div:not(:first-child) {
-    cursor: pointer;
-}
