@@ -1,0 +1,197 @@
+{
+  "brand": {
+    "custom": "Personnalisé",
+    "kitchen": "Kitchen",
+    "lobe": "LobeHub"
+  },
+  "cancel": "Annuler",
+  "confirm": "Confirmer",
+  "custom": {
+    "initializing": "StableDiffusion / LobeTheme est en cours d'initialisation, veuillez patienter..."
+  },
+  "footer": {
+    "community": "Communauté",
+    "help": "Aide",
+    "moreProducts": "Plus de Produits",
+    "resources": "Ressources"
+  },
+  "header": {
+    "feedback": "Retour",
+    "setting": "Réglage",
+    "switchTheme": "Changer de thème clair/sombre"
+  },
+  "modal": {
+    "themeFeedback": {
+      "title": "Retour sur le thème"
+    },
+    "themeSetting": {
+      "desc": "Paramètres de thème et de mise en page",
+      "title": "Paramètres du thème"
+    }
+  },
+  "prompt": {
+    "area": {
+      "attribute": "Sélection d'attribut",
+      "object": "Sélection d'objet",
+      "tag": "Sélection de balise"
+    },
+    "load": "Charger la demande",
+    "negative": "Négatif",
+    "positive": "Positif",
+    "set": "Définir la demande"
+  },
+  "setting": {
+    "button": {
+      "reset": "Retour à la valeur par défaut",
+      "submit": "Appliquer et redémarrer l'interface"
+    },
+    "confirmPageUnload": {
+      "desc": "Aide à éviter la perte de données non enregistrées",
+      "title": "Confirmation de quitter la page"
+    },
+    "customFont": {
+      "desc": "Lorsqu'activée, elle chargera automatiquement une web police pour améliorer l'affichage du texte en chinois, anglais et code",
+      "title": "Police personnalisée"
+    },
+    "customLogo": {
+      "desc": "Support URL / Base64 / Symboles Emoji",
+      "title": "Logo personnalisé"
+    },
+    "customTitle": {
+      "desc": "Titre du logo personnalisé",
+      "title": "Titre personnalisé"
+    },
+    "extraNetworkSidebar": {
+      "defaultCardSize": {
+        "desc": "Valeur par défaut de la taille de la couverture du modèle au démarrage",
+        "title": "Taille de la couverture du modèle"
+      },
+      "defaultExpand": {
+        "desc": "S'il faut développer la barre latérale par défaut au démarrage",
+        "title": "Développement par défaut"
+      },
+      "defaultWidth": {
+        "desc": "Largeur par défaut de la barre latérale au démarrage",
+        "title": "Largeur par défaut"
+      },
+      "displayMode": {
+        "desc": "Fixé en mode grille pour un affichage constant, auto-développement lorsque la souris se déplace sur le côté en mode flottant",
+        "title": "Mode d'affichage"
+      },
+      "enable": {
+        "desc": "Activer la barre latérale réseau supplémentaire sur le côté droit",
+        "title": "Activer"
+      }
+    },
+    "group": {
+      "experimental": "Fonctionnalités expérimentales",
+      "extraNetworkSidebar": "Barre latérale réseau supplémentaire",
+      "layout": "Réglages de mise en page",
+      "promptTextarea": "Zone de texte de la demande",
+      "quickSettingSidebar": "Barre latérale de réglage rapide",
+      "theme": "Paramètres du thème"
+    },
+    "hideFooter": {
+      "desc": "Masquer le pied de page du thème et afficher uniquement le pied de page par défaut de stable diffusion webui",
+      "title": "Masquer le pied de page"
+    },
+    "imageInfo": {
+      "desc": "Afficher de meilleures informations sur l'image dans l'image générée",
+      "title": "Informations sur l'image alternatives"
+    },
+    "language": {
+      "desc": "Langue du thème Lobe",
+      "title": "Langue"
+    },
+    "logoType": {
+      "desc": "Type de logo",
+      "preview": "Aperçu",
+      "title": "Type de logo"
+    },
+    "neutralColor": {
+      "desc": "Personnaliser différentes nuances de gris avec différentes tendances de couleur, la deuxième est la couleur neutre d'origine de Kitchen",
+      "title": "Couleur neutre"
+    },
+    "primaryColor": {
+      "desc": "Couleur primaire personnalisée, la deuxième est la couleur de thème d'origine de Kitchen",
+      "title": "Couleur primaire"
+    },
+    "promptDisplayMode": {
+      "desc": "Hauteur fixe ou hauteur automatique avec prise en charge redimensionnable",
+      "resizable": "Redimensionnable",
+      "scroll": "Faire défiler",
+      "title": "Mode d'affichage de la demande"
+    },
+    "promptEditor": {
+      "desc": "Fournir un éditeur de demande simple en haut de la barre latérale de réglage rapide",
+      "title": "Éditeur de demande"
+    },
+    "promptHighlight": {
+      "desc": "Coloriser automatiquement l'affichage de la demande selon les règles de syntaxe de Stable Diffusion",
+      "title": "Mise en évidence de la syntaxe de la demande"
+    },
+    "quickSettingSidebar": {
+      "defaultExpand": {
+        "desc": "S'il faut développer la barre latérale par défaut au démarrage",
+        "title": "Développement par défaut"
+      },
+      "defaultWidth": {
+        "desc": "Largeur par défaut de la barre latérale au démarrage",
+        "title": "Largeur par défaut"
+      },
+      "displayMode": {
+        "desc": "Fixé en mode grille pour un affichage constant, auto-développement lorsque la souris se déplace sur le côté en mode flottant",
+        "title": "Mode d'affichage"
+      },
+      "enable": {
+        "desc": "Activer la barre latérale de réglage rapide sur le côté gauche",
+        "title": "Activer"
+      }
+    },
+    "reduceAnimation": {
+      "desc": "Réduire l'effet de flou et la couleur de fond en mouvement, ce qui peut améliorer la fluidité et économiser l'utilisation du processeur",
+      "title": "Réduire l'animation"
+    },
+    "splitPreviewer": {
+      "desc": "Placer la zone de saisie de la demande à gauche et le bouton de génération à droite, en veillant à ce que l'image générée soit toujours affichée en haut lors du défilement (expérimental)",
+      "title": "Diviser le visualiseur"
+    },
+    "svgIcons": {
+      "desc": "Remplacer tous les icônes Emoji dans stable diffusion webui par des icônes SVG globalement",
+      "title": "Icônes SVG"
+    },
+    "tab": {
+      "appearance": "Apparence",
+      "experimental": "Expérimental",
+      "layout": "Disposition",
+      "sidebar": "Barre latérale"
+    }
+  },
+  "share": "Partager",
+  "shareModal": {
+    "download": "Télécharger la capture d'écran",
+    "imageType": "Format d'image",
+    "info": "Informations sur l'image",
+    "screenshot": "Capture d'écran",
+    "settings": "Paramètres d'export",
+    "showAllImages": "Afficher toutes les images",
+    "showConfig": "Afficher la configuration générée",
+    "showNegative": "Afficher la promotion négative",
+    "tabs": {
+      "info": "Info",
+      "settings": "Paramètres"
+    },
+    "title": "Nom de l'image",
+    "warn": "Veuillez d'abord générer l'image",
+    "withBackground": "Inclure l'image de fond",
+    "withFooter": "Inclure le pied de page"
+  },
+  "sidebar": {
+    "extraNetwork": "Réseau supplémentaire",
+    "mode": {
+      "fixed": "Fixe",
+      "float": "Flottant"
+    },
+    "quickSetting": "Réglage rapide"
+  }
+}

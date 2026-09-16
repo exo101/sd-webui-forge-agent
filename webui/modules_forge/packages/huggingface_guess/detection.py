@@ -212,7 +212,7 @@ def detect_unet_config(state_dict: dict, key_prefix: str) -> dict:
         dit_config["concat_padding_mask"] = True
         dit_config["crossattn_emb_channels"] = 1024
         dit_config["adaln_lora_dim"] = 256
-        dit_config["num_blocks"] = 28
+        dit_config["num_blocks"] = count_blocks(state_dict_keys, "{}blocks.".format(key_prefix) + "{}.")  # anima-base/preview=28, Anima-2.9B=40
         dit_config["num_heads"] = 16
         dit_config["rope_h_extrapolation_ratio"] = 4.0
         dit_config["rope_w_extrapolation_ratio"] = 4.0

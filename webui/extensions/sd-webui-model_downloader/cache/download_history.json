@@ -1,0 +1,23 @@
+[
+  {
+    "model_name": "krea2_turbo_nvfp4.safetensors",
+    "source": "huggingface",
+    "save_path": "D:\\ai\\sd-webui-forge-neo-v3.2\\webui\\models\\Stable-diffusion",
+    "time": "2026-06-25 16:53:54",
+    "type": "full"
+  },
+  {
+    "model_name": "Comfy-Org/Krea-2 krea2_turbo_nvfp4.safetensors",
+    "source": "modelscope",
+    "save_path": "D:\\ai\\sd-webui-forge-neo-v3.2\\webui\\models\\Stable-diffusion",
+    "time": "2026-06-25 17:02:31",
+    "type": "full"
+  },
+  {
+    "model_name": "Comfy-Org/Krea-2 krea2_turbo_nvfp4.safetensors",
+    "source": "modelscope",
+    "save_path": "D:\\ai\\sd-webui-forge-neo-v3.2\\webui\\models\\Stable-diffusion",
+    "time": "2026-06-25 17:03:21",
+    "type": "full"
+  }
+]

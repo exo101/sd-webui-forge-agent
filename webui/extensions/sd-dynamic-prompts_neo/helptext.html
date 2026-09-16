@@ -1,0 +1,52 @@
+<div class="dynamic-prompting">
+    <a href="https://github.com/adieyal/sd-dynamic-prompts/blob/main/docs/SYNTAX.md">Syntax cheatsheet</a><br>
+    <a href="https://github.com/adieyal/sd-dynamic-prompts/blob/main/docs/tutorial.md">Tutorial</a><br>
+    <a href="https://github.com/adieyal/sd-dynamic-prompts/discussions">Discussions</a><br>
+    <a href="https://github.com/adieyal/sd-dynamic-prompts/issues">Report a bug</a><br>
+    <br/>
+
+    <h3><strong>Combinations</strong></h3>
+
+    Choose a number of terms from a list, in this case we choose two artists:
+    <code class="codeblock">{2$$$$artist1|artist2|artist3}</code><br/>
+
+    If $$$$ is not provided, then 1$$$$ is assumed.<br/><br/>
+
+    If the chosen number of terms is greater than the available terms, then some terms will be duplicated, otherwise chosen terms will be unique. This is useful in the case of wildcards, e.g.
+    <code class="codeblock">{2$$$$__artist__}</code> is equivalent to <code class="codeblock">{2$$$$__artist__|__artist__}</code><br/><br/>
+
+    A range can be provided:
+    <code class="codeblock">{1-3$$$$artist1|artist2|artist3}</code><br/>
+    In this case, a random number of artists between 1 and 3 is chosen.<br/><br/>
+
+    Options can be given weights:
+    <code class="codeblock">{2::artist1|artist2}</code><br/>
+    In this case, artist1 will be chosen twice as often as artist2.<br/><br/>
+
+    Wildcards can be used and the joiner can also be specified:
+    <code class="codeblock">{{1-$$$$and$$$$__adjective__}}</code><br/>
+
+    Here, a random number between 1 and 3 words from adjective.txt will be chosen and joined together with the word 'and' instead of the default comma.
+
+    <br/><br/>
+
+    <h3><strong>Wildcards</strong></h3>
+    Find and manage wildcards in the Wildcards Manager tab.
+
+    <br/><br/>
+
+    You can add more wildcards by creating a text file with one term per line and name is mywildcards.txt. Place it in ${WILDCARD_DIR}. <code class="codeblock">__&#60;folder&#62;/mywildcards__</code> will then become available.<br><br>
+
+    <h3><strong>Variables</strong></h3>
+    Set a variable like so:
+    <code class="codeblock">$${season=!{summer|autumn|winter|spring}}</code>
+
+    Now use it like this:
+    <code class="codeblock">In $${season} I wear a $${season} shirt and $${season} trousers</code>
+
+    For more details, and functionality, see the documentation (coming soon)
+    <br><br>
+    Find more settings on the <strong>Settings</strong> tab<br><br>
+
+    You are using <strong>version ${VERSION} of the WebUI extension</strong>, and the underlying <strong>dynamicprompts library is version ${LIB_VERSION}</strong>.
+</div>
