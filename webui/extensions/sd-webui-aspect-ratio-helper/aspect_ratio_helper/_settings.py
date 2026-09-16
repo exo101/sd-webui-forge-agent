@@ -134,27 +134,8 @@ def on_ui_settings():
         ),
     )
 
-    # accordion options
-    shared.opts.add_option(
-        key=_constants.ARH_HIDE_ACCORDION_BY_DEFAULT_KEY,
-        info=shared.OptionInfo(
-            default=OPT_KEY_TO_DEFAULT_MAP.get(
-                _constants.ARH_HIDE_ACCORDION_BY_DEFAULT_KEY,
-            ),
-            label='Hide accordion by default',
-            section=_constants.SECTION,
-        ),
-    )
-    shared.opts.add_option(
-        key=_constants.ARH_EXPAND_BY_DEFAULT_KEY,
-        info=shared.OptionInfo(
-            default=OPT_KEY_TO_DEFAULT_MAP.get(
-                _constants.ARH_EXPAND_BY_DEFAULT_KEY,
-            ),
-            label='Expand accordion by default',
-            section=_constants.SECTION,
-        ),
-    )
+    # 独立折叠块已移除（工具内联到宽高滑块下方），
+    # arh_hide_accordion_by_default / arh_expand_by_default 选项不再注册
     shared.opts.add_option(
         key=_constants.ARH_UI_COMPONENT_ORDER_KEY,
         info=shared.OptionInfo(

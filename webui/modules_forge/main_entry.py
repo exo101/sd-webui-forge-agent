@@ -4,7 +4,6 @@ import os.path
 import gradio as gr
 import torch
 from gradio.context import Context
-from rich import print_json
 
 from backend import memory_management
 from backend.args import dynamic_args
@@ -313,8 +312,7 @@ def refresh_model_loading_parameters(*, refresh: bool = True):
     modules: list[str] = [os.path.basename(x) for x in shared.opts.forge_additional_modules]
     dtype = str(unet_storage_dtype or [torch.float16, torch.bfloat16])
 
-    logger.info("Model Selected:")
-    print_json(data=dict(checkpoint=os.path.basename(ckpt), modules=modules, dtype=dtype))
+    logger.info(f"Model Selected: {os.path.basename(ckpt)} | modules: {', '.join(modules) or '-'} | dtype: {dtype}")
 
     if ckpt.endswith(("gguf", "GGUF")) and not lora_fp16:
         logger.warning("GGUF requires fp16 LoRA ; overriding option")

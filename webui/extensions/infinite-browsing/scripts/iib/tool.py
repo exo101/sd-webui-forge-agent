@@ -67,8 +67,6 @@ def backup_db_file(db_file_path):
         for i in range(files_to_remove_count):
             file_to_remove = os.path.join(backup_folder, sorted_backup_files[i][0])
             os.remove(file_to_remove)
-            
-    print(f"\033[92mIIB Database file has been successfully backed up to the backup folder.\033[0m")
 
 def get_sd_webui_conf(**kwargs):
     try:

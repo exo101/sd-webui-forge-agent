@@ -1,7 +1,7 @@
 {
   "port": 7869,
   "theme": "dark",
-  "listen": false,
+  "listen": true,
   "autolaunch": true,
   "cuda_malloc": true,
   "cuda_stream": true,
@@ -24,7 +24,7 @@
   "wallpaper": "",
   "llama": {
     "enabled": false,
-    "port": 8079,
+    "port": 8080,
     "model": "",
     "ngl": 100,
     "host": "0.0.0.0"

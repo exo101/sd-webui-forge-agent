@@ -40,6 +40,7 @@ class MaxDimensionScaler(ArhUIComponent):
         inputs = outputs = [self.script.wc, self.script.hc]
 
         with gr.Row(
+                variant='compact',
                 visible=self.should_show(),
         ):
             max_dim_default = _settings.safe_opt(
@@ -116,6 +117,7 @@ class MinDimensionScaler(ArhUIComponent):
         inputs = outputs = [self.script.wc, self.script.hc]
 
         with gr.Row(
+                variant='compact',
                 visible=self.should_show(),
         ):
             min_dim_default = _settings.safe_opt(
@@ -191,8 +193,8 @@ class PredefinedAspectRatioButtons(ArhUIComponent):
             _constants.ARH_PREDEFINED_ASPECT_RATIOS_KEY,
         ).split(',')
 
+        # 融合版：内联到宽高滑块下方，去掉 panel 嵌套保持紧凑
         with gr.Column(
-            variant='panel',
             visible=self.should_show(),
         ):
             # Build HTML for graphical aspect ratio shape buttons
@@ -296,14 +298,11 @@ class PredefinedPercentageButtons(ArhUIComponent):
 
     def render(self):
         inputs = outputs = [self.script.wc, self.script.hc]
-        with gr.Column(
-                variant='panel',
-                visible=self.should_show(),
+        # 融合版：去掉 panel 外层 Column，直接渲染紧凑行
+        with gr.Row(
+            variant='compact',
+            visible=self.should_show(),
         ):
-            with gr.Row(
-                variant='compact',
-                visible=self.should_show(),
-            ):
                 pct_slider = gr.Slider(
                     minimum=10,
                     maximum=200,

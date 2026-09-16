@@ -8,7 +8,6 @@ import json
 import logging
 import os
 import re
-import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -542,8 +541,6 @@ def configure_comfy_yaml(comfy_yaml: Path):
 
 
 def start():
-    print(f"Launching {'API server' if '--nowebui' in sys.argv else 'Web UI'} with arguments: {shlex.join(sys.argv[1:])}")
-
     from modules import logging_config
 
     logging_config.setup_logging(args.loglevel)

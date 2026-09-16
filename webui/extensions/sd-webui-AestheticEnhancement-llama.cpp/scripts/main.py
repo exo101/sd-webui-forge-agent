@@ -10,7 +10,8 @@ import random
 import glob
 import requests
 from modules import script_callbacks, shared
-from modules.llama_port import get_llama_url
+from modules.llama_port import get_llama_url, get_llama_port
+from modules import ui
 from PIL import Image
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,13 @@ DEFAULT_API_BASE_URL = "https://api-inference.modelscope.cn/v1"
 
 # Qwen 模块可用性检查标志
 QWEN_MODULE_AVAILABLE = False
+
+# 默认 Llama.cpp 端口（从 llama_port.py 获取）
+try:
+    _llama_port = get_llama_port()
+except Exception as e:
+    logger.warning(f"获取 Llama.cpp 端口失败：{e}，使用默认值 8080")
+    _llama_port = 8080
 
 # 确保 scripts 目录在 Python 路径中
 try:
@@ -609,10 +617,18 @@ def create_composition_tab():
 
 
 _LLAMA_URL = get_llama_url()
-_DEFAULT_VISION_MODEL = "Qwen3.5-2B-Q6_K.gguf"
+_DEFAULT_VISION_MODEL = ""
 
 # 全局变量存储聊天历史
 _vision_chat_history = []
+# 获取 llama.cpp 端口（使用 try-except 确保不会报错）
+try:
+    _llama_port = get_llama_port()
+    _llama_host = _LLAMA_URL.split(':')[0] if _LLAMA_URL else 'localhost'
+except Exception as e:
+    logger.warning(f"获取 Llama.cpp 端口或 URL 失败：{e}，使用默认值")
+    _llama_port = 8080
+    _llama_host = 'localhost'
 
 
 def _call_llamacpp_vision(message, image_path, model_name):
@@ -653,9 +669,9 @@ def _get_llamacpp_vision_models():
         resp.raise_for_status()
         data = resp.json()
         models = [m['id'] for m in data.get('data', [])]
-        return models if models else [_DEFAULT_VISION_MODEL]
+        return models
     except:
-        return [_DEFAULT_VISION_MODEL]
+        return []
 
 
 def get_response_vision_api(message: str, image_path: str = None,
@@ -720,14 +736,73 @@ def create_vision_chat_tab():
     </div>
     """)
 
-    # 模型选择
-    models = _get_llamacpp_vision_models()
-    model_dropdown = gr.Dropdown(
-        choices=models,
-        value=models[0] if models else _DEFAULT_VISION_MODEL,
-        label="🤖 视觉模型",
-        interactive=True
+    # ===== llama.cpp 连接配置（紧凑单行：通常只需填端口） =====
+    with gr.Row():
+        llama_port_input = gr.Textbox(
+            label="🔌 llama.cpp 端口",
+            placeholder="例如：8090，留空使用默认端口",
+            value=str(_llama_port),
+            interactive=True,
+            max_length=5,
+            scale=1,
+            min_width=110
+        )
+        llama_host_input = gr.Textbox(
+            label="🖥️ 主机 (默认 localhost)",
+            placeholder="localhost",
+            value="localhost",
+            interactive=True,
+            max_length=15,
+            scale=1,
+            min_width=130
+        )
+        # 模型选择（动态从 llama.cpp 服务获取模型列表）
+        models = _get_llamacpp_vision_models()
+        model_dropdown = gr.Dropdown(
+            choices=models,
+            value=models[0] if models else _DEFAULT_VISION_MODEL,
+            label="🤖 视觉模型",
+            interactive=True,
+            scale=4,
+            min_width=240
+        )
+        refresh_models_btn = gr.Button("🔄 刷新模型列表", scale=1, min_width=100)
+
+    # 模型状态：单行纯文本展示，不再占用独立块
+    model_status_text = gr.Textbox(
+        label="模型状态",
+        interactive=False,
+        value="",
+        lines=1,
+        container=False,
+        show_label=False
     )
+
+    def update_llama_config(port, host):
+        """端口/主机变化：更新模块级连接地址并自动刷新模型列表"""
+        global _llama_port, _llama_host, _LLAMA_URL
+        if port and str(port).strip().isdigit():
+            _llama_port = int(str(port).strip())
+        host = (host or "localhost").strip() or "localhost"
+        _llama_host = host
+        _LLAMA_URL = f"http://{host}:{_llama_port}"
+        logger.info(f"✅ llama.cpp 配置已更新：host={host}, port={_llama_port}, url={_LLAMA_URL}")
+        new_models = _get_llamacpp_vision_models()
+        if new_models:
+            return gr.update(choices=new_models, value=new_models[0]), f"✅ 已连接 {_LLAMA_URL}，发现 {len(new_models)} 个模型: {', '.join(new_models)}"
+        return gr.update(choices=[], value=""), f"❌ 未检测到 {_LLAMA_URL} 上的模型，请确认服务已启动"
+
+    def refresh_model_list():
+        new_models = _get_llamacpp_vision_models()
+        if new_models:
+            return gr.update(choices=new_models, value=new_models[0]), f"✅ 发现 {len(new_models)} 个模型: {', '.join(new_models)}"
+        else:
+            return gr.update(choices=[], value=""), "❌ 未检测到 llama.cpp 服务上的模型，请确认服务已启动"
+
+    refresh_models_btn.click(fn=refresh_model_list, inputs=[], outputs=[model_dropdown, model_status_text])
+    # 端口/主机变化时：更新连接地址并自动刷新模型列表（无需再手动点刷新）
+    llama_port_input.change(fn=update_llama_config, inputs=[llama_port_input, llama_host_input], outputs=[model_dropdown, model_status_text])
+    llama_host_input.change(fn=update_llama_config, inputs=[llama_port_input, llama_host_input], outputs=[model_dropdown, model_status_text])
 
     # 后端选择
     backend_selector = gr.Radio(
