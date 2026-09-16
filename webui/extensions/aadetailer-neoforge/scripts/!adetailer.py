@@ -49,7 +49,7 @@ from adetailer.args import (
     InpaintBBoxMatchMode,
     SkipImg2ImgOrig,
 )
-from adetailer.common import PredictOutput, ensure_pil_image, safe_mkdir
+from adetailer.common import PredictOutput, ensure_pil_image, safe_mkdir, scan_model_dir
 from adetailer.mask import (
     filter_by_ratio,
     filter_k_by,
@@ -91,20 +91,65 @@ no_huggingface = getattr(cmd_opts, "ad_no_huggingface", False)
 adetailer_dir = Path(paths.models_path, "adetailer")
 safe_mkdir(adetailer_dir)
 
-extra_models_dirs = shared.opts.data.get("ad_extra_models_dir", "")
-model_mapping = get_models(
-    adetailer_dir,
-    *extra_models_dirs.split("|"),
-    huggingface=not no_huggingface,
-)
+# Lazy model loading: models are downloaded on first use, not at startup.
+# This avoids blocking the WebUI launch with network downloads.
+_model_mapping: dict[str, str] | None = None
+
+
+def get_model_mapping() -> dict[str, str]:
+    global _model_mapping
+    if _model_mapping is None:
+        extra_models_dirs = shared.opts.data.get("ad_extra_models_dir", "")
+        _model_mapping = get_models(
+            adetailer_dir,
+            *extra_models_dirs.split("|"),
+            huggingface=not no_huggingface,
+        )
+    return _model_mapping
+
+
+# Built-in model names (hardcoded in common.py's get_models)
+# These are shown in the UI dropdown without triggering any network download.
+_BUILTIN_MODEL_NAMES = [
+    "face_yolov8n.pt",
+    "face_yolov8s.pt",
+    "hand_yolov8n.pt",
+    "person_yolov8n-seg.pt",
+    "person_yolov8s-seg.pt",
+    "yolov8x-worldv2.pt",
+]
+_MEDIAPIPE_MODEL_NAMES = [
+    "mediapipe_face_full",
+    "mediapipe_face_short",
+    "mediapipe_face_mesh",
+    "mediapipe_face_mesh_eyes_only",
+]
+
+
+def get_model_names() -> list[str]:
+    """
+    Return available model names WITHOUT downloading anything.
+    Scans local model directories + returns hardcoded built-in names.
+    Used for UI dropdown population at startup (no network calls).
+    """
+    names = list(_BUILTIN_MODEL_NAMES) + list(_MEDIAPIPE_MODEL_NAMES)
+    # Add any locally-installed custom .pt models
+    extra_models_dirs = shared.opts.data.get("ad_extra_models_dir", "")
+    dirs = [adetailer_dir] + [d for d in extra_models_dirs.split("|") if d]
+    for d in dirs:
+        for path in scan_model_dir(Path(d)):
+            if path.name not in names:
+                names.append(path.name)
+    return names
+
 
 txt2img_submit_button = img2img_submit_button = None
 txt2img_submit_button = cast(gr.Button, txt2img_submit_button)
 img2img_submit_button = cast(gr.Button, img2img_submit_button)
 
-print(
-    f"[-] ADetailer initialized. version: {__version__}, num models: {len(model_mapping)}"
-)
+# print(
+#     f"[-] ADetailer initialized. version: {__version__}, num models: {len(model_mapping)}"
+# )
 
 
 class AfterDetailerScript(scripts.Script):
@@ -130,7 +175,8 @@ class AfterDetailerScript(scripts.Script):
 
     def ui(self, is_img2img):
         num_models = opts.data.get("ad_max_models", 2)
-        ad_model_list = list(model_mapping.keys())
+        # Use get_model_names() to avoid network downloads at startup
+        ad_model_list = get_model_names()
         sampler_names = [sampler.name for sampler in all_samplers]
         scheduler_names = [x.label for x in schedulers]
 
@@ -764,10 +810,11 @@ class AfterDetailerScript(scripts.Script):
         )
 
     def get_ad_model(self, name: str):
-        if name not in model_mapping:
-            msg = f"[-] ADetailer: Model {name!r} not found. Available models: {list(model_mapping.keys())}"
+        mapping = get_model_mapping()
+        if name not in mapping:
+            msg = f"[-] ADetailer: Model {name!r} not found. Available models: {list(mapping.keys())}"
             raise ValueError(msg)
-        return model_mapping[name]
+        return mapping[name]
 
     def sort_bboxes(self, pred: PredictOutput) -> PredictOutput:
         sortby = opts.data.get("ad_bbox_sortby", BBOX_SORTBY[0])
@@ -1304,7 +1351,7 @@ def make_axis_on_xyz_grid():
     if xyz_grid is None:
         return
 
-    model_list = ["None", *model_mapping.keys()]
+    model_list = ["None", *get_model_names()]
     xyz_samplers = [sampler.name for sampler in all_samplers]
     xyz_schedulers = [scheduler.label for scheduler in schedulers]
 
@@ -1417,7 +1464,7 @@ def add_api_endpoints(_: gr.Blocks, app: FastAPI):
 
     @app.get("/adetailer/v1/ad_model")
     async def ad_model():
-        return {"ad_model": list(model_mapping)}
+        return {"ad_model": get_model_names()}
 
 
 script_callbacks.on_ui_settings(on_ui_settings)

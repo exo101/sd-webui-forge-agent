@@ -1,0 +1,30 @@
+# Enforce LF line endings for all text files
+* text=auto eol=lf
+
+# Python
+*.py text eol=lf
+
+# JavaScript / CSS
+*.js text eol=lf
+*.css text eol=lf
+
+# Markdown
+*.md text eol=lf
+
+# JSON
+*.json text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+
+# Binary files - no line ending conversion
+*.safetensors binary
+*.pt binary
+*.ckpt binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.mp4 binary
+*.webm binary

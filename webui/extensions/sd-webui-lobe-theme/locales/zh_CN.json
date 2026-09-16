@@ -1,0 +1,197 @@
+{
+  "brand": {
+    "custom": "自定义",
+    "kitchen": "Kitchen",
+    "lobe": "LobeHub"
+  },
+  "cancel": "取消",
+  "confirm": "确认",
+  "custom": {
+    "initializing": "StableDiffusion / LobeTheme 正在初始化，请稍候..."
+  },
+  "footer": {
+    "community": "社区",
+    "help": "帮助",
+    "moreProducts": "更多产品",
+    "resources": "资源"
+  },
+  "header": {
+    "feedback": "反馈",
+    "setting": "设置",
+    "switchTheme": "切换浅色/深色主题"
+  },
+  "modal": {
+    "themeFeedback": {
+      "title": "主题反馈"
+    },
+    "themeSetting": {
+      "title": "主题设置",
+      "desc": "偏好与布局设置"
+    }
+  },
+  "prompt": {
+    "area": {
+      "attribute": "属性选择区",
+      "object": "对象选择区",
+      "tag": "标签选择区"
+    },
+    "load": "加载提示",
+    "negative": "否定",
+    "positive": "肯定",
+    "set": "设置提示"
+  },
+  "setting": {
+    "button": {
+      "reset": "恢复默认值",
+      "submit": "应用并重新启动界面"
+    },
+    "confirmPageUnload": {
+      "desc": "帮助防止未保存数据的丢失",
+      "title": "确认离开页面"
+    },
+    "customFont": {
+      "desc": "启用后，将自动加载网页字体以增强中文、英文和代码的显示",
+      "title": "自定义字体"
+    },
+    "customLogo": {
+      "desc": "支持 URL / Base64 / 表情符号",
+      "title": "自定义标志"
+    },
+    "customTitle": {
+      "desc": "自定义标志标题",
+      "title": "自定义标题"
+    },
+    "extraNetworkSidebar": {
+      "defaultCardSize": {
+        "desc": "启动时模型封面大小的默认值",
+        "title": "模型封面大小"
+      },
+      "defaultExpand": {
+        "desc": "启动时默认是否展开侧边栏",
+        "title": "默认展开"
+      },
+      "defaultWidth": {
+        "desc": "启动时侧边栏的默认宽度",
+        "title": "默认宽度"
+      },
+      "displayMode": {
+        "desc": "固定网格模式以保持恒定显示，在浮动模式下鼠标移至侧边时自动展开",
+        "title": "显示模式"
+      },
+      "enable": {
+        "desc": "在右侧启用额外的网络侧边栏",
+        "title": "启用"
+      }
+    },
+    "group": {
+      "experimental": "实验性功能",
+      "extraNetworkSidebar": "额外网络侧边栏",
+      "layout": "布局设置",
+      "promptTextarea": "提示文本框",
+      "quickSettingSidebar": "快速设置侧边栏",
+      "theme": "主题设置"
+    },
+    "hideFooter": {
+      "desc": "隐藏主题页脚，仅显示 Stable Diffusion webui 的默认页脚",
+      "title": "隐藏页脚"
+    },
+    "imageInfo": {
+      "desc": "在生成的图像中显示更好的图像信息",
+      "title": "图像信息替代"
+    },
+    "language": {
+      "desc": "叶片主题语言",
+      "title": "语言"
+    },
+    "logoType": {
+      "desc": "标志类型",
+      "preview": "预览",
+      "title": "标志类型"
+    },
+    "neutralColor": {
+      "desc": "定制不同色调的灰色，第二个是原始厨房中性颜色",
+      "title": "中性颜色"
+    },
+    "primaryColor": {
+      "desc": "自定义主色，第二个是原始厨房主题颜色",
+      "title": "主色"
+    },
+    "promptDisplayMode": {
+      "desc": "固定高度或可拖动调整大小的自动高度",
+      "resizable": "可调整大小",
+      "scroll": "滚动",
+      "title": "提示显示模式"
+    },
+    "promptEditor": {
+      "desc": "在快速设置侧边栏顶部提供简单的提示编辑器",
+      "title": "提示编辑器"
+    },
+    "promptHighlight": {
+      "desc": "根据 Stable Diffusion 语法规则自动着色提示显示",
+      "title": "提示语法高亮"
+    },
+    "quickSettingSidebar": {
+      "defaultExpand": {
+        "desc": "启动时默认是否展开侧边栏",
+        "title": "默认展开"
+      },
+      "defaultWidth": {
+        "desc": "启动时侧边栏的默认宽度",
+        "title": "默认宽度"
+      },
+      "displayMode": {
+        "desc": "固定网格模式以保持恒定显示，在浮动模式下鼠标移至侧边时自动展开",
+        "title": "显示模式"
+      },
+      "enable": {
+        "desc": "在左侧启用快速设置侧边栏",
+        "title": "启用"
+      }
+    },
+    "reduceAnimation": {
+      "desc": "减少模糊效果和背景流动颜色，可提高流畅度并节省 CPU 使用率",
+      "title": "减少动画"
+    },
+    "splitPreviewer": {
+      "desc": "将提示输入框放在左侧，生成按钮放在右侧，确保滚动时生成的图像始终显示在顶部（实验性）",
+      "title": "分割预览器"
+    },
+    "svgIcons": {
+      "desc": "全局替换 Stable Diffusion webui 中的所有表情符号为 SVG 图标",
+      "title": "SVG 图标"
+    },
+    "tab": {
+      "appearance": "外观",
+      "experimental": "实验性",
+      "layout": "布局",
+      "sidebar": "侧边栏"
+    }
+  },
+  "share": "分享",
+  "shareModal": {
+    "download": "下载截图",
+    "imageType": "图片格式",
+    "info": "图片信息",
+    "screenshot": "截图",
+    "settings": "导出设置",
+    "showAllImages": "显示所有图片",
+    "showConfig": "显示生成配置",
+    "showNegative": "显示负面促销",
+    "tabs": {
+      "info": "信息",
+      "settings": "设置"
+    },
+    "title": "图片名称",
+    "warn": "请先生成图片",
+    "withBackground": "包括背景图片",
+    "withFooter": "包括页脚"
+  },
+  "sidebar": {
+    "extraNetwork": "额外网络",
+    "mode": {
+      "fixed": "固定",
+      "float": "浮动"
+    },
+    "quickSetting": "快速设置"
+  }
+}

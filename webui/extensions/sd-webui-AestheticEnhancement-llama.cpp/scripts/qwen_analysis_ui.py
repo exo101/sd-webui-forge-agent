@@ -24,15 +24,8 @@ try:
 except Exception:
     _LLAMA_URL = "http://localhost:8080"
 
-# Ollama API 配置（本地部署的 Qwen3.5 多模态模型）
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "localhost")
-OLLAMA_PORT = os.getenv("OLLAMA_PORT", "11434")
-OLLAMA_URL = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}/api/chat"
-
 # 默认配置
-DEFAULT_MODEL = "qwen3.5:4b"
-DEFAULT_QWEN_MODEL = DEFAULT_MODEL  # 兼容别名
-DEFAULT_BACKEND = "ollama"
+DEFAULT_MODEL = "qwen3-vl-4b"
 
 
 def encode_image_to_base64(image_data):
@@ -53,6 +46,25 @@ def encode_image_to_base64(image_data):
     except Exception as e:
         logger.error(f"图片编码失败：{e}")
         return None
+
+
+def analyze_with_backend(image_path, prompt, model, llamacpp_host=None):
+    """
+    统一分析接口，直接调用 llama.cpp
+
+    Args:
+        image_path: 图片路径
+        prompt: 分析提示词
+        model: 模型名称
+        llamacpp_host: llama.cpp 服务器地址
+
+    Returns:
+        dict: 分析结果
+    """
+    if LLAMACPP_AVAILABLE:
+        return analyze_with_llamacpp(image_path, prompt, model, llamacpp_host or _LLAMA_URL)
+    else:
+        return {"success": False, "analysis": f"❌ llama.cpp 模块不可用"}
 
 def analyze_with_ollama(image_data, prompt, model=DEFAULT_MODEL):
     """
@@ -174,7 +186,7 @@ def analyze_with_ollama(image_data, prompt, model=DEFAULT_MODEL):
         }
 
 
-def analyze_with_backend(image_path, prompt, model, backend="ollama", llamacpp_host=None):
+def analyze_with_backend(image_path, prompt, model, backend="llamacpp", llamacpp_host=None):
     """
     统一分析接口，根据后端选择调用方式
 
@@ -182,15 +194,13 @@ def analyze_with_backend(image_path, prompt, model, backend="ollama", llamacpp_h
         image_path: 图片路径
         prompt: 分析提示词
         model: 模型名称
-        backend: 后端类型 ("ollama" 或 "llamacpp")
+        backend: 后端类型 ("llamacpp")
         llamacpp_host: llama.cpp 服务器地址
 
     Returns:
         dict: 分析结果
     """
-    if backend == "ollama":
-        return analyze_with_ollama(image_path, prompt, model)
-    elif backend == "llamacpp" and LLAMACPP_AVAILABLE:
+    if backend == "llamacpp" and LLAMACPP_AVAILABLE:
         return analyze_with_llamacpp(image_path, prompt, model, llamacpp_host or _LLAMA_URL)
     else:
         return {"success": False, "analysis": f"❌ 不支持的后端：{backend}"}
@@ -365,20 +375,7 @@ def get_shot_only_prompt():
 
 请详细分析每个方面，并解释这样的镜头选择背后的意图和效果。"""
 
-def get_ollama_models():
-    """获取 Ollama 已安装的模型列表"""
-    try:
-        response = requests.get(f"http://{OLLAMA_HOST}:{OLLAMA_PORT}/api/tags", timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            models = [m["name"] for m in data.get("models", [])]
-            return models
-    except Exception as e:
-        logger.warning(f"获取 Ollama 模型列表失败：{e}")
-    return []
-
-
-def analyze_single_image(image_data, analysis_type="comprehensive", model=DEFAULT_MODEL, backend="ollama", llamacpp_host=None):
+def get_comprehensive_analysis_prompt():
     """
     分析单张图片
 
@@ -426,7 +423,7 @@ def analyze_single_image(image_data, analysis_type="comprehensive", model=DEFAUL
     return result
 
 
-def batch_analyze_images(image_paths, analysis_type="comprehensive", model=DEFAULT_MODEL, backend="ollama", llamacpp_host=None, progress=gr.Progress()):
+def batch_analyze_images(image_paths, analysis_type="comprehensive", model=DEFAULT_MODEL, backend="llamacpp", llamacpp_host=None, progress=gr.Progress()):
     """
     批量分析多张图片（按镜头分组）
 
@@ -819,21 +816,16 @@ def create_qwen_analysis_ui():
             with gr.Column(scale=1):
                 gr.Markdown("### 1️⃣ 系统配置")
 
-                # Ollama 配置
-                with gr.Group(visible=True) as ollama_config:
-                    ollama_host = gr.Textbox(
-                        label="Ollama 地址",
-                        value="localhost",
-                        placeholder="localhost"
+                # llama.cpp 配置（合并端口和主机为一个输入框）
+                with gr.Group(visible=True) as llamacpp_config:
+                    llamacpp_host = gr.Textbox(
+                        label="🔌 llama.cpp 服务器地址 (主机：端口)",
+                        value="http://localhost:8080",
+                        placeholder="http://localhost:8080",
+                        scale=1,
+                        info="格式：http://主机名：端口号，如 http://192.168.1.100:8080"
                     )
-                    ollama_port = gr.Number(
-                        label="Ollama 端口",
-                        value=11434,
-                        placeholder="11434"
-                    )
-                    test_ollama_btn = gr.Button("🔌 测试 Ollama 连接", variant="secondary")
-
-                test_llamacpp_btn = gr.Button("🔌 测试 llama.cpp 连接", variant="secondary")
+                    test_llamacpp_btn = gr.Button("🔌 测试 llama.cpp 连接", variant="secondary", scale=1)
 
                 connection_info = gr.Textbox(
                     label="连接状态",

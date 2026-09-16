@@ -1,0 +1,6 @@
+__creatures/mtg/orc/orc_berserker__
+__creatures/mtg/orc/orc_general__
+__creatures/mtg/orc/orc_rogue__
+__creatures/mtg/orc/orc_shaman__
+__creatures/mtg/orc/orc_warrior__
+__creatures/mtg/orc/orc_wizard__

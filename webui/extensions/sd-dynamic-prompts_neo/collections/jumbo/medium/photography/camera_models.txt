@@ -1,0 +1,50 @@
+# More camera models than you will ever need
+# Sourced from https://raw.githubusercontent.com/cdowlatram/Stereoscopic-Image-Analysis/dd59f5eb808101ef14eafc62a26e6590d6e5da6e/image_downloader/sensor_database.csv
+__medium/photography/camera_models/acer__
+__medium/photography/camera_models/agfaphoto__
+__medium/photography/camera_models/benq__
+__medium/photography/camera_models/canon__
+__medium/photography/camera_models/casio__
+__medium/photography/camera_models/classic__
+__medium/photography/camera_models/concord__
+__medium/photography/camera_models/contax__
+__medium/photography/camera_models/epson__
+__medium/photography/camera_models/fujifilm__
+__medium/photography/camera_models/ge__
+__medium/photography/camera_models/hp__
+__medium/photography/camera_models/iphone__
+__medium/photography/camera_models/jenoptik__
+__medium/photography/camera_models/kodak__
+__medium/photography/camera_models/konica__
+__medium/photography/camera_models/konica_minolta__
+__medium/photography/camera_models/kyocera__
+__medium/photography/camera_models/leica__
+__medium/photography/camera_models/minolta__
+__medium/photography/camera_models/minox__
+__medium/photography/camera_models/nikon__
+__medium/photography/camera_models/olympus__
+__medium/photography/camera_models/panasonic__
+__medium/photography/camera_models/pentax__
+__medium/photography/camera_models/praktica__
+__medium/photography/camera_models/ricoh__
+__medium/photography/camera_models/rollei__
+__medium/photography/camera_models/samsung__
+__medium/photography/camera_models/sanyo__
+__medium/photography/camera_models/sigma__
+__medium/photography/camera_models/sony__
+__medium/photography/camera_models/toshiba__
+__medium/photography/camera_models/vivitar__
+__medium/photography/camera_models/yakumo__
+FC300S
+FC6310
+BLN-L24
+JVC GC-QX3HD
+JVC GC-QX5HD
+LM-Q710.FGN
+MotoE2(4G-LTE)
+Nokia 808 PureView
+Nokia Lumia 1020
+RP_OV5647
+RP_imx219
+ZTE Blade L5 Plus
+

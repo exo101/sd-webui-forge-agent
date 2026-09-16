@@ -1,0 +1,8 @@
+
+__creatures/mtg/plant/plant_dog__
+__creatures/mtg/plant/plant_elemental__
+__creatures/mtg/plant/plant_general__
+__creatures/mtg/plant/plant_hydra__
+__creatures/mtg/plant/plant_skeleton__
+__creatures/mtg/plant/plant_wall__
+__creatures/mtg/plant/plant_zombie__

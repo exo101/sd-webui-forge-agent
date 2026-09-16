@@ -1,0 +1,5 @@
+send2trash
+ZipUnicode
+beautifulsoup4
+packaging
+pysocks

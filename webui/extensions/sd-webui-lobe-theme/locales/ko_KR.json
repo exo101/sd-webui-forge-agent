@@ -1,0 +1,197 @@
+{
+  "brand": {
+    "custom": "사용자 정의",
+    "kitchen": "Kitchen",
+    "lobe": "LobeHub"
+  },
+  "cancel": "취소",
+  "confirm": "확인",
+  "custom": {
+    "initializing": "StableDiffusion / LobeTheme이 초기화 중입니다. 잠시 기다려주세요..."
+  },
+  "footer": {
+    "community": "커뮤니티",
+    "help": "도움말",
+    "moreProducts": "더 많은 제품",
+    "resources": "자료"
+  },
+  "header": {
+    "feedback": "피드백",
+    "setting": "설정",
+    "switchTheme": "밝은/어두운 테마 전환"
+  },
+  "modal": {
+    "themeFeedback": {
+      "title": "테마 피드백"
+    },
+    "themeSetting": {
+      "desc": "테마 및 레이아웃 설정",
+      "title": "테마 설정"
+    }
+  },
+  "prompt": {
+    "area": {
+      "attribute": "속성 선택",
+      "object": "객체 선택",
+      "tag": "태그 선택"
+    },
+    "load": "로드 프롬프트",
+    "negative": "부정적",
+    "positive": "긍정적",
+    "set": "설정 프롬프트"
+  },
+  "setting": {
+    "button": {
+      "reset": "기본값으로 돌아가기",
+      "submit": "적용 및 인터페이스 재시작"
+    },
+    "confirmPageUnload": {
+      "desc": "저장되지 않은 데이터 손실을 방지하는 데 도움이 됩니다.",
+      "title": "페이지 이탈 확인"
+    },
+    "customFont": {
+      "desc": "활성화되면 중국어, 영어 및 코드의 텍스트 표시를 향상시키기 위해 자동으로 웹 글꼴을 로드합니다.",
+      "title": "사용자 정의 글꼴"
+    },
+    "customLogo": {
+      "desc": "URL / Base64 / 이모지 심볼 지원",
+      "title": "사용자 정의 로고"
+    },
+    "customTitle": {
+      "desc": "사용자 정의 로고 제목",
+      "title": "사용자 정의 제목"
+    },
+    "extraNetworkSidebar": {
+      "defaultCardSize": {
+        "desc": "시작할 때 모델 커버 크기의 기본값",
+        "title": "모델 커버 크기"
+      },
+      "defaultExpand": {
+        "desc": "시작할 때 사이드바를 기본적으로 확장할지 여부",
+        "title": "기본 확장"
+      },
+      "defaultWidth": {
+        "desc": "시작할 때 사이드바의 기본 너비",
+        "title": "기본 너비"
+      },
+      "displayMode": {
+        "desc": "고정된 그리드 모드로 상시 표시하거나 부유 모드에서 측면으로 마우스를 이동할 때 자동으로 확장",
+        "title": "표시 모드"
+      },
+      "enable": {
+        "desc": "오른쪽에 추가 네트워크 사이드바 활성화",
+        "title": "활성화"
+      }
+    },
+    "group": {
+      "experimental": "실험적 기능",
+      "extraNetworkSidebar": "추가 네트워크 사이드바",
+      "layout": "레이아웃 설정",
+      "promptTextarea": "프롬프트 텍스트 상자",
+      "quickSettingSidebar": "빠른 설정 사이드바",
+      "theme": "테마 설정"
+    },
+    "hideFooter": {
+      "desc": "테마 푸터를 숨기고 Stable Diffusion 웹UI의 기본 푸터만 표시",
+      "title": "푸터 숨기기"
+    },
+    "imageInfo": {
+      "desc": "생성된 이미지에서 더 나은 이미지 정보 표시",
+      "title": "대체 이미지 정보"
+    },
+    "language": {
+      "desc": "로브 테마 언어",
+      "title": "언어"
+    },
+    "logoType": {
+      "desc": "로고 유형",
+      "preview": "미리보기",
+      "title": "로고 유형"
+    },
+    "neutralColor": {
+      "desc": "다른 색상 경향을 가진 다양한 회색 음영을 사용자 정의합니다. 두 번째는 원래 주방의 중립 색상입니다.",
+      "title": "중립 색상"
+    },
+    "primaryColor": {
+      "desc": "사용자 정의 기본 색상, 두 번째는 원래 주방 테마 색상입니다.",
+      "title": "기본 색상"
+    },
+    "promptDisplayMode": {
+      "desc": "고정 높이 또는 드래그 가능한 크기 조정 지원을 통한 자동 높이",
+      "resizable": "크기 조절 가능",
+      "scroll": "스크롤",
+      "title": "프롬프트 표시 모드"
+    },
+    "promptEditor": {
+      "desc": "빠른 설정 사이드바 상단에 간단한 프롬프트 편집기 제공",
+      "title": "프롬프트 편집기"
+    },
+    "promptHighlight": {
+      "desc": "Stable Diffusion 구문 규칙에 따라 프롬프트 표시를 자동으로 색상화",
+      "title": "프롬프트 구문 강조"
+    },
+    "quickSettingSidebar": {
+      "defaultExpand": {
+        "desc": "시작할 때 사이드바를 기본적으로 확장할지 여부",
+        "title": "기본 확장"
+      },
+      "defaultWidth": {
+        "desc": "시작할 때 사이드바의 기본 너비",
+        "title": "기본 너비"
+      },
+      "displayMode": {
+        "desc": "고정된 그리드 모드로 상시 표시하거나 부유 모드에서 측면으로 마우스를 이동할 때 자동으로 확장",
+        "title": "표시 모드"
+      },
+      "enable": {
+        "desc": "왼쪽에 빠른 설정 사이드바 활성화",
+        "title": "활성화"
+      }
+    },
+    "reduceAnimation": {
+      "desc": "부드러움을 향상시키고 CPU 사용량을 줄일 수 있는 흐림 효과와 배경 흐름 색상을 줄입니다.",
+      "title": "애니메이션 줄이기"
+    },
+    "splitPreviewer": {
+      "desc": "프롬프트 입력 상자를 왼쪽에 놓고 생성 버튼을 오른쪽에 놓아 스크롤할 때 항상 생성된 이미지가 위에 표시되도록 합니다 (실험적)",
+      "title": "분할 미리보기"
+    },
+    "svgIcons": {
+      "desc": "Stable Diffusion 웹UI의 모든 이모지 아이콘을 전역적으로 SVG 아이콘으로 대체",
+      "title": "SVG 아이콘"
+    },
+    "tab": {
+      "appearance": "외관",
+      "experimental": "실험적 기능",
+      "layout": "레이아웃",
+      "sidebar": "사이드바"
+    }
+  },
+  "share": "공유",
+  "shareModal": {
+    "download": "스크린샷 다운로드",
+    "imageType": "이미지 형식",
+    "info": "이미지 정보",
+    "screenshot": "스크린샷",
+    "settings": "내보내기 설정",
+    "showAllImages": "모든 이미지 표시",
+    "showConfig": "생성 구성 표시",
+    "showNegative": "부정적 프로모션 표시",
+    "tabs": {
+      "info": "정보",
+      "settings": "설정"
+    },
+    "title": "이미지 이름",
+    "warn": "먼저 이미지를 생성해주세요",
+    "withBackground": "배경 이미지 포함",
+    "withFooter": "푸터 포함"
+  },
+  "sidebar": {
+    "extraNetwork": "추가 네트워크",
+    "mode": {
+      "fixed": "고정",
+      "float": "부유"
+    },
+    "quickSetting": "빠른 설정"
+  }
+}

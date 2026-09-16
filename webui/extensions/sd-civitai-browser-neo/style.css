@@ -1,0 +1,2001 @@
+/* Card list HTML */
+.civmodellist {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+    padding: 16px;
+}
+
+.civmodellist figure {
+    margin: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    background: var(--background-fill-primary);
+    border: solid 2px transparent;
+}
+
+.civmodelcard {
+    position: relative;
+    box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.25);
+}
+
+.civmodelcard:hover {
+    z-index: var(--layer-5);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 0 2px 2px rgba(255, 255, 255, 0.45);
+}
+
+.civmodelcardoutdated {
+    box-shadow: 0 0 2px 2px orange;
+}
+.civmodelcardinstalled {
+    box-shadow: 0 0 2px 2px aquamarine;
+}
+.civmodelcardcrossfamily {
+    box-shadow: 0 0 2px 2px #5b9bd5;
+}
+
+/* --- Favorite creator card --- */
+.civcard-favorite {
+    box-shadow: 0 0 2px 2px gold;
+}
+.civcard-favorite figcaption::after {
+    content: ' ⭐';
+    font-size: 0.85em;
+}
+
+/* --- Card Legend --- */
+.card-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 18px;
+    padding: 8px 14px;
+    margin-bottom: 6px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    font-size: 0.78em;
+    color: rgba(255, 255, 255, 0.75);
+    user-select: none;
+    line-height: 1;
+}
+.card-legend .legend-title {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.45);
+    margin-right: 4px;
+}
+.card-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+.card-legend .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 2px solid transparent;
+}
+.card-legend .legend-dot.not-installed {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: transparent;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+.card-legend .legend-dot.installed {
+    border-color: aquamarine;
+    background: transparent;
+    box-shadow: 0 0 4px 1px rgba(127, 255, 212, 0.5);
+}
+.card-legend .legend-dot.outdated {
+    border-color: orange;
+    background: transparent;
+    box-shadow: 0 0 4px 1px rgba(255, 165, 0, 0.5);
+}
+.card-legend .legend-dot.cross-family {
+    border-color: #5b9bd5;
+    background: transparent;
+    box-shadow: 0 0 4px 1px rgba(91, 155, 213, 0.5);
+}
+.card-legend .legend-dot.early-access {
+    border-color: #e0e0e0;
+    background: transparent;
+    box-shadow: 0 0 4px 1px rgba(224, 224, 224, 0.5);
+}
+.card-legend .legend-separator {
+    width: 1px;
+    height: 14px;
+    background: rgba(255, 255, 255, 0.15);
+    margin: 0 2px;
+}
+
+.civmodelcard img,
+.civmodelcard .video-bg {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 0;
+    flex-shrink: 0;
+}
+
+.civmodelcard figcaption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    padding: 20px 12px 14px;
+    word-break: break-word;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.75) 60%, rgba(0, 0, 0, 0.9) 100%);
+    color: white !important;
+    font-weight: 500;
+    line-height: 1.4;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    /* backdrop-filter: blur(2px); */
+}
+
+.civmodelcard:hover figcaption {
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.civmodelcard:has(.model-checkbox:checked) {
+    border-color: #2ee59d;
+}
+
+/* --- Model Card Header --- */
+.card-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 42px; /* 42 Bratuha!? */
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.badges-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    pointer-events: none;
+}
+
+.checkbox-container {
+    position: relative;
+    pointer-events: auto;
+}
+
+.delete-button-container {
+    position: relative;
+    pointer-events: auto;
+}
+
+/* Outdated card: delete button + checkbox stacked */
+.outdated-card-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    pointer-events: auto;
+}
+.outdated-card-actions .delete-model-btn {
+    position: relative;
+    top: auto;
+    right: auto;
+}
+.outdated-card-actions .checkbox-container {
+    position: relative;
+}
+
+.delete-model-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(220, 38, 38, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+    pointer-events: auto;
+    padding: 0;
+}
+
+.delete-model-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: white;
+    pointer-events: none;
+}
+
+.delete-model-btn:hover {
+    background: rgba(239, 68, 68, 0.9);
+    border-color: #ffffff;
+    box-shadow: 0 2px 12px 0 rgba(220, 38, 38, 0.5);
+    transform: scale(1.05);
+}
+
+/* --- Model Card Badges --- */
+/* Type Badge */
+.model-type-badge {
+    display: flex;
+    height: 22px;
+    padding: 4px 10px;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(6px);
+    font-size: 0.75em;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    pointer-events: none !important;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: fit-content;
+}
+/* Early Access Badge */
+.civmodelcard.early-access .early-access-icon { /* Icon */
+    fill: #e0e0e0;
+    margin-left: -4px;
+    margin-right: 2px;
+    width: 14px;
+    height: 14px;
+}
+
+.civmodelcard.early-access { /* Model Card */
+    box-shadow: 0 6px 15px -2px color-mix(in srgb, #e0e0e0 20%, rgba(0, 0, 0, 0.1));
+    border-color: color-mix(in srgb, #e0e0e0 40%, rgba(255, 255, 255, 0.3));
+}
+.civmodelcard.early-access .early-access-badge { /* Model Type Badge */
+    color: #e0e0e0;
+    border-color: color-mix(in srgb, #e0e0e0 40%, rgba(255, 255, 255, 0.3));
+}
+
+/* NSFW Badge */
+.nsfw-badge {
+    display: flex;
+    height: 22px;
+    padding: 4px 8px;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(6px);
+    font-size: 0.75em;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    pointer-events: none !important;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: fit-content;
+}
+.nsfw-badge .nsfw-badge-icon {
+    fill: rgba(255, 255, 255, 0.2);
+    margin-left: -4px;
+    margin-right: 4px;
+    width: 14px;
+    height: 14px;
+}
+
+.civmodelcard:hover .badges-container .model-type-badge,
+.civmodelcard:hover .badges-container .nsfw-badge,
+.civmodelcard:hover .badges-container .status-badge {
+    opacity: 0;
+    transform: translateX(-10px);
+}
+
+/* Status Badge (New / Updated) */
+.status-badge {
+    display: flex;
+    height: 22px;
+    padding: 4px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(6px);
+    font-size: 0.75em;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    pointer-events: none !important;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: fit-content;
+}
+.status-badge.new {
+    background: rgba(16, 185, 129, 0.85);
+    border-color: rgba(52, 211, 153, 0.6);
+    color: #fff;
+}
+.status-badge.updated {
+    background: rgba(34, 197, 94, 0.75);
+    border-color: rgba(74, 222, 128, 0.5);
+    color: #ecfdf5;
+}
+
+/* Base model separator / abbreviation inside type badge (e.g. "Checkpoint | IL") */
+.model-type-badge .base-model-sep {
+    margin: 0 3px;
+    opacity: 0.45;
+    font-weight: 400;
+}
+.model-type-badge .base-model-short {
+    font-weight: 700;
+}
+
+/* Modern Custom-Checkbox */
+/* This style is required for the correct display and functionality of the custom checkbox */
+.model-checkbox {
+    opacity: 0;
+    position: absolute;
+    top: 0;
+    right: 0;
+    pointer-events: auto;
+}
+
+.custom-checkbox {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+    pointer-events: auto;
+}
+
+.custom-checkbox:hover {
+    border-color: #ffffff;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.2);
+}
+
+.model-checkbox:checked + .custom-checkbox {
+    background: rgba(0, 0, 0, 0.75);
+    border: 2px solid #2ee59d;
+    box-shadow: 0 2px 12px 0 rgba(46, 229, 157, 0.25);
+}
+
+.checkbox-checkmark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0.7);
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.checkbox-checkmark::before {
+    content: '';
+    display: block;
+    width: 14px;
+    height: 14px;
+    background-image: url("data:image/svg+xml;utf8,<svg width='14' height='14' xmlns='http://www.w3.org/2000/svg'><polyline points='3,8 6,11 11,4' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 12px 12px;
+}
+
+.model-checkbox:checked + .custom-checkbox .checkbox-checkmark {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* End of Card list HTML */
+
+#quicksettings0 > div {
+    max-width: None !important;
+    width: auto !important;
+}
+
+#togglesL {
+    margin-top: 3px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#toggles {
+    margin-top: -10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#searchType > div {
+    gap: 0.5em;
+}
+
+#browserTab {
+    position: relative;
+}
+
+#browserTab > div {
+    gap: var(--layout-gap) !important;
+}
+
+#browserTab > div > #header {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    background: color-mix(in srgb, var(--background-fill-primary) 85%, transparent);
+    z-index: 60;
+}
+
+#txt2img_seed > label > input {
+    height: unset !important;
+}
+
+#browserTab > div > #header,
+#browserTab > div > #header_off {
+    display: flex;
+    flex-direction: column;
+    padding-top: 15px;
+    margin-top: -15px;
+}
+
+#toggle1,
+#toggle2,
+#toggle3,
+#toggle4,
+#toggle4_api,
+#toggle5,
+#toggle6 {
+    margin-top: 5px;
+    margin-right: 0px;
+    margin-left: 0px;
+    display: flex;
+    justify-content: center;
+}
+
+#civitai_update_toggles > div {
+    display: flex;
+    flex-direction: column;
+}
+
+#civitai_update_toggles {
+    margin-top: calc(-1 * var(--layout-gap));
+    margin-bottom: var(--layout-gap);
+}
+
+#toggle1L,
+#toggle2L,
+#toggle3L,
+#toggle4L,
+#toggle4L_api,
+#toggle5L,
+#toggle6L,
+#overwrite_toggle,
+#skip_hash_toggle,
+#do_html_gen {
+    display: flex;
+    justify-content: center;
+}
+
+#centerText,
+#searchType {
+    text-align: center;
+}
+
+#browserTab {
+    min-height: 650px;
+}
+
+#download_all_button {
+    max-height: 40px;
+    height: 40px;
+    align-self: end;
+    margin-bottom: 1px;
+}
+
+#searchBox > label > textarea {
+    padding-top: 11px !important;
+}
+
+#searchBox {
+    max-width: 800px;
+    align-self: center;
+}
+
+#baseMdl {
+    min-width: 100px !important;
+    max-width: 100px !important;
+}
+
+#spanWidth {
+    display: flex !important;
+    flex-direction: row;
+}
+
+#spanWidth > div {
+    flex-wrap: nowrap;
+}
+
+/* === Modern Date-Filtered Layout === */
+/* Container for date sections masonry layout */
+.date-sections-container {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 16px;
+    gap: 16px;
+}
+
+/* Date section styling */
+.date-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    padding: 16px;
+    /* min-width: 300px; */
+    background: var(--background-fill-secondary);
+    border: 1px solid var(--border-color-primary);
+    border-radius: 8px;
+    align-self: stretch;
+}
+.date-section h4 {
+    display: flex;
+    color: #495057;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+    padding: 8px 0;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.date-section h4::before {
+    content: '';
+    width: 20px;
+    height: 20px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23495057'%3E%3Cpath d='M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.card-counter {
+    color: var(--body-text-color);
+    font-size: 14px;
+    font-weight: 400;
+    margin-left: 8px;
+    padding: 2px 8px;
+    background: var(--background-fill-primary);
+    border: 1px solid var(--border-color-primary);
+    border-radius: 12px;
+}
+
+/* Horizontal layout for cards within date sections */
+.date-section .card-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-around;
+    gap: 12px;
+}
+
+/* End of Date-Filtered Layout */
+
+#selected_tags {
+    text-align: center;
+}
+
+#pageBtn1,
+#pageBtn2 {
+    max-width: 120px !important;
+    min-width: 50px !important;
+}
+
+#pageSlider {
+    max-height: 44px;
+}
+
+#pageSlider > div:nth-child(2) {
+    max-height: 25px;
+}
+
+#pageBoxMobile {
+    display: flex;
+    justify-content: space-between;
+}
+
+#pageBox {
+    display: flex;
+    justify-content: center;
+    align-self: center;
+    max-width: 950px !important;
+}
+
+#pageBox > div:first-child {
+    align-items: end;
+}
+
+#refreshBtn,
+#refreshBtnL {
+    align-self: end;
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+    max-width: 42px !important;
+    min-width: 42px !important;
+    width: 42px !important;
+    padding: 0px !important;
+}
+
+#refreshBtn > img,
+#refreshBtnL > img {
+    margin: unset;
+}
+
+#searchRow {
+    max-width: 800px;
+    align-self: center;
+}
+
+#save_set_box {
+    display: flex;
+    justify-content: center;
+}
+
+#save_set_btn {
+    max-width: 220px !important;
+    min-width: 220px !important;
+    margin-bottom: -6px;
+    padding: 5px;
+    height: unset !important;
+    min-height: 35px !important;
+}
+
+#searchType > div:nth-child(3) {
+    justify-content: center;
+}
+
+.open-in-civitai {
+    font-size: 18pt;
+    color: var(--body-text-color);
+    display: flex;
+    justify-content: center;
+    margin-top: -12px;
+}
+
+#select_all_models_container {
+    display: flex;
+    justify-content: flex-end;
+}
+
+#select_all_models {
+    max-width: 100px;
+    min-width: 100px;
+    min-height: 30px;
+    padding: 0px;
+    margin-top: -25px;
+}
+
+.civitai_dl_item,
+.civitai_dl_item_completed,
+.civitai_dl_item_failed {
+    background-color: var(--error-background-fill);
+    border-radius: 8px;
+    padding: 5px 0px;
+    border: 1px solid var(--input-border-color);
+    margin: 10px 0px;
+}
+
+.civitai_dl_item_failed > .dl_stat > .dl_progress_bar {
+    background-color: transparent !important;
+    padding: 0px 0px 2px 0px !important;
+}
+
+.dl_progress_bar {
+    background-color: var(--button-primary-border-color);
+    color: var(--body-text-color);
+    padding: 0px 0px 2px 5px;
+    border-radius: 8px;
+    transition: width 0.5s ease-in-out;
+}
+
+.dl_progress_bar::before,
+.dl_progress_bar::after {
+    content: '';
+    display: table;
+    clear: both;
+}
+
+.civitai-btn-text:hover {
+    color: var(--link-text-color-hover);
+    cursor: pointer;
+}
+
+/* Customized Accordion Filter */
+
+#filterBox,
+#filterBoxL {
+    align-self: end;
+    height: 42px;
+    max-width: 42px;
+    padding: unset !important;
+    margin: 0px !important;
+    display: flex;
+    justify-content: center;
+}
+
+#filterBox {
+    background: var(--button-secondary-background-fill);
+}
+
+#filterBoxL {
+    background: var(--input-background-fill);
+}
+
+#filterBox:hover,
+#filterBoxL:hover {
+    background: var(--button-secondary-background-fill-hover);
+}
+
+#filterBox .label-wrap.open,
+#filterBoxL .label-wrap.open {
+    border-bottom: unset !important;
+    background: var(--button-secondary-background-fill-hover);
+    border-radius: 7px !important;
+    height: 40px;
+}
+
+#filterBox > div:nth-child(3),
+#filterBoxL > div:nth-child(3) {
+    padding: 20px;
+    position: absolute;
+    border-radius: 10px;
+    width: 300px;
+    z-index: 100 !important;
+    margin-top: 55px;
+}
+
+.browser_tooltip {
+    box-shadow: var(--body-text-color) 0px 0px 2px 0px;
+    background: var(--background-fill-primary);
+    color: var(--body-text-color);
+    border-radius: 3px;
+    padding: 10px;
+    position: absolute;
+    z-index: 50;
+    margin-top: 30px;
+}
+
+#toggle4 > label > span,
+#toggle4L > label > span {
+    color: var(--neutral-400);
+}
+
+#filterBox > div:nth-child(3),
+#toggle4 > div:nth-child(3) {
+    background: var(--background-fill-primary);
+}
+
+#filterBoxL > div:nth-child(3),
+#toggle4L > div:nth-child(3) {
+    background: var(--neutral-950);
+}
+
+#filterBox > div:nth-child(2),
+#filterBoxL > div:nth-child(2) {
+    padding: 10px !important;
+}
+
+#filterBox .gradio-slider input[type='number'],
+#filterBoxL .gradio-slider input[type='number'] {
+    width: 70px !important;
+}
+
+#pageBox .gradio-slider input[type='number'] {
+    width: 5em !important;
+}
+
+#filterBox > div:nth-child(2) > span:nth-child(1),
+#filterBoxL > div:nth-child(2) > span:nth-child(1) {
+    display: none;
+}
+
+#filterBox > div:nth-child(2) > span:nth-child(2),
+#filterBoxL > div:nth-child(2) > span:nth-child(2) {
+    transform: rotate(0deg) !important;
+    transition: 0s !important;
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    font-size: 0;
+    color: transparent;
+    overflow: hidden;
+}
+
+#filterBox > div:nth-child(2) > span:nth-child(2)::before,
+#filterBoxL > div:nth-child(2) > span:nth-child(2)::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* End of Custom Accordion */
+
+.card-button {
+    width: 42px !important;
+}
+
+.edit-button.card-button::before {
+    font-size: 90%;
+    vertical-align: top;
+}
+
+.copy-path-button.card-button::before {
+    font-size: 110%;
+}
+
+.copy-path-button.card-button {
+    margin-top: -4px;
+}
+
+.goto-civitbrowser.card-button {
+    filter: drop-shadow(2px 2px 3px black);
+    display: flex;
+    align-items: center;
+}
+
+.goto-civitbrowser.card-button:hover svg {
+    fill: red !important;
+}
+
+/* Custom settings Accordion */
+.settings-accordion {
+    border: 1px solid var(--block-border-color);
+    border-radius: 8px !important;
+    margin: 15px 0px 2px 0px;
+    padding: 8px 8px;
+}
+
+.flex-column-layout {
+    display: flex;
+    gap: 10px;
+    flex-direction: column;
+}
+
+.sub-folder-button-container {
+    width: 100%;
+}
+
+.guide-button {
+    position: relative;
+    z-index: 1;
+}
+
+.plus-button {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 0;
+}
+
+#accordionToggle {
+    width: 100%;
+    display: flex;
+    font-size: 12pt;
+    justify-content: space-between;
+}
+
+#selected_tags > div {
+    justify-content: center;
+    padding-top: 10px;
+    padding-bottom: 20px;
+}
+
+/* === HTML Model Page Preview === */
+
+#civitai_preview_html {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    color: var(--body-text-color);
+}
+
+/* == Main Container Layout == */
+#civitai_preview_html .main-container {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 10px;
+    /* width: 100%; */
+    gap: 16px;
+}
+
+/* Model Page and Uploader Block */
+#civitai_preview_html .header-block {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background: var(--background-fill-secondary);
+    border: 1px solid var(--border-color-primary);
+    border-radius: 12px;
+    gap: 16px;
+}
+
+#civitai_preview_html .model-page-line,
+#civitai_preview_html .model-uploader-line {
+    display: flex;
+    align-items: center;
+    line-height: 1;
+    gap: 12px;
+}
+#civitai_preview_html .page-label,
+#civitai_preview_html .uploader-label {
+    font-size: 20px;
+    font-weight: 600;
+    color: #8b5cf6;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+#civitai_preview_html .model-page-line a,
+#civitai_preview_html .model-uploader-line a {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--body-text-color);
+    text-decoration: none;
+}
+#civitai_preview_html .model-page-line a:hover,
+#civitai_preview_html .model-uploader-line a:hover {
+    color: var(--link-text-color-hover);
+}
+
+/* Uploader Divider */
+#civitai_preview_html .uploader-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Uploader Avatar */
+#civitai_preview_html .model-uploader-line .avatar {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+/* == Model Info Section == */
+#civitai_preview_html .info-section {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 16px;
+}
+
+/* Info and Permissions Container */
+#civitai_preview_html .info-permissions-container {
+    display: flex;
+    gap: 16px;
+}
+@media (max-width: 1500px) {
+    #civitai_preview_html .info-permissions-container {
+        flex-direction: column;
+        gap: 16px;
+    }
+}
+
+/* - Version Info Block - */
+#civitai_preview_html .version-info-block {
+    display: flex;
+    flex-direction: column;
+    flex: auto;
+    padding: 20px;
+    background: var(--background-fill-secondary);
+    border: 1px solid var(--border-color-primary);
+    border-radius: 16px;
+    line-height: 1;
+    gap: 16px;
+}
+
+#civitai_preview_html .version-info-block dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    margin: 0;
+    align-items: center;
+    gap: 15px 20px;
+}
+#civitai_preview_html .version-info-block dt {
+    font-size: 14px;
+    font-weight: 600;
+    color: #8b5cf6;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+#civitai_preview_html .version-info-block dd {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--body-text-color);
+    margin: 0;
+    word-break: break-word;
+}
+
+/* Tags Container */
+#civitai_preview_html .civitai-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+#civitai_preview_html .civitai-tag {
+    color: white;
+    font-size: 0.8em;
+    font-weight: 500;
+    padding: 6px 12px;
+    background: var(--button-secondary-background-fill);
+    border: 1px solid var(--border-color-accent);
+    border-radius: 20px;
+    line-height: 1;
+}
+
+/* - Permissions Block - */
+#civitai_preview_html .permissions-block {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 16px;
+    gap: 16px;
+}
+#civitai_preview_html .permissions-block svg {
+    display: inline-block;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+#civitai_preview_html .permissions-block p {
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.8;
+    text-wrap: nowrap;
+}
+
+/* - Description Block - */
+#civitai_preview_html .description-block {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background: var(--background-fill-secondary);
+    border: 1px solid var(--border-color-primary);
+    border-radius: 16px;
+    gap: 16px;
+}
+
+#civitai_preview_html .description-wrapper {
+    position: relative;
+}
+#civitai_preview_html .description-content {
+    padding: 10px;
+    max-height: 400px;
+    border-radius: 16px;
+    overflow-wrap: break-word;
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out;
+}
+
+#civitai_preview_html .description-overlay {
+    position: absolute;
+    bottom: 40px;
+    left: 0;
+    right: 0;
+    height: 150px;
+    background: linear-gradient(to bottom, transparent 0%, var(--background-fill-secondary) 80%);
+    pointer-events: none;
+    opacity: 1;
+    transition: all 0.4s ease-in-out;
+}
+#civitai_preview_html .description-overlay.hidden {
+    opacity: 0;
+}
+
+#civitai_preview_html .description-toggle-btn {
+    display: block;
+    margin: 10px auto 0;
+    padding: 8px 16px;
+    color: var(--button-primary-text-color);
+    font-size: 14px;
+    font-weight: 500;
+    background: var(--button-primary-background-fill);
+    border: 1px solid var(--button-primary-border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+#civitai_preview_html .description-toggle-btn:hover {
+    background: var(--button-primary-background-fill-hover);
+    border-color: var(--button-primary-border-color-hover);
+    color: var(--button-primary-text-color-hover);
+}
+#civitai_preview_html .description-toggle-btn.hidden {
+    display: none;
+}
+
+#civitai_preview_html .trained-words-block {
+    background: var(--block-background-fill);
+    border: 1px solid var(--block-border-color);
+    border-radius: var(--block-radius);
+    padding: 12px 16px;
+    margin-bottom: 12px;
+}
+#civitai_preview_html .trained-words-block .block-header {
+    text-align: center;
+    margin: 0 0 8px 0;
+    padding: 0;
+    line-height: 1;
+}
+#civitai_preview_html .trained-words-content {
+    font-size: 0.875rem;
+    color: var(--body-text-color);
+    word-break: break-word;
+    margin-bottom: 10px;
+}
+#civitai_preview_html .add-to-prompt-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: var(--button-small-radius);
+    border: 1px solid var(--button-primary-border-color);
+    background: var(--button-primary-background-fill);
+    color: var(--button-primary-text-color);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+#civitai_preview_html .add-to-prompt-btn:hover {
+    background: var(--button-primary-background-fill-hover);
+    border-color: var(--button-primary-border-color-hover);
+    color: var(--button-primary-text-color-hover);
+}
+
+/* Overlay trained-words-block */
+.civitai-overlay .trained-words-block {
+    background: var(--block-background-fill);
+    border: 1px solid var(--block-border-color);
+    border-radius: var(--block-radius);
+    padding: 12px 16px;
+    margin-bottom: 12px;
+}
+.civitai-overlay .trained-words-block .block-header {
+    text-align: center;
+    margin: 0 0 8px 0;
+    padding: 0;
+    line-height: 1;
+}
+.civitai-overlay .trained-words-content {
+    font-size: 0.875rem;
+    color: var(--body-text-color);
+    word-break: break-word;
+    margin-bottom: 10px;
+}
+.civitai-overlay .add-to-prompt-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: var(--button-small-radius);
+    border: 1px solid var(--button-primary-border-color);
+    background: var(--button-primary-background-fill);
+    color: var(--button-primary-text-color);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+.civitai-overlay .add-to-prompt-btn:hover {
+    background: var(--button-primary-background-fill-hover);
+    border-color: var(--button-primary-border-color-hover);
+    color: var(--button-primary-text-color-hover);
+}
+
+/* Trigger word rows — per-group rows with copy/add buttons */
+#civitai_preview_html .trigger-word-row,
+.civitai-overlay .trigger-word-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--block-border-color);
+}
+#civitai_preview_html .trigger-word-row:last-of-type,
+.civitai-overlay .trigger-word-row:last-of-type {
+    border-bottom: none;
+    margin-bottom: 8px;
+}
+#civitai_preview_html .trigger-word-text,
+.civitai-overlay .trigger-word-text {
+    font-size: 0.8rem;
+    color: var(--body-text-color);
+    word-break: break-word;
+    flex: 1;
+}
+#civitai_preview_html .lora-tag-row .trigger-word-text,
+.civitai-overlay .lora-tag-row .trigger-word-text {
+    font-family: monospace;
+    font-weight: 600;
+    color: #8b5cf6;
+}
+#civitai_preview_html .trigger-word-actions,
+.civitai-overlay .trigger-word-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+#civitai_preview_html .tw-copy-btn,
+#civitai_preview_html .tw-add-btn,
+.civitai-overlay .tw-copy-btn,
+.civitai-overlay .tw-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-radius: var(--button-small-radius);
+    border: 1px solid var(--block-border-color);
+    background: var(--block-background-fill);
+    color: var(--body-text-color);
+    transition: background 0.15s ease;
+    padding: 0;
+    line-height: 1;
+}
+#civitai_preview_html .tw-copy-btn:hover,
+#civitai_preview_html .tw-add-btn:hover,
+.civitai-overlay .tw-copy-btn:hover,
+.civitai-overlay .tw-add-btn:hover {
+    background: var(--block-border-color);
+}
+
+#civitai_preview_html .version-info-block .block-header,
+#civitai_preview_html .permissions-block .block-header,
+#civitai_preview_html .description-block .block-header {
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    line-height: 1;
+}
+
+/* Modern Links - UnderLine */
+#civitai_preview_html a {
+    position: relative;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+#civitai_preview_html a::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--link-text-color-hover);
+    transition: width 0.3s ease;
+}
+#civitai_preview_html a:hover::after {
+    width: 100%;
+}
+
+/* == Images section == */
+/* Images section */
+#civitai_preview_html .images-section {
+    display: flex;
+    flex-direction: column;
+}
+
+#civitai_preview_html .sampleimgs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Default: 2 columns */
+    gap: 16px;
+}
+/* Switch to 1 column if there is not enough space */
+@media (max-width: 1500px) {
+    #civitai_preview_html .sampleimgs {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Individual image block - horizontal layout */
+#civitai_preview_html .sampleimgs .image-block {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    margin: 0;
+    padding: 16px;
+    border: 1px solid var(--border-color-primary);
+    border-radius: 16px;
+    align-items: start;
+    gap: 16px;
+}
+
+/* Image container */
+#civitai_preview_html .civitai-image-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Image and video styling - preserve aspect ratio */
+#civitai_preview_html .sampleimgs .image-block img,
+#civitai_preview_html .sampleimgs .image-block video {
+    width: auto;
+    max-width: 250px;
+    height: auto;
+    border-radius: 8px;
+    object-fit: contain;
+    cursor: zoom-in;
+    display: block;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+#civitai_preview_html .sampleimgs .image-block img:hover,
+#civitai_preview_html .sampleimgs .image-block video:hover {
+    transform: scale(1.01);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Send to txt2img button */
+#civitai_preview_html .civitai-txt2img-btn {
+    display: inline-block;
+    padding: 8px 16px;
+    min-width: 120px;
+    color: var(--button-secondary-text-color);
+    font-size: 14px;
+    font-weight: 500;
+    background: var(--button-secondary-background-fill);
+    border: 1px solid var(--button-secondary-border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.1s ease;
+}
+#civitai_preview_html .civitai-txt2img-btn:hover {
+    background: var(--button-secondary-background-fill-hover);
+    transform: translateY(-1px);
+}
+
+/* Image metadata section - vertical layout */
+#civitai_preview_html #image_info {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+/* Definition list for metadata */
+#civitai_preview_html #image_info dl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+}
+
+/* Metadata blocks */
+#civitai_preview_html .civitai-meta,
+#civitai_preview_html .civitai-meta-btn {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    padding: 12px;
+    width: fit-content;
+    background: var(--background-fill-secondary);
+    border: 1px solid var(--border-color-primary);
+    border-radius: 6px;
+    justify-content: space-between;
+    align-self: stretch;
+    transition: all 0.1s ease;
+}
+#civitai_preview_html .civitai-meta-btn:hover {
+    background: var(--background-fill-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+}
+#civitai_preview_html .civitai-meta {
+    background: color-mix(in srgb, var(--background-fill-primary), transparent);
+}
+
+#civitai_preview_html .civitai-meta dt,
+#civitai_preview_html .civitai-meta-btn dt {
+    margin: 0 0 4px 0;
+    color: #8b5cf6;
+    font-size: 16px;
+    font-weight: 600;
+}
+#civitai_preview_html .civitai-meta dd,
+#civitai_preview_html .civitai-meta-btn dd {
+    margin: 0;
+    color: var(--body-text-color);
+    font-size: 14px;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+/* Empty state for missing metadata */
+/* Full-width error block */
+#civitai_preview_html .sampleimgs .image-block-empty {
+    display: flex;
+    grid-column: 1 / -1;
+    flex-direction: column;
+    margin: 0;
+    border-radius: 16px;
+    align-items: center;
+    justify-content: center;
+}
+
+#civitai_preview_html .image-metadata-empty {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    padding: 32px 16px;
+    width: 100%;
+    min-width: 100%;
+    color: var(--body-text-color-subdued);
+    background: var(--background-fill-secondary);
+    border: 2px dashed var(--border-color-accent);
+    border-radius: 12px;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+#civitai_preview_html .empty-state-icon {
+    margin-bottom: 16px;
+    color: var(--body-text-color-subdued);
+    opacity: 0.6;
+}
+#civitai_preview_html .empty-state-icon svg {
+    width: 48px;
+    height: 48px;
+    stroke: currentColor;
+}
+#civitai_preview_html .empty-state-text h4 {
+    margin: 0 0 8px 0;
+    color: var(--body-text-color);
+    font-size: 18px;
+    font-weight: 600;
+}
+#civitai_preview_html .empty-state-text p {
+    margin: 0;
+    color: var(--body-text-color-subdued);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* More details accordion */
+#civitai_preview_html .tabs {
+    margin-top: 12px;
+    width: 100%;
+}
+#civitai_preview_html .tab {
+    border: 1px solid var(--border-color-primary);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--background-fill-secondary);
+}
+
+/* Label */
+#civitai_preview_html .tab-label {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 12px 16px;
+    color: var(--body-text-color-subdued);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    gap: 8px;
+    transition: color 0.2s ease;
+}
+#civitai_preview_html .tab-label:hover {
+    color: var(--body-text-color);
+}
+/* Arrow-Icon */
+#civitai_preview_html .tab-label::before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9,18 15,12 9,6'%3E%3C/polyline%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    transition: transform 0.3s ease;
+}
+#civitai_preview_html .accordionCheckbox:checked + .tab-label::before {
+    transform: rotate(90deg);
+}
+
+/* Details Content */
+#civitai_preview_html .tab-content {
+    display: flex;
+    flex-wrap: wrap;
+    max-height: 0;
+    padding: 0 16px;
+    overflow: hidden;
+    opacity: 0;
+    gap: 8px;
+    transition: max-height 0.35s ease, opacity 0.35s ease, padding 0.25s ease;
+}
+#civitai_preview_html .accordionCheckbox:checked ~ .tab-content {
+    padding: 16px;
+    max-height: 4000px; /* BullShit */
+    border-top: 1px solid var(--border-color-primary);
+    opacity: 1;
+}
+
+#civitai_preview_html .accordionCheckbox {
+    display: none;
+}
+
+/* End HTML Model Page Preview */
+
+/* === Simple Image Viewer === */
+.viewer-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 99999 !important;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    cursor: default;
+    overflow: hidden;
+}
+.viewer-overlay.active {
+    display: flex !important;
+    opacity: 1;
+}
+
+.viewer-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    position: relative;
+    box-sizing: border-box;
+}
+.viewer-media {
+    max-width: calc(100vw - 80px);
+    max-height: calc(100vh - 80px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8);
+    cursor: default;
+    user-select: none;
+    transition: transform 0.2s ease;
+    margin: auto;
+}
+.viewer-media:hover {
+    transform: scale(1.02);
+}
+
+/* Viewer Animations */
+@keyframes viewerFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+@keyframes viewerFadeOut {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+}
+
+.viewer-overlay.active .viewer-media {
+    animation: viewerFadeIn 0.4s ease forwards;
+}
+.viewer-overlay.closing .viewer-media {
+    animation: viewerFadeOut 0.3s ease forwards;
+}
+
+/* Ensure viewer works in all contexts */
+#civitai_preview_html .viewer-overlay,
+.civitai-overlay .viewer-overlay {
+    z-index: 99999 !important;
+}
+
+/* End Simple Image Viewer */
+
+/* === Civitai Overlay | Clicking on Civitai Button in ExtraNetwork Tab === */
+.civitai-overlay {
+    position: fixed;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 60px;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(5px);
+    overflow-y: auto;
+    opacity: 0;
+    z-index: 1001;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+.civitai-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.civitai-overlay-inner {
+    position: relative;
+    box-sizing: border-box;
+    padding: 1em;
+    width: 100%;
+    height: auto;
+    min-height: 100%;
+    background: var(--neutral-950);
+    border: solid 1px var(--block-border-color);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+    opacity: 0;
+    z-index: 1001;
+    transform: translateY(20px);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.civitai-overlay.show .civitai-overlay-inner {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.civitai-overlay-text {
+    position: absolute;
+    color: white;
+    font-size: 24px;
+    font-family: var(--font);
+    top: 50%;
+    left: 50%;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 1002;
+    transform: translate(-50%, -50%);
+    animation: fadeInText 0.5s ease 0.2s forwards;
+}
+
+@keyframes fadeInText {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) translateY(0);
+    }
+}
+
+/* Hide scrollbars */
+.civitai-overlay::-webkit-scrollbar {
+    display: none;
+}
+.civitai-overlay {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* ── Update Mode ─────────────────────────────────── */
+
+/* Mode switcher — two pills: Search CivitAI | Update Local Models */
+.civupdate-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.civupdate-switcher {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.mode-pill {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 20px;
+    color: #ccc;
+    font-size: 13px;
+    padding: 5px 16px;
+    cursor: pointer;
+    transition: background 0.18s, border-color 0.18s, color 0.18s;
+}
+.mode-pill:hover {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+}
+.mode-pill-active {
+    background: rgba(255, 140, 0, 0.2);
+    border-color: #e07b00;
+    color: #ffb347;
+    font-weight: 600;
+    cursor: default;
+}
+
+/* Action bar shown below the switcher in Update Mode */
+.civupdate-action-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: rgba(255, 140, 0, 0.09);
+    border: 1px solid rgba(224, 123, 0, 0.5);
+    border-radius: 8px;
+    padding: 8px 14px;
+}
+
+.civupdate-count {
+    flex: 1;
+    font-size: 13px;
+    color: #ddd;
+    min-width: 180px;
+}
+
+.civupdate-btn-all {
+    background: #e07b00;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.18s;
+}
+.civupdate-btn-all:hover { background: #ff9520; }
+
+.civupdate-retention {
+    font-size: 11.5px;
+    color: #999;
+    white-space: nowrap;
+}
+
+/* Update-mode card grid (reuses .civmodelcards base) */
+.update-mode-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 4px 0;
+}
+
+.update-mode-card {
+    border: 2px solid #e07b00 !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--card-background-fill, #1e1e2e);
+    position: relative;
+}
+
+.update-card-thumb {
+    width: 100%;
+    aspect-ratio: 2/3;
+    overflow: hidden;
+    background: #2a2a40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.update-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.update-card-no-thumb {
+    font-size: 36px;
+    opacity: 0.15;
+}
+
+.update-card-caption {
+    padding: 6px 8px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.update-card-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #ddd;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.update-card-badges {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.update-badge {
+    display: inline-block;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.update-badge-type {
+    background: rgba(99,179,237,0.15);
+    color: #63b3ed;
+}
+
+/* Family-specific colours */
+.update-badge-family.pony    { background: rgba(236,153,75,0.2);  color: #ec994b; }
+.update-badge-family.illustrious,
+.update-badge-family.il      { background: rgba(160,130,240,0.2); color: #b896ff; }
+.update-badge-family.sdxl    { background: rgba(72,199,142,0.2);  color: #48c78e; }
+.update-badge-family.flux    { background: rgba(90,210,235,0.2);  color: #5ad2eb; }
+.update-badge-family         { background: rgba(180,180,180,0.15); color: #ccc;   }
+
+.update-card-versions {
+    font-size: 11px;
+    color: #aaa;
+}
+.ver-old { text-decoration: line-through; color: #888; }
+.ver-arrow { color: #666; }
+.ver-new { color: #7ec18a; font-weight: 600; }
+
+.update-card-btn {
+    align-self: flex-end;
+    margin-top: 2px;
+    background: #e07b00;
+    border: none;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+    width: 100%;
+}
+.update-card-btn:hover { background: #ff9520; }
+
+/* ── Update Mode: version selector list (revamp) ─────────────────────────── */
+
+.update-card-ver-list {
+    max-height: 100px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 2px;
+    padding-right: 2px;
+}
+
+/* Custom scrollbar for the version list */
+.update-card-ver-list::-webkit-scrollbar {
+    width: 4px;
+}
+.update-card-ver-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+.update-card-ver-list::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 2px;
+}
+
+.ver-option {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: #bbb;
+    cursor: pointer;
+    padding: 1px 2px;
+    border-radius: 3px;
+    transition: background 0.1s;
+}
+.ver-option:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.ver-option input[type="checkbox"] {
+    width: 12px;
+    height: 12px;
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: #e07b00;
+}
+
+.ver-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 0 4px;
+    border-radius: 3px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.ver-badge.latest {
+    background: rgba(126, 193, 138, 0.2);
+    color: #7ec18a;
+}
+.ver-badge.installed {
+    background: rgba(200, 180, 100, 0.2);
+    color: #c8b464;
+}
