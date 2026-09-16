@@ -1,3 +1,37 @@
+/* ============================================================
+   融合版：内联尺寸工具条（宽高滑块正下方）
+   设计原则：与滑块同属一个视觉簇，紧凑、低层级、无块状感
+   ============================================================ */
+#txt2img_settings .arh-inline-tools,
+#img2img_settings .arh-inline-tools {
+    margin-top: -2px;
+    padding: 0;
+    border: none;
+    background: transparent;
+}
+
+#txt2img_settings .arh-inline-tools > .block,
+#img2img_settings .arh-inline-tools > .block {
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+/* 内联模式下图形比例按钮再收紧一档 */
+.arh-inline-tools .arh-shape-buttons {
+    gap: 4px;
+    padding: 2px 0 6px;
+}
+
+.arh-inline-tools .arh-shape-btn {
+    padding: 4px 7px;
+    min-width: 46px;
+}
+
+.arh-inline-tools .arh-shape-rect {
+    transform: scale(0.92);
+}
+
 #txt2img_size_toolbox, #img2img_size_toolbox {
     min-width: unset !important;
     gap: 0;

@@ -21,8 +21,17 @@ DEFAULT_OUT = ROOT / "dist" / "sd-webui-agent-encrypted"
 
 PROTECTED_MODULES = [
     "agent",
+    "agent_chat",
+    "agent_ui",
     "agent_config",
     "agent_tools",
+    "agent_tools_common",
+    "agent_tools_models",
+    "agent_tools_image",
+    "agent_tools_api",
+    "agent_tools_video",
+    "agent_tools_workspace",
+    "agent_tools_schemas",
     "agent_tools_registry",
     "agent_prompts",
     "canva_mcp",

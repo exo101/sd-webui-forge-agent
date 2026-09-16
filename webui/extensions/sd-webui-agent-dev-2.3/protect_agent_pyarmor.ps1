@@ -29,8 +29,17 @@ Copy-Item -LiteralPath (Join-Path $Scripts "agent.py") -Destination $OutScripts
 Copy-Item -LiteralPath (Join-Path $Root "agent_config.json") -Destination $Out
 
 $Modules = @(
+    "agent_chat.py",
+    "agent_ui.py",
     "agent_config.py",
     "agent_tools.py",
+    "agent_tools_common.py",
+    "agent_tools_models.py",
+    "agent_tools_image.py",
+    "agent_tools_api.py",
+    "agent_tools_video.py",
+    "agent_tools_workspace.py",
+    "agent_tools_schemas.py",
     "agent_tools_registry.py",
     "agent_prompts.py",
     "canva_mcp.py"
@@ -44,6 +53,13 @@ foreach ($Module in $Modules) {
             throw "PyArmor failed on $Module"
         }
     }
+}
+
+# Copy remaining plain modules (no secrets/core logic) so the build is complete.
+Get-ChildItem -LiteralPath $Scripts -Filter *.py -File | ForEach-Object {
+    if ($_.Name -eq "agent.py" -or $Modules -contains $_.Name) { return }
+    Copy-Item -LiteralPath $_.FullName -Destination $OutScripts
+    Write-Host "[Agent Protect] Copied plain module: $($_.Name)"
 }
 
 $Readme = @"

@@ -4,18 +4,34 @@
     const VIEWER_ID = "pnginfo_compare_viewer";
     let beforeData = null;
     let afterData = null;
+    let previewObserverReady = false;
 
-    function readImage(input, callback) {
-        const file = input && input.files && input.files[0];
-        if (!file) return;
+    // A src is usable if it's a data URI, a Gradio /file= temp URL, or an http(s) URL
+    function isUsableSrc(src) {
+        if (!src) return false;
+        return src.indexOf("data:") === 0 || src.indexOf("/file=") !== -1 || /^https?:\/\//i.test(src);
+    }
 
-        const reader = new FileReader();
-        reader.onload = () => callback({
-            url: reader.result,
-            width: 0,
-            height: 0,
-        });
-        reader.readAsDataURL(file);
+    function setSide(side, url) {
+        if (!isUsableSrc(url)) return;
+        if (side === "before") beforeData = { url };
+        else if (side === "after") afterData = { url };
+        render();
+    }
+
+    function scanPreviewImages(root = document) {
+        const beforeRoot = document.getElementById(BEFORE_ID);
+        const afterRoot = document.getElementById(AFTER_ID);
+        if (!beforeRoot && !afterRoot) return;
+        const images = [];
+        if (root instanceof HTMLImageElement) images.push(root);
+        if (root.querySelectorAll) images.push(...root.querySelectorAll("img"));
+        for (const img of images) {
+            const src = img.getAttribute("src") || img.currentSrc;
+            if (!isUsableSrc(src)) continue;
+            if (beforeRoot && beforeRoot.contains(img)) setSide("before", src);
+            else if (afterRoot && afterRoot.contains(img)) setSide("after", src);
+        }
     }
 
     function render() {
@@ -23,7 +39,7 @@
         if (!viewer) return;
 
         if (!beforeData || !afterData) {
-            viewer.innerHTML = '<div class="pnginfo-compare-empty">请上传两张图片进行对比</div>';
+            viewer.innerHTML = '<div class="pnginfo-compare-empty">请上传两张图片进行对比（"原图" 与 "对比图" 各一张，支持点击选择、拖拽或粘贴）</div>';
             return;
         }
 
@@ -38,7 +54,7 @@
                 </div>
             </div>
             <input class="pnginfo-compare-slider" type="range" min="0" max="100" value="50" aria-label="调整图像对比分界线">
-            <div class="pnginfo-compare-labels"><span>原图</span><span>对比图</span></div>
+            <div class="pnginfo-compare-labels"><span>原图（左）</span><span>对比图（右）</span></div>
         `;
 
         const slider = viewer.querySelector(".pnginfo-compare-slider");
@@ -51,33 +67,77 @@
         });
     }
 
-    function bind() {
-        return Boolean(
-            document.getElementById(BEFORE_ID) &&
-            document.getElementById(AFTER_ID) &&
-            document.getElementById(VIEWER_ID),
-        );
+    // Fast path: read the chosen file directly from the picker input.
+    function bindFileInputs() {
+        const roots = [
+            [document.getElementById(BEFORE_ID), "before"],
+            [document.getElementById(AFTER_ID), "after"],
+        ];
+        for (const [root, side] of roots) {
+            if (!root) continue;
+            const input = root.querySelector('input[type="file"]');
+            if (!input || input.dataset.pnginfoCmpBound) continue;
+            input.dataset.pnginfoCmpBound = "1";
+            input.addEventListener("change", (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => setSide(side, reader.result);
+                reader.readAsDataURL(file);
+            });
+        }
     }
 
-    function installUploadListener() {
-        if (document.body.dataset.pnginfoCompareUploadBound) return;
+    // Gradio 5 may replace the native file input after the component has
+    // rendered. Keep a delegated listener on document so replacement inputs,
+    // drag/drop and picker uploads all use the same path.
+    function installUploadDelegation() {
+        if (document.body.dataset.pnginfoCompareUploadDelegated) return;
         document.addEventListener("change", (event) => {
-            if (!(event.target instanceof HTMLInputElement) || event.target.type !== "file") return;
+            const input = event.target;
+            if (!(input instanceof HTMLInputElement) || input.type !== "file") return;
             const beforeRoot = document.getElementById(BEFORE_ID);
             const afterRoot = document.getElementById(AFTER_ID);
-            if (beforeRoot && beforeRoot.contains(event.target)) {
-                readImage(event.target, (data) => {
-                    beforeData = data;
-                    render();
-                });
-            } else if (afterRoot && afterRoot.contains(event.target)) {
-                readImage(event.target, (data) => {
-                    afterData = data;
-                    render();
-                });
+            const side = beforeRoot && beforeRoot.contains(input)
+                ? "before"
+                : afterRoot && afterRoot.contains(input) ? "after" : null;
+            const file = input.files && input.files[0];
+            if (!side || !file) return;
+            const reader = new FileReader();
+            reader.onload = () => setSide(side, reader.result);
+            reader.readAsDataURL(file);
+        }, true);
+        document.body.dataset.pnginfoCompareUploadDelegated = "true";
+    }
+
+    // Robust path: watch the preview <img> that Gradio renders after ANY upload
+    // (picker, drag & drop, clipboard paste all end up as a preview img with a src).
+    function installPreviewObserver() {
+        if (previewObserverReady) return;
+        previewObserverReady = true;
+        new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                if (m.type === "childList") {
+                    bindFileInputs();
+                    for (const node of m.addedNodes) scanPreviewImages(node);
+                    continue;
+                }
+                if (m.type !== "attributes" || m.attributeName !== "src") continue;
+                const img = m.target;
+                if (!(img instanceof HTMLImageElement)) continue;
+                const src = img.getAttribute("src");
+                if (!isUsableSrc(src)) continue;
+                const beforeRoot = document.getElementById(BEFORE_ID);
+                const afterRoot = document.getElementById(AFTER_ID);
+                if (beforeRoot && beforeRoot.contains(img)) setSide("before", src);
+                else if (afterRoot && afterRoot.contains(img)) setSide("after", src);
             }
+        }).observe(document.body, {
+            attributes: true,
+            attributeFilter: ["src"],
+            childList: true,
+            subtree: true,
         });
-        document.body.dataset.pnginfoCompareUploadBound = "true";
     }
 
     function installStyles() {
@@ -124,18 +184,30 @@
         document.head.appendChild(style);
     }
 
+    function uiReady() {
+        return Boolean(
+            document.getElementById(BEFORE_ID) &&
+            document.getElementById(AFTER_ID) &&
+            document.getElementById(VIEWER_ID),
+        );
+    }
+
     function setup() {
         installStyles();
-        installUploadListener();
-        if (bind()) return;
-        setTimeout(setup, 100);
+        installPreviewObserver();
+        installUploadDelegation();
+        bindFileInputs();
+        scanPreviewImages();
+        if (!uiReady()) return false;
+        render();
+        return true;
     }
 
     onUiLoaded(() => {
-        setup();
-        new MutationObserver(bind).observe(document.body, {
-            childList: true,
-            subtree: true,
-        });
+        if (setup()) return;
+        // The PNG Info tab may render its components lazily; poll until they exist.
+        const timer = setInterval(() => {
+            if (setup()) clearInterval(timer);
+        }, 100);
     });
 })();

@@ -12,11 +12,14 @@ import io
 import json
 import base64
 import time
+import queue
+import threading
 import traceback
 from pathlib import Path
 
 import requests
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from PIL import Image
 from modules import script_callbacks, shared
 from modules_forge.main_thread import run_and_wait_result
@@ -33,7 +36,14 @@ except ImportError:
 # 会触发 agent.py 的第一次执行（注册 UI），WebUI 再正常加载 agent.py 时
 # 可能因模块名差异导致第二次执行 → 两个"绘梦智能体助手"标签页
 # =============================================================================
-AGENT_DEV_DIR = Path(__file__).parent.parent.parent / "sd-webui-agent-dev" / "scripts"
+_extensions_root = Path(__file__).parent.parent.parent
+AGENT_DEV_DIR = _extensions_root / "sd-webui-agent-dev" / "scripts"
+if not AGENT_DEV_DIR.is_dir():
+    # 兼容带版本号后缀的目录名，例如 sd-webui-agent-dev-2.2
+    for _candidate in sorted(_extensions_root.glob("sd-webui-agent-dev-*")):
+        if (_candidate / "scripts" / "agent.py").is_file():
+            AGENT_DEV_DIR = _candidate / "scripts"
+            break
 
 # 确保 sd-webui-agent-dev/scripts 在 sys.path 中
 if str(AGENT_DEV_DIR) not in sys.path:
@@ -262,6 +272,143 @@ def _call_llm_requests(messages, cfg, tools, tool_choice="auto"):
     return resp.json()
 
 
+# =============================================================================
+# LLM 流式调用（用于 chat-stream 端点，实时推送思考/回复文本）
+# 失败时抛出异常，由调用方回退到非流式
+# =============================================================================
+def _accumulate_chunk(choice, content_state, tool_acc, on_token):
+    """累积一个流式 chunk 的 content / tool_calls 增量，返回 finish_reason"""
+    delta = choice.delta
+    if delta is not None:
+        if getattr(delta, "content", None):
+            content_state["text"] += delta.content
+            if on_token:
+                on_token(delta.content)
+        for tc in (getattr(delta, "tool_calls", None) or []):
+            idx = tc.index if getattr(tc, "index", None) is not None else 0
+            acc = tool_acc.setdefault(
+                idx, {"id": "", "type": "function", "function": {"name": "", "arguments": ""}}
+            )
+            if getattr(tc, "id", None):
+                acc["id"] = tc.id
+            fn = getattr(tc, "function", None)
+            if fn is not None:
+                if getattr(fn, "name", None):
+                    acc["function"]["name"] += fn.name
+                if getattr(fn, "arguments", None):
+                    acc["function"]["arguments"] += fn.arguments
+    return getattr(choice, "finish_reason", None)
+
+
+def _chunk_to_response(content_state, tool_acc, finish_reason):
+    """把流式累积结果组装成与非流式一致的响应结构"""
+    message = {"role": "assistant", "content": content_state["text"] or None}
+    tool_calls = [tool_acc[i] for i in sorted(tool_acc.keys())]
+    if tool_calls:
+        message["tool_calls"] = tool_calls
+    return {"choices": [{"message": message, "finish_reason": finish_reason or "stop"}]}
+
+
+def _call_llm_stream(messages, cfg, tools, tool_choice="auto", on_token=None):
+    """调用 LLM API（流式），逐段回调 on_token(delta_text)，返回完整响应（与非流式同构）"""
+    try:
+        from openai import OpenAI
+    except ImportError:
+        return _call_llm_stream_requests(messages, cfg, tools, tool_choice, on_token)
+
+    client = OpenAI(
+        api_key=cfg.get("api_key", "local"),
+        base_url=cfg.get("base_url", "http://localhost:8080/v1"),
+        max_retries=1,
+    )
+    stream = client.chat.completions.create(
+        model=cfg.get("model", "Qwen3.5-4B-Q6_K.gguf"),
+        messages=messages,
+        tools=tools,
+        tool_choice=tool_choice,
+        stream=True,
+    )
+    content_state = {"text": ""}
+    tool_acc = {}
+    finish_reason = None
+    for chunk in stream:
+        choices = getattr(chunk, "choices", None) or []
+        if not choices:
+            continue
+        fr = _accumulate_chunk(choices[0], content_state, tool_acc, on_token)
+        if fr:
+            finish_reason = fr
+    return _chunk_to_response(content_state, tool_acc, finish_reason)
+
+
+def _call_llm_stream_requests(messages, cfg, tools, tool_choice="auto", on_token=None):
+    """requests 流式回退方案（解析 OpenAI SSE 格式）"""
+    url = cfg.get("base_url", "http://localhost:8080/v1").rstrip("/") + "/chat/completions"
+    payload = {
+        "model": cfg.get("model", "Qwen3.5-4B-Q6_K.gguf"),
+        "messages": messages,
+        "tools": tools,
+        "tool_choice": tool_choice,
+        "stream": True,
+        "max_tokens": 4096,
+    }
+    headers = {"Content-Type": "application/json"}
+    if cfg.get("api_key"):
+        headers["Authorization"] = f"Bearer {cfg['api_key']}"
+    resp = requests.post(url, json=payload, headers=headers, timeout=300, stream=True)
+    resp.raise_for_status()
+    content_state = {"text": ""}
+    tool_acc = {}
+    finish_reason = None
+    for raw in resp.iter_lines(decode_unicode=True):
+        if not raw or not raw.startswith("data:"):
+            continue
+        data = raw[5:].strip()
+        if data == "[DONE]":
+            break
+        try:
+            chunk = json.loads(data)
+        except json.JSONDecodeError:
+            continue
+        choices = chunk.get("choices") or []
+        if not choices:
+            continue
+        choice = choices[0]
+        delta = choice.get("delta") or {}
+        if delta.get("content"):
+            content_state["text"] += delta["content"]
+            if on_token:
+                on_token(delta["content"])
+        for tc in delta.get("tool_calls") or []:
+            idx = tc.get("index", 0)
+            acc = tool_acc.setdefault(
+                idx, {"id": "", "type": "function", "function": {"name": "", "arguments": ""}}
+            )
+            if tc.get("id"):
+                acc["id"] = tc["id"]
+            fn = tc.get("function") or {}
+            if fn.get("name"):
+                acc["function"]["name"] += fn["name"]
+            if fn.get("arguments"):
+                acc["function"]["arguments"] += fn["arguments"]
+        if choice.get("finish_reason"):
+            finish_reason = choice["finish_reason"]
+    return _chunk_to_response(content_state, tool_acc, finish_reason)
+
+
+def _call_llm_with_fallback(messages, cfg, tools, tool_choice="auto", on_event=None):
+    """优先流式调用（实时推送 token），失败自动回退非流式"""
+    if on_event:
+        try:
+            return _call_llm_stream(
+                messages, cfg, tools, tool_choice=tool_choice,
+                on_token=lambda d: on_event({"type": "token", "text": d}),
+            )
+        except Exception as e:
+            print(f"[PS Agent] LLM 流式调用失败，回退非流式: {e}")
+    return _call_llm(messages, cfg, tools, tool_choice=tool_choice)
+
+
 # 检测用户是否有工具调用意图
 TOOL_INTENT_KEYWORDS = [
     "生成", "画", "绘制", "创作", "制作", "创建", "做一张", "来一张",
@@ -287,8 +434,8 @@ def _has_tool_intent(text):
 # =============================================================================
 # 智能体聊天主逻辑（非流式）
 # =============================================================================
-def agent_chat(body: dict):
-    """智能体聊天主逻辑"""
+def agent_chat(body: dict, on_event=None):
+    """智能体聊天主逻辑。on_event 可选：流式端点传入，实时推送进度事件"""
     cfg = _get_cfg()
     user_message = body.get("message", "")
     image_base64 = body.get("image_base64", "")  # PS 传入的当前画布图片（单张，兼容）
@@ -404,6 +551,8 @@ def agent_chat(body: dict):
 
     for iteration in range(max_iter):
         print(f"[PS Agent] LLM 调用 第 {iteration + 1}/{max_iter} 次")
+        if on_event:
+            on_event({"type": "status", "text": "正在思考…" if iteration == 0 else f"正在思考…（第 {iteration + 1} 轮）"})
 
         # 模型感知策略：
         # - Qwen/ModelScope/DashScope 模型：原生支持 auto function calling
@@ -418,13 +567,13 @@ def agent_chat(body: dict):
         print(f"[PS Agent] tool_choice={tool_choice} (has_intent={has_intent}, has_images={has_images}, iter={iteration})")
 
         try:
-            resp = _call_llm(messages, cfg, tools, tool_choice=tool_choice)
+            resp = _call_llm_with_fallback(messages, cfg, tools, tool_choice=tool_choice, on_event=on_event)
         except Exception as e:
             # required 可能不被某些代理支持，回退到 auto 重试
             if tool_choice == "required":
                 print(f"[PS Agent] required 模式失败，回退 auto: {e}")
                 try:
-                    resp = _call_llm(messages, cfg, tools, tool_choice="auto")
+                    resp = _call_llm_with_fallback(messages, cfg, tools, tool_choice="auto", on_event=on_event)
                 except Exception as e2:
                     error_msg = str(e2)
                     print(f"[PS Agent] LLM 调用失败: {error_msg}")
@@ -456,7 +605,7 @@ def agent_chat(body: dict):
         if not tool_calls and has_intent and tool_choice != "required":
             print(f"[PS Agent] auto 模式无工具调用，用 required 重试...")
             try:
-                resp = _call_llm(messages, cfg, tools, tool_choice="required")
+                resp = _call_llm_with_fallback(messages, cfg, tools, tool_choice="required", on_event=on_event)
                 choices = resp.get("choices", [])
                 if choices:
                     choice_msg = choices[0].get("message", {})
@@ -502,6 +651,8 @@ def agent_chat(body: dict):
                 func_args = {}
 
             print(f"[PS Agent] 调用工具: {func_name}({func_args})")
+            if on_event:
+                on_event({"type": "tool", "name": func_name, "args": func_args})
 
             # 执行工具（复用新版本的 _execute_tool，自动注入图片参数）
             try:
@@ -515,6 +666,9 @@ def agent_chat(body: dict):
             except Exception as e:
                 result_str = json.dumps({"status": "error", "error": str(e)}, ensure_ascii=False)
                 tool_images = []
+
+            if on_event:
+                on_event({"type": "tool_done", "name": func_name, "images": len(tool_images) if tool_images else 0})
 
             # 收集图片
             if tool_images:
@@ -773,6 +927,54 @@ def agent_api_callbacks(_: gr_or_blocks, app: FastAPI):
         返回: { "status": "success", "reply": "...", "images": [...] }
         """
         return _cors_response(agent_chat(body))
+
+    @app.post("/sdapi/v1/ps-plugin/agent/chat-stream")
+    def chat_stream_endpoint(body: dict):
+        """
+        智能体聊天流式端点（SSE）
+        逐条推送事件: data: {json}\\n\\n
+        事件类型:
+          {"type":"status","text":"正在思考…"}            LLM 开始思考
+          {"type":"token","text":"..."}                   LLM 输出文本增量
+          {"type":"tool","name":"txt2img","args":{...}}   开始执行工具
+          {"type":"tool_done","name":"txt2img","images":1} 工具执行完成
+          {"type":"done", "status":"success","reply":"...","images":[...]}  最终结果（与 /chat 返回同构）
+          {"type":"done","status":"error","error":"..."}  出错
+        """
+        q = queue.Queue()
+        SENTINEL = object()
+
+        def on_event(ev):
+            q.put(ev)
+
+        def worker():
+            try:
+                result = agent_chat(body, on_event=on_event)
+                if not isinstance(result, dict):
+                    result = {"status": "error", "error": "LLM 返回格式异常"}
+                event = {"type": "done"}
+                event.update(result)
+                q.put(event)
+            except Exception as e:
+                print(f"[PS Agent] ❌ chat-stream 异常: {e}")
+                traceback.print_exc()
+                q.put({"type": "done", "status": "error", "error": str(e)})
+            finally:
+                q.put(SENTINEL)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+        def gen():
+            while True:
+                ev = q.get()
+                if ev is SENTINEL:
+                    break
+                yield "data: " + json.dumps(ev, ensure_ascii=False) + "\n\n"
+
+        headers = dict(CORS_HEADERS)
+        headers["Cache-Control"] = "no-cache"
+        headers["X-Accel-Buffering"] = "no"
+        return StreamingResponse(gen(), media_type="text/event-stream", headers=headers)
 
     @app.post("/sdapi/v1/ps-plugin/agent/debug-llm")
     def debug_llm(body: dict):

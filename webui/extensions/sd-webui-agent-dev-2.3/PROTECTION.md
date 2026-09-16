@@ -11,15 +11,26 @@ Stable Diffusion WebUI 必须能读取并导入 `scripts/agent.py`，否则插�
 
 建议混淆：
 
+- `scripts/agent_chat.py`（对话核心：chat_stream / _execute_tool）
+- `scripts/agent_ui.py`（Gradio 界面 / @mention 系统）
 - `scripts/agent_config.py`
-- `scripts/agent_tools.py`
+- `scripts/agent_tools.py`（工具门面）
+- `scripts/agent_tools_common.py`
+- `scripts/agent_tools_models.py`
+- `scripts/agent_tools_image.py`
+- `scripts/agent_tools_api.py`
+- `scripts/agent_tools_video.py`
+- `scripts/agent_tools_workspace.py`
+- `scripts/agent_tools_schemas.py`
 - `scripts/agent_tools_registry.py`
 - `scripts/agent_prompts.py`
 - `scripts/canva_mcp.py`
 
 保留明文：
 
-- `scripts/agent.py`
+- `scripts/agent.py`（入口，仅注册 UI 回调与再导出）
+- `scripts/agent_history.py`（历史解析辅助，无核心逻辑）
+- `scripts/agent_models.py`（模型目录常量）
 - `agent_config.json`
 
 注意：`agent_config.json` 只能保存空 Key 或默认配置，不要发布真实 API Key。
