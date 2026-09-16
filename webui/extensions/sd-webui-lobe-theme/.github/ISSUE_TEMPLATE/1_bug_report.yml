@@ -1,0 +1,70 @@
+name: '🐛 反馈缺陷 Bug Report'
+description: '反馈一个问题缺陷 | Report an bug'
+title: '[Bug] 请取一个问题概要描述标题 | Please take a brief description of the title'
+labels: '🐛 Bug'
+body:
+  - type: markdown
+    attributes:
+      value: |
+        - 反馈一个问题缺陷, 请确保你已经阅读了 [常见问题](https://github.com/lobehub/sd-webui-lobe-theme/issues/467)
+        - Report an bug, please make sure you have read the [FAQ](https://github.com/lobehub/sd-webui-lobe-theme/issues/468)
+  - type: checkboxes
+    attributes:
+      label: '👀 检查清单 | Initial checklist'
+      options:
+        - label: 已经阅读了 [常见问题](https://github.com/lobehub/sd-webui-lobe-theme/issues/467) | I have read the [FAQ](https://github.com/lobehub/sd-webui-lobe-theme/issues/468)
+          required: true
+        - label: 插件和 SD WebUI 均为为最新版本 | Plugin and SD WebUI both are the latest version
+          required: true
+        - label: 插件的分支为 main | The branch of the plugin is main
+          required: true
+        - label: 在单独开启插件的情况下，问题仍然存在 | The problem still exists when the plugin is turned on separately
+          required: true
+  - type: dropdown
+    attributes:
+      label: '💻 系统环境 | Operating System'
+      options:
+        - Windows
+        - macOS
+        - Ubuntu
+        - Other Linux
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: '🌐 浏览器 | Browser'
+      options:
+        - Chrome
+        - Edge
+        - Safari
+        - Firefox
+        - Other
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: '📦 SD Wbui 版本或提交 | Version or Commit'
+  - type: input
+    attributes:
+      label: '📦 Lobe Theme 版本或提交 | Version or Commit'
+  - type: textarea
+    attributes:
+      label: '🐛 问题描述 | Bug Description'
+      description: |
+        清晰且简洁地描述你期待发生的事情。请按照以下的故障排除步骤操作，更新 webui 和 lobe 主题到最新版本。如果问题仍然存在，尝试检查是否有其他插件与之冲突，并提供冲突插件的名称。
+        A clear and concise description of your problem. Please follow the troubleshooting steps below, update the webui and lobe theme to the latest version. If the problem persists, try to check if there is a conflict with other plugins and provide the name of the conflicting plugin.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: '🚦 期望结果 | Expected Behavior'
+      description: A clear and concise description of what you expected to happen.
+  - type: textarea
+    attributes:
+      label: '📷 复现步骤 | Recurrence Steps'
+      description: A clear and concise description of how to recurrence.
+  - type: textarea
+    attributes:
+      label: '📝 补充信息 | Additional Information'
+      description: If your problem needs further explanation, or if the issue you're seeing cannot be reproduced in a gist, please add more information here.

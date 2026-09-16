@@ -1,7 +1,7 @@
 {
   "port": 7869,
   "theme": "dark",
-  "listen": true,
+  "listen": false,
   "autolaunch": true,
   "cuda_malloc": true,
   "cuda_stream": true,
@@ -11,9 +11,6 @@
   "xformers": false,
   "lowvram": false,
   "neveroom": true,
-  "no_half": false,
-  "no_half_vae": false,
-  "precision_full": false,
   "api": true,
   "share": false,
   "skip_install": true,
@@ -57,6 +54,9 @@
     "birefnet_dir": "webui\\models\\BiRefNet"
   },
   "presets": {},
+  "no_half": false,
+  "no_half_vae": false,
+  "precision_full": false,
   "proxy": {
     "mode": "none",
     "address": "",

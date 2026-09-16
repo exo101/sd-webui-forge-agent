@@ -159,7 +159,7 @@ def segmentation_tab():
                     gr.Markdown("图像清理模块不可用。请确保已安装 litelama 库。")
             
             # 图层分离标签页
-            with gr.TabItem("图层分类", elem_id="layer_processing_classification_tab"):
+            with gr.TabItem("图层分离", elem_id="layer_processing_classification_tab"):
                 if create_layer_separation_ui is not None:
                     try:
                         create_layer_separation_ui()
@@ -170,7 +170,7 @@ def segmentation_tab():
                 else:
                     gr.Markdown("图层分离模块不可用。")
     
-    return [(ui, "智能抠图与图像清理", "Segmentation_Tab")]
+    return [(ui, "图层处理", "Segmentation_Tab")]
 
 # 注册标签页
 script_callbacks.on_ui_tabs(segmentation_tab)

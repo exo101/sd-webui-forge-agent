@@ -130,17 +130,6 @@ def multimodal_media_tab():
                     import traceback
                     traceback.print_exc()
 
-            # Kling 可灵视频生成标签页
-            with gr.TabItem("3. Kling 可灵视频生成", elem_id="multimodal_kling_tab"):
-                try:
-                    from scripts.kling_video.main_ui import create_kling_video_gen_ui
-                    # 创建 Kling 可灵视频生成 UI 组件
-                    kling_video_gen_ui = create_kling_video_gen_ui()
-                except Exception as e:
-                    gr.Markdown(f"❌ Kling 可灵视频模块初始化错误：{e}")
-                    import traceback
-                    traceback.print_exc()
-
             # ACE-Step 音乐生成标签页
             with gr.TabItem("5. ACE-Step 音乐生成", elem_id="multimodal_music_tab"):
                 try:

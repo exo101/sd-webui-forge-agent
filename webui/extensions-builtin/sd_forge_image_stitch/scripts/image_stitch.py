@@ -306,7 +306,7 @@ class ImageStitch(scripts.Script):
 
     def ui(self, is_img2img):
         tab = 'img2img' if is_img2img else 'txt2img'
-        with gr.Accordion(self.title(), open=True, elem_id=f"{tab}_image_stitch_accordion"):
+        with gr.Accordion(self.title(), open=False, elem_id=f"{tab}_image_stitch_accordion"):
             # 显式勾选框，始终可见，不依赖 InputAccordion 的 JS 动态创建
             enable = gr.Checkbox(label="启用多图参考（上传参考图后勾选此框生效）", value=True, elem_id=f"{tab}_image_stitch_enable")
             gr.HTML(i2i_info if is_img2img else t2i_info)

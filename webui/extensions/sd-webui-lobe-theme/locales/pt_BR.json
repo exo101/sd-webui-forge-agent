@@ -1,0 +1,197 @@
+{
+  "brand": {
+    "custom": "Personalizado",
+    "kitchen": "Kitchen",
+    "lobe": "LobeHub"
+  },
+  "cancel": "Cancelar",
+  "confirm": "Confirmar",
+  "custom": {
+    "initializing": "StableDiffusion / LobeTheme está inicializando, por favor aguarde..."
+  },
+  "footer": {
+    "community": "Comunidade",
+    "help": "Ajuda",
+    "moreProducts": "Mais Produtos",
+    "resources": "Recursos"
+  },
+  "header": {
+    "feedback": "Feedback",
+    "setting": "Configuração",
+    "switchTheme": "Alternar Tema Claro/Escuro"
+  },
+  "modal": {
+    "themeFeedback": {
+      "title": "Feedback do Tema"
+    },
+    "themeSetting": {
+      "desc": "Preferências e configurações de layout",
+      "title": "Configurações do Tema"
+    }
+  },
+  "prompt": {
+    "area": {
+      "attribute": "Seleção de Atributo",
+      "object": "Seleção de Objeto",
+      "tag": "Seleção de Tag"
+    },
+    "load": "Carregar Prompt",
+    "negative": "Negativo",
+    "positive": "Positivo",
+    "set": "Definir Prompt"
+  },
+  "setting": {
+    "button": {
+      "reset": "Reverter para a predefinição",
+      "submit": "Aplicar e Reiniciar Interface"
+    },
+    "confirmPageUnload": {
+      "desc": "Ajuda a evitar a perda de dados não salvos",
+      "title": "Confirmação ao sair da página"
+    },
+    "customFont": {
+      "desc": "Quando ativado, carregará automaticamente uma webfont para aprimorar a exibição de texto em chinês, inglês e código",
+      "title": "Fonte Personalizada"
+    },
+    "customLogo": {
+      "desc": "Suporte URL / Base64 / Símbolos de Emoji",
+      "title": "Logotipo Personalizado"
+    },
+    "customTitle": {
+      "desc": "Título do Logotipo Personalizado",
+      "title": "Título Personalizado"
+    },
+    "extraNetworkSidebar": {
+      "defaultCardSize": {
+        "desc": "Valor padrão do tamanho da capa do modelo ao iniciar",
+        "title": "Tamanho da Capa do Modelo"
+      },
+      "defaultExpand": {
+        "desc": "Se deve expandir a barra lateral por padrão ao iniciar",
+        "title": "Expansão Padrão"
+      },
+      "defaultWidth": {
+        "desc": "Largura padrão da barra lateral ao iniciar",
+        "title": "Largura Padrão"
+      },
+      "displayMode": {
+        "desc": "Fixo como modo de grade para exibição constante, auto-expandir quando o mouse se move para o lado no modo flutuante",
+        "title": "Modo de Exibição"
+      },
+      "enable": {
+        "desc": "Habilitar a barra lateral de rede extra no lado direito",
+        "title": "Habilitar"
+      }
+    },
+    "group": {
+      "experimental": "Recursos Experimentais",
+      "extraNetworkSidebar": "Barra Lateral de Rede Extra",
+      "layout": "Configurações de Layout",
+      "promptTextarea": "Caixa de Texto do Prompt",
+      "quickSettingSidebar": "Barra Lateral de Configuração Rápida",
+      "theme": "Configurações do Tema"
+    },
+    "hideFooter": {
+      "desc": "Ocultar o rodapé do tema e exibir apenas o rodapé padrão do stable diffusion webui",
+      "title": "Ocultar Rodapé"
+    },
+    "imageInfo": {
+      "desc": "Exibir informações melhores da imagem na imagem gerada",
+      "title": "Informações da Imagem Alternativas"
+    },
+    "language": {
+      "desc": "Idioma do Tema Lobe",
+      "title": "Idioma"
+    },
+    "logoType": {
+      "desc": "Tipo de Logotipo",
+      "preview": "Visualização",
+      "title": "Tipo de Logotipo"
+    },
+    "neutralColor": {
+      "desc": "Personalize diferentes tons de cinza com diferentes tendências de cor, o segundo é a cor neutra original da Cozinha",
+      "title": "Cor Neutra"
+    },
+    "primaryColor": {
+      "desc": "Cor primária personalizada, o segundo é a cor do tema original da Cozinha",
+      "title": "Cor Primária"
+    },
+    "promptDisplayMode": {
+      "desc": "Altura fixa ou altura automática com suporte para redimensionamento arrastável",
+      "resizable": "Redimensionável",
+      "scroll": "Rolagem",
+      "title": "Modo de Exibição do Prompt"
+    },
+    "promptEditor": {
+      "desc": "Fornece um editor de prompt simples no topo da barra lateral de configuração rápida",
+      "title": "Editor de Prompt"
+    },
+    "promptHighlight": {
+      "desc": "Colorize automaticamente a exibição do prompt de acordo com as regras de sintaxe do Stable Diffusion",
+      "title": "Realce de Sintaxe do Prompt"
+    },
+    "quickSettingSidebar": {
+      "defaultExpand": {
+        "desc": "Se deve expandir a barra lateral por padrão ao iniciar",
+        "title": "Expansão Padrão"
+      },
+      "defaultWidth": {
+        "desc": "Largura padrão da barra lateral ao iniciar",
+        "title": "Largura Padrão"
+      },
+      "displayMode": {
+        "desc": "Fixo como modo de grade para exibição constante, auto-expandir quando o mouse se move para o lado no modo flutuante",
+        "title": "Modo de Exibição"
+      },
+      "enable": {
+        "desc": "Habilitar a barra lateral de configuração rápida no lado esquerdo",
+        "title": "Habilitar"
+      }
+    },
+    "reduceAnimation": {
+      "desc": "Reduzir o efeito de desfoque e cor de fundo, o que pode melhorar a suavidade e economizar o uso da CPU",
+      "title": "Reduzir Animação"
+    },
+    "splitPreviewer": {
+      "desc": "Coloque a caixa de entrada do prompt à esquerda e o botão de geração à direita, garantindo que a imagem gerada seja sempre exibida no topo ao rolar (experimental)",
+      "title": "Dividir Visualizador"
+    },
+    "svgIcons": {
+      "desc": "Substituir todos os ícones de Emoji no stable diffusion webui por ícones SVG globalmente",
+      "title": "Ícones SVG"
+    },
+    "tab": {
+      "appearance": "Aparência",
+      "experimental": "Experimental",
+      "layout": "Layout",
+      "sidebar": "Barra lateral"
+    }
+  },
+  "share": "Compartilhar",
+  "shareModal": {
+    "download": "Baixar Captura de Tela",
+    "imageType": "Formato da Imagem",
+    "info": "Informações da Imagem",
+    "screenshot": "Captura de Tela",
+    "settings": "Configurações de Exportação",
+    "showAllImages": "Mostrar Todas as Imagens",
+    "showConfig": "Mostrar Configuração Gerada",
+    "showNegative": "Mostrar Promoção Negativa",
+    "tabs": {
+      "info": "Informações",
+      "settings": "Configurações"
+    },
+    "title": "Nome da Imagem",
+    "warn": "Por favor, gere a imagem primeiro",
+    "withBackground": "Incluir Imagem de Fundo",
+    "withFooter": "Incluir Rodapé"
+  },
+  "sidebar": {
+    "extraNetwork": "Rede Extra",
+    "mode": {
+      "fixed": "Fixo",
+      "float": "Flutuante"
+    },
+    "quickSetting": "Configuração Rápida"
+  }
+}
