@@ -1,0 +1,197 @@
+{
+  "brand": {
+    "custom": "Benutzerdefiniert",
+    "kitchen": "Kitchen",
+    "lobe": "LobeHub"
+  },
+  "cancel": "Abbrechen",
+  "confirm": "Bestätigen",
+  "custom": {
+    "initializing": "StableDiffusion / LobeTheme initialisiert, bitte warten..."
+  },
+  "footer": {
+    "community": "Gemeinschaft",
+    "help": "Hilfe",
+    "moreProducts": "Weitere Produkte",
+    "resources": "Ressourcen"
+  },
+  "header": {
+    "feedback": "Feedback",
+    "setting": "Einstellung",
+    "switchTheme": "Wechseln Sie das Licht-/Dunkel-Thema"
+  },
+  "modal": {
+    "themeFeedback": {
+      "title": "Themenfeedback"
+    },
+    "themeSetting": {
+      "desc": "Einstellungen für Thema und Layout",
+      "title": "Themen-Einstellungen"
+    }
+  },
+  "prompt": {
+    "area": {
+      "attribute": "Attributauswahl",
+      "object": "Objektauswahl",
+      "tag": "Tagauswahl"
+    },
+    "load": "Lade-Prompt",
+    "negative": "Negativ",
+    "positive": "Positiv",
+    "set": "Setze-Prompt"
+  },
+  "setting": {
+    "button": {
+      "reset": "Zum Standard zurückkehren",
+      "submit": "Anwenden und Schnittstelle neu starten"
+    },
+    "confirmPageUnload": {
+      "desc": "Hilft, den Verlust von ungespeicherten Daten zu verhindern",
+      "title": "Bestätigung beim Verlassen der Seite"
+    },
+    "customFont": {
+      "desc": "Wenn aktiviert, wird automatisch eine Webfont geladen, um die Anzeige von Text in Chinesisch, Englisch und Code zu verbessern",
+      "title": "Benutzerdefinierte Schriftart"
+    },
+    "customLogo": {
+      "desc": "Unterstützt URL / Base64 / Emoji-Symbole",
+      "title": "Benutzerdefiniertes Logo"
+    },
+    "customTitle": {
+      "desc": "Benutzerdefinierter Logotitel",
+      "title": "Benutzerdefinierter Titel"
+    },
+    "extraNetworkSidebar": {
+      "defaultCardSize": {
+        "desc": "Standardwert der Modell-Cover-Größe beim Starten",
+        "title": "Modell-Cover-Größe"
+      },
+      "defaultExpand": {
+        "desc": "Ob die Seitenleiste beim Starten standardmäßig erweitert werden soll",
+        "title": "Standardmäßig erweitern"
+      },
+      "defaultWidth": {
+        "desc": "Standardbreite der Seitenleiste beim Starten",
+        "title": "Standardbreite"
+      },
+      "displayMode": {
+        "desc": "Festgelegt als Rastermodus für konstante Anzeige, automatische Erweiterung, wenn die Maus an den Rand im schwebenden Modus bewegt wird",
+        "title": "Anzeigemodus"
+      },
+      "enable": {
+        "desc": "Aktivieren Sie die zusätzliche Netzwerkseitenleiste auf der rechten Seite",
+        "title": "Aktivieren"
+      }
+    },
+    "group": {
+      "experimental": "Experimentelle Funktionen",
+      "extraNetworkSidebar": "Zusätzliche Netzwerkseitenleiste",
+      "layout": "Layout-Einstellungen",
+      "promptTextarea": "Prompt-Textfeld",
+      "quickSettingSidebar": "Schnelle Einstellungsseitenleiste",
+      "theme": "Themen-Einstellungen"
+    },
+    "hideFooter": {
+      "desc": "Blenden Sie die Themenfußzeile aus und zeigen Sie nur die Standardfußzeile von Stable Diffusion WebUI an",
+      "title": "Fußzeile ausblenden"
+    },
+    "imageInfo": {
+      "desc": "Zeigt bessere Bildinformationen im generierten Bild an",
+      "title": "Alternative Bildinformationen"
+    },
+    "language": {
+      "desc": "Lappen-Themensprache",
+      "title": "Sprache"
+    },
+    "logoType": {
+      "desc": "Logo-Typ",
+      "preview": "Vorschau",
+      "title": "Logo-Typ"
+    },
+    "neutralColor": {
+      "desc": "Passen Sie verschiedene Grautöne mit unterschiedlichen Farbtendenzen an, der zweite ist die originale neutrale Farbe der Küche",
+      "title": "Neutrale Farbe"
+    },
+    "primaryColor": {
+      "desc": "Benutzerdefinierte Primärfarbe, die zweite ist die originale Farbe des Küchenthemas",
+      "title": "Primärfarbe"
+    },
+    "promptDisplayMode": {
+      "desc": "Feste Höhe oder automatische Höhe mit ziehbarer Größenänderungsunterstützung",
+      "resizable": "Größenänderbar",
+      "scroll": "Scrollen",
+      "title": "Prompt-Anzeigemodus"
+    },
+    "promptEditor": {
+      "desc": "Bietet einen einfachen Prompt-Editor oben in der Schnelleinstellungsseitenleiste",
+      "title": "Prompt-Editor"
+    },
+    "promptHighlight": {
+      "desc": "Färbt die Prompt-Anzeige automatisch gemäß den Stable Diffusion-Syntaxregeln ein",
+      "title": "Prompt-Syntaxhervorhebung"
+    },
+    "quickSettingSidebar": {
+      "defaultExpand": {
+        "desc": "Ob die Seitenleiste beim Starten standardmäßig erweitert werden soll",
+        "title": "Standardmäßig erweitern"
+      },
+      "defaultWidth": {
+        "desc": "Standardbreite der Seitenleiste beim Starten",
+        "title": "Standardbreite"
+      },
+      "displayMode": {
+        "desc": "Festgelegt als Rastermodus für konstante Anzeige, automatische Erweiterung, wenn die Maus an den Rand im schwebenden Modus bewegt wird",
+        "title": "Anzeigemodus"
+      },
+      "enable": {
+        "desc": "Aktivieren Sie die Schnelleinstellungsseitenleiste auf der linken Seite",
+        "title": "Aktivieren"
+      }
+    },
+    "reduceAnimation": {
+      "desc": "Reduzieren Sie den Unschärfeeffekt und die Hintergrundflussfarbe, um die Geschmeidigkeit zu verbessern und die CPU-Auslastung zu reduzieren",
+      "title": "Animation reduzieren"
+    },
+    "splitPreviewer": {
+      "desc": "Platzieren Sie das Prompt-Eingabefeld links und die Generierungsschaltfläche rechts, um sicherzustellen, dass das generierte Bild beim Scrollen immer oben angezeigt wird (experimentell)",
+      "title": "Split-Previewer"
+    },
+    "svgIcons": {
+      "desc": "Ersetzen Sie alle Emoji-Symbole in Stable Diffusion WebUI global durch SVG-Symbole",
+      "title": "SVG-Symbole"
+    },
+    "tab": {
+      "appearance": "Erscheinungsbild",
+      "experimental": "Experimentell",
+      "layout": "Layout",
+      "sidebar": "Seitenleiste"
+    }
+  },
+  "share": "Teilen",
+  "shareModal": {
+    "download": "Screenshot herunterladen",
+    "imageType": "Bildformat",
+    "info": "Bildinformationen",
+    "screenshot": "Screenshot",
+    "settings": "Exporteinstellungen",
+    "showAllImages": "Alle Bilder anzeigen",
+    "showConfig": "Konfiguration anzeigen",
+    "showNegative": "Negative anzeigen",
+    "tabs": {
+      "info": "Info",
+      "settings": "Einstellungen"
+    },
+    "title": "Bildname",
+    "warn": "Bitte zuerst ein Bild generieren",
+    "withBackground": "Hintergrundbild einbeziehen",
+    "withFooter": "Fußzeile einbeziehen"
+  },
+  "sidebar": {
+    "extraNetwork": "Zusätzliches Netzwerk",
+    "mode": {
+      "fixed": "Fixiert",
+      "float": "Schwebend"
+    },
+    "quickSetting": "Schnelleinstellung"
+  }
+}

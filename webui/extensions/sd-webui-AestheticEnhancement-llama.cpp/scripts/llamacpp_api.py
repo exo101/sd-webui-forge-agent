@@ -12,16 +12,25 @@ import json
 
 logger = logging.getLogger(__name__)
 
-# 默认配置（读取启动器共享端口配置，自动跟随启动器的 llama 端口）
-try:
-    from modules.llama_port import get_llama_port
-    _port = get_llama_port()
-except Exception:
-    _port = 8080
-
+# 默认配置
 DEFAULT_LLAMACPP_HOST = "localhost"
-DEFAULT_LLAMACPP_PORT = _port
+DEFAULT_LLAMACPP_PORT = 8080
 DEFAULT_LLAMACPP_URL = f"http://{DEFAULT_LLAMACPP_HOST}:{DEFAULT_LLAMACPP_PORT}"
+
+
+def get_llama_port_from_config(port_config: dict = None) -> int:
+    """从配置字典中获取端口号"""
+    if port_config and 'llama_port' in port_config:
+        return port_config['llama_port']
+    return DEFAULT_LLAMACPP_PORT
+
+
+def set_llama_port(port: int):
+    """设置 llama.cpp 端口号"""
+    global DEFAULT_LLAMACPP_PORT
+    DEFAULT_LLAMACPP_PORT = port
+    DEFAULT_LLAMACPP_URL = f"http://{DEFAULT_LLAMACPP_HOST}:{port}"
+    logger.info(f"✅ 已更新 llama.cpp 端口：{port}")
 
 
 def encode_image_to_base64(image_path: str) -> Optional[str]:

@@ -1,0 +1,197 @@
+{
+  "brand": {
+    "custom": "Custom",
+    "kitchen": "Kitchen",
+    "lobe": "LobeHub"
+  },
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "custom": {
+    "initializing": "StableDiffusion / LobeTheme is initializing, please wait..."
+  },
+  "footer": {
+    "community": "Community",
+    "help": "Help",
+    "moreProducts": "More Products",
+    "resources": "Resources"
+  },
+  "header": {
+    "feedback": "Feedback",
+    "setting": "Setting",
+    "switchTheme": "Switch Light/Dark Theme"
+  },
+  "modal": {
+    "themeFeedback": {
+      "title": "Theme Feedback"
+    },
+    "themeSetting": {
+      "desc": "Preferences and Layout Settings",
+      "title": "Theme Settings"
+    }
+  },
+  "prompt": {
+    "area": {
+      "attribute": "Attribute Selection",
+      "object": "Object Selection",
+      "tag": "Tag Selection"
+    },
+    "load": "Load Prompt",
+    "negative": "Negative",
+    "positive": "Positive",
+    "set": "Set Prompt"
+  },
+  "setting": {
+    "button": {
+      "reset": "Revert to default",
+      "submit": "Apply and Restart Interface"
+    },
+    "confirmPageUnload": {
+      "desc": "Helps prevent loss of unsaved data",
+      "title": "Confirmation on page leaving"
+    },
+    "customFont": {
+      "desc": "When enabled, it will automatically load a webfont to enhance the display of text in Chinese, English, and code",
+      "title": "Custom Font"
+    },
+    "customLogo": {
+      "desc": "Support URL / Base64 / Emoji symbols",
+      "title": "Custom Logo"
+    },
+    "customTitle": {
+      "desc": "Custom Logo Title",
+      "title": "Custom Title"
+    },
+    "extraNetworkSidebar": {
+      "defaultCardSize": {
+        "desc": "Default value of model cover size when starting",
+        "title": "Model Cover Size"
+      },
+      "defaultExpand": {
+        "desc": "Whether to expand the sidebar by default when starting",
+        "title": "Default Expand"
+      },
+      "defaultWidth": {
+        "desc": "Default width of the sidebar when starting",
+        "title": "Default Width"
+      },
+      "displayMode": {
+        "desc": "Fixed as grid mode for constant display, auto-expand when the mouse moves to the side in floating mode",
+        "title": "Display Mode"
+      },
+      "enable": {
+        "desc": "Enable the extra network sidebar on the right side",
+        "title": "Enable"
+      }
+    },
+    "group": {
+      "experimental": "Experimental Features",
+      "extraNetworkSidebar": "Extra Network Sidebar",
+      "layout": "Layout Settings",
+      "promptTextarea": "Prompt Textbox",
+      "quickSettingSidebar": "Quick Setting Sidebar",
+      "theme": "Theme Settings"
+    },
+    "hideFooter": {
+      "desc": "Hide the theme footer and only display the default footer of stable diffusion webui",
+      "title": "Hide Footer"
+    },
+    "imageInfo": {
+      "desc": "Display better image information in the generated image",
+      "title": "Image Info Alternative"
+    },
+    "language": {
+      "desc": "Lobe Theme language",
+      "title": "Language"
+    },
+    "logoType": {
+      "desc": "Logo Type",
+      "preview": "Preview",
+      "title": "Logo Type"
+    },
+    "neutralColor": {
+      "desc": "Customize different shades of gray with different color tendencies, the second one is the original Kitchen neutral color",
+      "title": "Neutral Color"
+    },
+    "primaryColor": {
+      "desc": "Custom primary color, the second one is the original Kitchen theme color",
+      "title": "Primary Color"
+    },
+    "promptDisplayMode": {
+      "desc": "Fixed height or auto height with draggable resize support",
+      "resizable": "Resizable",
+      "scroll": "Scroll",
+      "title": "Prompt Display Mode"
+    },
+    "promptEditor": {
+      "desc": "Provide a simple prompt editor at the top of the quick setting sidebar",
+      "title": "Prompt Editor"
+    },
+    "promptHighlight": {
+      "desc": "Automatically colorize prompt display according to the Stable Diffusion syntax rules",
+      "title": "Prompt Syntax Highlighting"
+    },
+    "quickSettingSidebar": {
+      "defaultExpand": {
+        "desc": "Whether to expand the sidebar by default when starting",
+        "title": "Default Expand"
+      },
+      "defaultWidth": {
+        "desc": "Default width of the sidebar when starting",
+        "title": "Default Width"
+      },
+      "displayMode": {
+        "desc": "Fixed as grid mode for constant display, auto-expand when the mouse moves to the side in floating mode",
+        "title": "Display Mode"
+      },
+      "enable": {
+        "desc": "Enable the quick setting sidebar on the left side",
+        "title": "Enable"
+      }
+    },
+    "reduceAnimation": {
+      "desc": "Reduce the blur effect and background flow color, which can improve smoothness and save CPU usage",
+      "title": "Reduce Animation"
+    },
+    "splitPreviewer": {
+      "desc": "Put the prompt input box on the left and the generate button on the right, ensuring that the generated image is always displayed at the top when scrolling (experimental)",
+      "title": "Split Previewer"
+    },
+    "svgIcons": {
+      "desc": "Replace all Emoji icons in stable diffusion webui with SVG icons globally",
+      "title": "SVG Icons"
+    },
+    "tab": {
+      "appearance": "Appearance",
+      "experimental": "Experimental",
+      "layout": "Layout",
+      "sidebar": "Sidebar"
+    }
+  },
+  "share": "Share",
+  "shareModal": {
+    "download": "Download Screenshot",
+    "imageType": "Image Format",
+    "info": "Image Info",
+    "screenshot": "Screenshot",
+    "settings": "Export Settings",
+    "showAllImages": "Show All Images",
+    "showConfig": "Show Generate Config",
+    "showNegative": "Show Negative Promot",
+    "tabs": {
+      "info": "Info",
+      "settings": "Settings"
+    },
+    "title": "Image Name",
+    "warn": "Please Generate Image First",
+    "withBackground": "Include Background Image",
+    "withFooter": "Include Footer"
+  },
+  "sidebar": {
+    "extraNetwork": "Extra Network",
+    "mode": {
+      "fixed": "Fixed",
+      "float": "Float"
+    },
+    "quickSetting": "Quick Setting"
+  }
+}

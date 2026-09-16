@@ -8,7 +8,6 @@ import json
 import logging
 import os
 import re
-import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -292,7 +291,7 @@ def prepare_environment():
     bnb_package = os.environ.get("BNB_PACKAGE", "bitsandbytes==0.49.2")
 
     packaging_package = os.environ.get("PACKAGING_PACKAGE", "packaging==26.0")
-    gradio_package = os.environ.get("GRADIO_PACKAGE", "gradio==5.49.1")
+    gradio_package = os.environ.get("GRADIO_PACKAGE", "gradio==4.40.0 gradio_rangeslider==0.0.8")
     requirements_file = os.environ.get("REQS_FILE", "requirements.txt")
 
     try:
@@ -542,8 +541,6 @@ def configure_comfy_yaml(comfy_yaml: Path):
 
 
 def start():
-    # print(f"Launching {'API server' if '--nowebui' in sys.argv else 'Web UI'} with arguments: {shlex.join(sys.argv[1:])}")
-
     from modules import logging_config
 
     logging_config.setup_logging(args.loglevel)
