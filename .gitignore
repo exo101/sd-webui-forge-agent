@@ -26,3 +26,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.env
+.env.*
+*.pem
+*.key
+application-local.yml
+application-local.yaml
+.agent_backups/
+*.bak
