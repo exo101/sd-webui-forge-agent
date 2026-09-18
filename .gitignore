@@ -26,3 +26,14 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# Local extensions, models, outputs and runtime caches (keep local only)
+webui/extensions/*/
+webui/models/
+webui/outputs/
+webui/extensions/tmp/
+webui/extensions/*/see-through/workspace/
+webui/extensions/*/outputs/
+.agent_backups/
+.trae/
+_launch_tmp_*.bat
