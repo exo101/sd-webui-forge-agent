@@ -152,6 +152,9 @@ def build_bat(args: list[str], proxy: str = "", skip_update: bool = False, gpu_d
     # 先设置 PYTHON 环境变量，确保 webui.bat 使用启动器管理的 Python
     # 同时设置 SKIP_VENV=1，跳过旧 venv（旧 venv 可能是不同 Python 版本创建的）
     python_lines = f'set PYTHON={get_python_exe()}\nset SKIP_VENV=1\nset PYTHONIOENCODING=utf-8\n'
+    # 无条件设置 NO_PROXY，确保代理软件不会拦截 localhost 流量
+    # 否则 Gradio 检查 localhost 可访问性时会失败，报 "When localhost is not accessible"
+    no_proxy_lines = 'set NO_PROXY=localhost,127.0.0.1,0.0.0.0\nset no_proxy=localhost,127.0.0.1,0.0.0.0\n'
     # 如果 environment.bat 存在则加载，否则跳过
     env_lines = ""
     if os.path.exists(ENV_BAT):
@@ -162,6 +165,7 @@ def build_bat(args: list[str], proxy: str = "", skip_update: bool = False, gpu_d
         f"{env_lines}"
         f'cd /d "{WEBUI_DIR}"\n'
         f"{python_lines}"
+        f"{no_proxy_lines}"
         f"{proxy_lines}"
         f"{gpu_lines}"
         f"{skip_lines}"

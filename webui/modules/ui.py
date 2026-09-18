@@ -535,8 +535,8 @@ def create_ui():
                                 add_copy_image_controls("inpaint_sketch", inpaint_color_sketch)
 
                             with gr.TabItem("Inpaint upload", id="inpaint_upload", elem_id="img2img_inpaint_upload_tab") as tab_inpaint_upload:
-                                init_img_inpaint = gr.Image(label="Image for img2img", show_label=False, source="upload", interactive=True, type="pil", elem_id="img_inpaint_base")
-                                init_mask_inpaint = gr.Image(label="Mask", source="upload", interactive=True, type="pil", image_mode="RGBA", elem_id="img_inpaint_mask")
+                                init_img_inpaint = gr.Image(label="Image for img2img", show_label=False, sources=["upload"], interactive=True, type="pil", elem_id="img_inpaint_base")
+                                init_mask_inpaint = gr.Image(label="Mask", sources=["upload"], interactive=True, type="pil", image_mode="RGBA", elem_id="img_inpaint_mask")
 
                             with gr.TabItem("Batch", id="batch", elem_id="img2img_batch_tab") as tab_batch:
                                 with gr.Tabs(elem_id="img2img_batch_source"):
@@ -836,7 +836,7 @@ def create_ui():
     with gr.Blocks(analytics_enabled=False) as pnginfo_interface:
         with ResizeHandleRow(equal_height=False):
             with gr.Column(variant="panel"):
-                image = gr.Image(elem_id="pnginfo_image", label="Source", source="upload", interactive=True, type="pil", height="50vh", image_mode="RGBA")
+                image = gr.Image(elem_id="pnginfo_image", label="Source", sources=["upload"], interactive=True, type="pil", height="50vh", image_mode="RGBA")
 
             with gr.Column(variant="panel"):
                 html = gr.HTML()
@@ -866,7 +866,7 @@ def create_ui():
                 gr.Image(
                     elem_id="pnginfo_compare_before",
                     label="原图",
-                    source="upload",
+                    sources=["upload"],
                     interactive=True,
                     type="pil",
                     height=220,
@@ -874,7 +874,7 @@ def create_ui():
                 gr.Image(
                     elem_id="pnginfo_compare_after",
                     label="对比图",
-                    source="upload",
+                    sources=["upload"],
                     interactive=True,
                     type="pil",
                     height=220,

@@ -53,8 +53,6 @@ class SettingsTab(QWidget):
         
         # 壁纸设置
         layout.addWidget(self._group_wallpaper())
-        # llama.cpp 设置
-        layout.addWidget(self._group_llama())
         # ComfyUI 设置
         layout.addWidget(self._group_comfyui())
         
@@ -261,37 +259,6 @@ class SettingsTab(QWidget):
         self._widgets["wallpaper"] = None  # 不直接存储widget，存路径
         return g
 
-    def _group_llama(self) -> QGroupBox:
-        g = QGroupBox("🦙 llama.cpp 服务")
-        layout = QGridLayout(g)
-        layout.setSpacing(10)
-
-        # 启用开关
-        chk_enable = QCheckBox("启用 llama.cpp 服务（与 WebUI 同时启动）")
-        layout.addWidget(chk_enable, 0, 0, 1, 4)
-        self._widgets["llama_enabled"] = chk_enable
-
-        layout.addWidget(QLabel("端口:"), 1, 0)
-        spin_port = QSpinBox()
-        spin_port.setRange(1024, 65535)
-        spin_port.setFixedWidth(100)
-        layout.addWidget(spin_port, 1, 1)
-        self._widgets["llama_port"] = spin_port
-
-        layout.addWidget(QLabel("GPU层数 (-ngl):"), 1, 2)
-        spin_ngl = QSpinBox()
-        spin_ngl.setRange(0, 200)
-        spin_ngl.setFixedWidth(80)
-        spin_ngl.setToolTip("指定加载到GPU的层数，-1为全部")
-        layout.addWidget(spin_ngl, 1, 3)
-        self._widgets["llama_ngl"] = spin_ngl
-
-        # 提示信息
-        lbl_hint = QLabel("💡 根据端口自动匹配模型：8080→4B, 8079→2B，其余端口自动选择第一个模型")
-        lbl_hint.setStyleSheet(f"color: {COLORS['text_dim']}; font-size: 10px;")
-        layout.addWidget(lbl_hint, 2, 0, 1, 5)
-        return g
-
     def _group_comfyui(self) -> QGroupBox:
         from PyQt6.QtWidgets import QFileDialog
         g = QGroupBox("🖥️ ComfyUI 服务")
@@ -459,12 +426,6 @@ class SettingsTab(QWidget):
         else:
             self._set_wallpaper("")
 
-        # llama 配置加载
-        llama_cfg = c.get("llama", {})
-        self._widgets["llama_enabled"].setChecked(llama_cfg.get("enabled", True))
-        self._widgets["llama_port"].setValue(llama_cfg.get("port", 8080))
-        self._widgets["llama_ngl"].setValue(llama_cfg.get("ngl", 100))
-
         # ComfyUI 配置加载
         comfy_cfg = c.get("comfyui", {})
         self._widgets["comfyui_enabled"].setChecked(comfy_cfg.get("enabled", False))
@@ -497,12 +458,6 @@ class SettingsTab(QWidget):
         # 壁纸
         wallpaper = self.config.get("wallpaper", "")
         config["wallpaper"] = wallpaper
-
-        # llama 配置
-        llama_cfg = config.setdefault("llama", {})
-        llama_cfg["enabled"] = self._widgets["llama_enabled"].isChecked()
-        llama_cfg["port"] = self._widgets["llama_port"].value()
-        llama_cfg["ngl"] = self._widgets["llama_ngl"].value()
 
         # ComfyUI 配置
         comfy_cfg = config.setdefault("comfyui", {})

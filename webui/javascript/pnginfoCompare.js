@@ -46,7 +46,7 @@
         viewer.innerHTML = `
             <div class="pnginfo-compare-stage">
                 <img class="pnginfo-compare-image" src="${beforeData.url}" alt="原图">
-                <div class="pnginfo-compare-overlay" style="clip-path: inset(0 50% 0 0);">
+                <div class="pnginfo-compare-overlay" style="clip-path: inset(0 0 0 50%);">
                     <img class="pnginfo-compare-image" src="${afterData.url}" alt="对比图">
                 </div>
                 <div class="pnginfo-compare-divider" style="left: 50%;">
@@ -62,7 +62,7 @@
         const divider = viewer.querySelector(".pnginfo-compare-divider");
         slider.addEventListener("input", () => {
             const value = Number(slider.value);
-            overlay.style.clipPath = `inset(0 ${100 - value}% 0 0)`;
+            overlay.style.clipPath = `inset(0 0 0 ${value}%)`;
             divider.style.left = `${value}%`;
         });
     }
@@ -145,14 +145,14 @@
         const style = document.createElement("style");
         style.id = "pnginfo-compare-styles";
         style.textContent = `
-            #pnginfo_compare_viewer_host { width: 100%; }
-            .pnginfo-compare-viewer { width: 100%; margin-top: 12px; }
+            #pnginfo_compare_viewer_host { width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; }
+            .pnginfo-compare-viewer { width: 100%; max-width: 720px; margin: 12px auto 0; box-sizing: border-box; }
             .pnginfo-compare-stage {
-                position: relative; width: 100%; min-height: 280px;
-                overflow: hidden; background: #111; border-radius: 6px;
+                position: relative; width: 100%; max-width: 100%; min-height: 160px;
+                overflow: hidden; background: #111; border-radius: 6px; box-sizing: border-box;
             }
             .pnginfo-compare-image {
-                display: block; width: 100%; height: 480px;
+                display: block; width: 100%; max-width: 100%; height: 260px;
                 object-fit: contain; user-select: none; pointer-events: none;
             }
             .pnginfo-compare-overlay {

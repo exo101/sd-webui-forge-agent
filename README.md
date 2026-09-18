@@ -320,6 +320,41 @@ models/VAE/
 | **🔥 PyTorch 编译加速** | 使用 torch.compile 加速推理 |
 | **🎛️ 调制引导控制** | 改善 Anima 模型的生成质量 |
 
+### 已集成扩展列表
+
+> 以下是 `webui/extensions/` 目录下已集成的全部扩展，开箱即用，无需自行安装。
+
+| 扩展目录 | 用途简述 |
+|---------|---------|
+| **aadetailer-neoforge** | ADetailer 人脸/手部自动修复 |
+| **forge-h3-studio** | H3 Studio 综合工具集 |
+| **infinite-browsing** | 无限图像浏览，快速查看历史生成图 |
+| **sd-civitai-browser-neo** | Civitai 模型在线浏览与一键下载 |
+| **sd-dynamic-prompts_neo** | 动态提示词模板，支持变量与逻辑分支 |
+| **sd-forge-regional-prompter-neo** | 区域提示词，分区域控制画面内容 |
+| **sd-forge-tutorial** | 内置新手图文教程 |
+| **sd-webui-AestheticEnhancement-llama.cpp** | 基于 Qwen3.5 的图像/视频美学分析 |
+| **sd-webui-agent-dev-2.4** | 智能体 Agent，支持自然语言对话式生图 |
+| **sd-webui-bsk-camera-control-forge-neo** | 3D 相机角度选择器，多角度提示词 |
+| **sd-webui-forge-neo-seedvr2** | SeedVR2 视频超分辨率增强 |
+| **sd-webui-lobe-theme** | Lobe 主题美化界面 |
+| **sd-webui-model-keyword** | 自动识别模型关键词，避免漏触发 |
+| **sd-webui-model_downloader** | 模型批量下载工具 |
+| **sd-webui-multimodal-media** | 多媒体处理：TTS 语音、唇形同步、Qwen 视频、ACE-Step 音乐 |
+| **sd-webui-openpose-editor** | OpenPose 姿态可视化编辑器 |
+| **sd-webui-prompt-all-in-one-neo** | 提示词管理一体化（历史记录、翻译、权重） |
+| **sd-webui-ps-plugin-api** | Photoshop 插件对接 API，PS 内直接生图 |
+| **sd-webui-see-through-sam** | SAM 一键抠图与图层分离 |
+| **sd-webui-supermerger-forgeneo-anima** | SuperMerger 模型合并/融合 |
+| **sd-webui-tagcomplete-neo** | 提示词自动补全 |
+| **sd-webui-trellis2** | TRELLIS.2 单图生成 3D 模型 |
+| **stable-diffusion-webui-localization-zh_Hans** | 中文汉化语言包 |
+| **stable-diffusion-webui-wd14-tagger** | WD 1.4 反向标签器，自动给图像打标 |
+| **TE-webui-DLSS5** | DLSS 5 视频超分与插帧 |
+
+> [!TIP]
+> 所有扩展均位于 `webui/extensions/`，可在 WebUI 的 **Extensions** 页面单独启用或禁用；删除对应文件夹即可彻底卸载。
+
 ---
 
 ## 📚 学习资源

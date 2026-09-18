@@ -1,30 +1,99 @@
-1.不支持AMD显卡，如果启动器出现闪退，就是因为驱动版本太低，安装英伟达NVIDIA驱动 596.49
+1.不支持AMD显卡，如果启动器出现闪退，最低驱动版本要求，英伟达NVIDIA驱动 596.49
 
-2.在sd-webui-forge-neo-v3.5\system\vcredist目录，安装VC_redist.x64.exe修复环境库
  
-3：模型目录位置：sd-webui-forge-neo-v3/  webui  /  models
+2：模型目录位置：sd-webui-forge-neo-v3/  webui  /  models
          
-变分解码器                                              vae
-图生3d模型目录                                      trellis2   
-文本编码模型目录                                   text_encoder
-生图主模型目录                                       Stable-diffusion
-场景分割模型目录                                   sams
-图层拆分插件模型目录                           diffusers
-语音合成模型目录                                   qwen3-tts   
-语音识别模型目录                                   whisper-tiny
-唇形同步模型目录                                   LatentSync
-普通放大算法模型目录                           ESRGAN
-高精度放大算法模型目录                       SEEDVR2
-生图主模型目录                                     diffusion_models
-控制模型与预处理器模型目录               ControINet
-图像清理插件模型目录                          cleaner
-混元翻译模型                                          Hy-MT2-1.8B
-智能抠图模型目录                                  BiRefNet
-修脸插件模型目录                                  adetailer
-微调训练模型目录                                  lora
-音乐生成模型                                         ace-step
+变分解码器                                              vae （生图专用）
 
-4：llama视觉分析模型目录位置：sd-webui-forge-neo-v3/  llama.cpp  /  models
+图生3d模型目录                                      trellis2  
+ 
+文本编码模型目录                                   text_encoder （生图专用）
+
+生图主模型目录                                       Stable-diffusion  （生图专用）
+
+场景分割模型目录                                   sams
+
+图层拆分插件模型目录                             diffusers
+
+语音合成模型目录                                   qwen3-tts 
+  
+语音识别模型目录                                   whisper-tiny
+
+普通放大算法模型目录                           ESRGAN
+
+高精度放大算法模型目录                       SEEDVR2
+
+控制模型与预处理器模型目录               ControINet 
+
+图像清理插件模型目录                          cleaner
+
+混元翻译模型                                        Hy-MT2-1.8B
+
+智能抠图模型目录                                  BiRefNet
+
+修脸插件模型目录                                  adetailer
+
+微调训练模型目录                                  lora 
+
+音乐生成模型                                        ace-step
+
+
+
+3：扩展目录位置：sd-webui-forge-neo-v3  /  webui  /  extensions
+
+以下扩展开箱即用，可在 WebUI 的 Extensions 页面单独启用或禁用；删除对应文件夹即可彻底卸载。
+
+aadetailer-neoforge                              人脸/手部自动修复
+
+sd-civitai-browser-neo                          Civitai 模型在线浏览与一键下载
+
+sd-dynamic-prompts_neo                          动态提示词模板，支持变量与逻辑分支
+
+sd-forge-regional-prompter-neo          区域提示词，分区域控制画面内容
+
+sd-forge-tutorial                                       内置新手图文教程
+
+sd-webui-AestheticEnhancement-llama.cpp  基于 Qwen3.5 的图像/视频美学分析
+
+sd-webui-agent-dev-2.4                          智能体 Agent，支持自然语言对话式生图
+
+sd-webui-bsk-camera-control-forge-neo  3D 相机角度选择器，多角度提示词
+
+sd-webui-forge-neo-seedvr2                      SeedVR2 视频超分辨率增强
+
+sd-webui-lobe-theme                              Lobe 主题美化界面
+
+sd-webui-model-keyword                          自动识别模型关键词，避免漏触发
+
+sd-webui-model_downloader               模型批量下载工具
+
+sd-webui-multimodal-media                多媒体处理：TTS 语音、唇形同步、Qwen 视频、ACE-Step 音乐
+
+sd-webui-openpose-editor                 OpenPose 姿态可视化编辑器
+
+sd-webui-prompt-all-in-one-neo          提示词管理一体化（历史记录、翻译、权重）
+
+sd-webui-ps-plugin-api                          Photoshop 插件对接 API，PS 内直接生图
+
+sd-webui-see-through-sam                  SAM 一键抠图与图层分离
+
+sd-webui-supermerger-forgeneo-anima  SuperMerger 模型合并/融合
+
+sd-webui-tagcomplete-neo                 提示词自动补全
+
+sd-webui-trellis2                                        TRELLIS.2 单图生成 3D 模型
+
+stable-diffusion-webui-localization-zh_Hans  中文汉化语言包
+
+stable-diffusion-webui-wd14-tagger     WD 1.4 反向标签器，自动给图像打标
+
+TE-webui-DLSS5                                     DLSS 5 视频超分与插帧
+
+infinite-browsing                                  无限图像浏览，快速查看历史生成图
+
+forge-h3-studio                                    H3 Studio 综合工具集
+
+
 
 
 

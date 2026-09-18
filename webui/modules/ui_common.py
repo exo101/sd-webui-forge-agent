@@ -192,6 +192,16 @@ def create_output_panel(tabname, outdir, toprow=None):
                 res.gallery = gr.Gallery(label="Output", show_label=False, elem_id=f"{tabname}_gallery", columns=4, preview=True, height=shared.opts.gallery_height or None, interactive=False, type="pil", object_fit="contain")
                 res.player = gr.Video(label="Output", show_label=False, elem_id=f"{tabname}_player", height=shared.opts.gallery_height or None, interactive=False, autoplay=shared.opts.video_player_auto, loop=shared.opts.video_player_loop, include_audio=False, show_download_button=False, show_share_button=False, visible=False)
 
+            if tabname == "img2img":
+                gr.HTML(
+                    """
+                    <div id="img2img_compare_viewer" class="img2img-compare-viewer">
+                        <div class="img2img-compare-empty">生成图片后，可在此拖动滑块对比原图与生成结果</div>
+                    </div>
+                    """,
+                    elem_id="img2img_compare_viewer_host",
+                )
+
             with gr.Row(elem_id=f"image_buttons_{tabname}", elem_classes="image-buttons"):
                 open_folder_button = ToolButton(folder_symbol, elem_id=f"{tabname}_open_folder", visible=not shared.cmd_opts.hide_ui_dir_config, tooltip="Open images output directory.")
 

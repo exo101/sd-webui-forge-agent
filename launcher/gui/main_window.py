@@ -570,17 +570,6 @@ class MainWindow(QMainWindow):
                 # 保持在主控台
                 self._switch_tab(0)
                 
-                # 自动启动 llama.cpp（如果启用）
-                if self.config.get("llama", {}).get("enabled", True):
-                    try:
-                        if hasattr(self.tab_log, 'append_line'):
-                            self.tab_log.append_line("⏱  WebUI 启动后自动启动 llama.cpp...")
-                        from PyQt6.QtCore import QTimer
-                        QTimer.singleShot(2000, self._on_llama_launch)
-                    except Exception as e:
-                        if hasattr(self.tab_log, 'append_line'):
-                            self.tab_log.append_line(f"⚠️  llama 自动启动失败：{str(e)}")
-                
                 # 自动启动 ComfyUI（如果启用）
                 if self.config.get("comfyui", {}).get("enabled", False):
                     try:
