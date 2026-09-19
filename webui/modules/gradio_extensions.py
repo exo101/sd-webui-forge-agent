@@ -91,6 +91,41 @@ original_BlockContext_init = patches.patch(__name__, obj=gradio.blocks.BlockCont
 original_Blocks_get_config_file = patches.patch(__name__, obj=gradio.blocks.Blocks, field="get_config_file", replacement=Blocks_get_config_file)
 
 
+# Gradio 5 在 Dropdown.preprocess 中对值不在 choices 里的情况直接抛错; Gradio 4 原样返回值
+# (index 模式找不到时返回 None). webui 的下拉选项大量被动态刷新(checkpoint/sampler/controlnet
+# 等), 刷新瞬间旧值不在新选项中是常态, 这里恢复 Gradio 4 的宽松语义.
+def Dropdown_preprocess(self, payload):
+    if payload is None:
+        return None
+
+    choice_values = [value for _, value in self.choices]
+
+    if self.type == "value":
+        return payload
+    elif self.type == "index":
+        if isinstance(payload, list):
+            return [
+                choice_values.index(choice) if choice in choice_values else None
+                for choice in payload
+            ]
+        else:
+            return choice_values.index(payload) if payload in choice_values else None
+
+    raise ValueError(f"Unknown type: {self.type}. Please choose from: 'value', 'index'.")
+
+
+patches.patch(__name__, obj=gr.Dropdown, field="preprocess", replacement=Dropdown_preprocess)
+
+
+# Gradio 5 新增了 Slider/Number 的提交值越界校验(minimum/maximum), Gradio 4 不做此校验.
+# Slider 与 Number 的 preprocess 都调用这个静态方法, 置空即可全局恢复旧行为.
+def _no_raise_if_out_of_bounds(num, minimum, maximum):
+    return None
+
+
+patches.patch(__name__, obj=gr.Number, field="raise_if_out_of_bounds", replacement=staticmethod(_no_raise_if_out_of_bounds))
+
+
 ui_tempdir.install_ui_tempdir_override()
 
 

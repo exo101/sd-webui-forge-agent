@@ -132,6 +132,20 @@ def webui_worker():
         # running its code. We disable this here. Suggested by RyotaK.
         app.user_middleware = [x for x in app.user_middleware if x.cls.__name__ != "CORSMiddleware"]
 
+        # Gradio 5 moved all internal routes under the /gradio_api/ prefix.
+        # Keep the legacy /file= prefix working so that extensions which hardcode
+        # old-style URLs in HTML/JS keep serving their assets.
+        from fastapi import Request
+        from starlette.responses import RedirectResponse
+
+        async def _legacy_file_redirect(request: Request):
+            target = request.url.path.replace("/file=", "/gradio_api/file=", 1)
+            if request.url.query:
+                target += f"?{request.url.query}"
+            return RedirectResponse(target, status_code=307)
+
+        app.add_api_route("/file={path_or_url:path}", _legacy_file_redirect, methods=["GET", "HEAD"], include_in_schema=False)
+
         initialize_util.setup_middleware(app)
 
         progress.setup_progress_api(app)

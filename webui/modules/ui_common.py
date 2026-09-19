@@ -192,14 +192,34 @@ def create_output_panel(tabname, outdir, toprow=None):
                 res.gallery = gr.Gallery(label="Output", show_label=False, elem_id=f"{tabname}_gallery", columns=4, preview=True, height=shared.opts.gallery_height or None, interactive=False, type="pil", object_fit="contain")
                 res.player = gr.Video(label="Output", show_label=False, elem_id=f"{tabname}_player", height=shared.opts.gallery_height or None, interactive=False, autoplay=shared.opts.video_player_auto, loop=shared.opts.video_player_loop, include_audio=False, show_download_button=False, show_share_button=False, visible=False)
 
+            if tabname == "txt2img":
+                gr.HTML(
+                    """
+                    <div id="txt2img_compare_viewer" class="txt2img-compare-viewer">
+                        <div class="txt2img-compare-empty">生成后自动显示对比</div>
+                    </div>
+                    """,
+                    elem_id="txt2img_compare_viewer_host",
+                )
+
             if tabname == "img2img":
                 gr.HTML(
                     """
                     <div id="img2img_compare_viewer" class="img2img-compare-viewer">
-                        <div class="img2img-compare-empty">生成图片后，可在此拖动滑块对比原图与生成结果</div>
+                        <div class="img2img-compare-empty">生成后自动显示对比</div>
                     </div>
                     """,
                     elem_id="img2img_compare_viewer_host",
+                )
+
+            if tabname == "extras":
+                gr.HTML(
+                    """
+                    <div id="extras_compare_viewer" class="extras-compare-viewer">
+                        <div class="extras-compare-empty">生成后自动显示对比</div>
+                    </div>
+                    """,
+                    elem_id="extras_compare_viewer_host",
                 )
 
             with gr.Row(elem_id=f"image_buttons_{tabname}", elem_classes="image-buttons"):

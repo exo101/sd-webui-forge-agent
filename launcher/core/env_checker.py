@@ -4,7 +4,105 @@ import subprocess
 import sys
 import glob
 import re
+import ssl
+import time
+import urllib.request
 from .paths import BASE_DIR, PYTHON_EXE, GIT_EXE
+
+
+# ── Python 自动下载安装 ────────────────────────────────────────
+PYTHON_VERSION   = "3.13.12"
+PYTHON_INSTALLER = f"python-{PYTHON_VERSION}-amd64.exe"
+# 下载镜像（国内镜像优先，官方源兜底）
+PYTHON_DOWNLOAD_URLS = [
+    f"https://mirrors.huaweicloud.com/python/{PYTHON_VERSION}/{PYTHON_INSTALLER}",
+    f"https://registry.npmmirror.com/-/binary/python/{PYTHON_VERSION}/{PYTHON_INSTALLER}",
+    f"https://www.python.org/ftp/python/{PYTHON_VERSION}/{PYTHON_INSTALLER}",
+]
+# 安装包小于该大小视为下载不完整/错误页面（正常约 28MB）
+_MIN_INSTALLER_SIZE = 20 * 1024 * 1024
+_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+       "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36")
+
+
+def _report(progress_callback, message: str, percent: int = -1):
+    """安全调用进度回调：callback(message: str, percent: int)，percent=-1 表示无确定进度"""
+    if progress_callback is None:
+        return
+    try:
+        progress_callback(message, percent)
+    except Exception:
+        pass
+
+
+def _download_installer(urls: list[str], dest: str, progress_callback=None) -> str:
+    """
+    依次尝试多个镜像下载安装包：先写入 .part 临时文件，校验通过后原子改名。
+    单个镜像遇到 SSL 错误时自动以“忽略证书”方式重试一次。
+
+    Returns:
+        dest（最终文件路径）
+    Raises:
+        RuntimeError: 所有镜像均下载失败
+    """
+    last_error = "未知错误"
+    tmp = dest + ".part"
+
+    for index, url in enumerate(urls):
+        tag = f"镜像 {index + 1}/{len(urls)}"
+        # verify_ssl=True 常规下载；SSL 失败时用 False 兜底重试一次
+        for verify_ssl in (True, False):
+            try:
+                _report(progress_callback, f"⬇️  正在从{tag}下载 Python {PYTHON_VERSION}：{url}", 0)
+                req = urllib.request.Request(url, headers={"User-Agent": _UA})
+                ctx = None if verify_ssl else ssl._create_unverified_context()
+                with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
+                    total = int(resp.headers.get("Content-Length", 0)) or 0
+                    downloaded = 0
+                    last_pct = -10
+                    start_ts = time.time()
+                    last_emit = start_ts
+                    with open(tmp, "wb") as f:
+                        while True:
+                            chunk = resp.read(1 << 16)
+                            if not chunk:
+                                break
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            now = time.time()
+                            speed_mb = downloaded / max(now - start_ts, 0.1) / 1048576
+                            if total:
+                                pct = int(downloaded * 100 / total)
+                                # 每变化 10% 或间隔 2 秒上报一次，避免日志刷屏
+                                if pct >= last_pct + 10 or pct == 100 or now - last_emit >= 2:
+                                    _report(progress_callback,
+                                            f"⬇️  下载中 {pct}%（{downloaded / 1048576:.1f}/"
+                                            f"{total / 1048576:.1f} MB，{speed_mb:.1f} MB/s）", pct)
+                                    last_pct = pct
+                                    last_emit = now
+                            elif now - last_emit >= 2:
+                                _report(progress_callback,
+                                        f"⬇️  已下载 {downloaded / 1048576:.1f} MB（{speed_mb:.1f} MB/s）", -1)
+                                last_emit = now
+
+                actual = os.path.getsize(tmp)
+                if total and actual != total:
+                    raise RuntimeError(f"下载不完整：{actual}/{total} 字节")
+                if actual < _MIN_INSTALLER_SIZE:
+                    raise RuntimeError(f"文件体积异常（仅 {actual / 1048576:.1f} MB），疑似下载到错误页面")
+
+                os.replace(tmp, dest)
+                _report(progress_callback, f"✅ Python 安装包下载完成（{actual / 1048576:.1f} MB）", 100)
+                return dest
+            except Exception as e:
+                last_error = str(e) or repr(e)
+                _report(progress_callback, f"⚠️  {tag}下载失败：{last_error}", -1)
+                if verify_ssl and isinstance(e, ssl.SSLError):
+                    _report(progress_callback, "🔄  SSL 证书校验失败，尝试忽略证书重试…", -1)
+                    continue
+                break  # 该镜像已穷尽重试方式，切换下一个镜像
+
+    raise RuntimeError(f"所有下载镜像均尝试失败（最后错误：{last_error}）")
 
 
 def _run(cmd, **kwargs) -> tuple[int, str]:
@@ -27,10 +125,16 @@ def check_python() -> dict:
     return {"ok": ok, "version": out if ok else "未找到", "path": PYTHON_EXE}
 
 
-def ensure_python_installed() -> dict:
+def ensure_python_installed(progress_callback=None) -> dict:
     """
-    检查 Python 是否可用，如果不可用则尝试从 launcher/python-3.13.12-amd64.exe 自动安装。
-    
+    检查 Python 是否可用：
+      1. 已可用（system/python/python.exe）→ 直接返回；
+      2. launcher 目录下存在用户自备的完整安装包 → 使用该安装包；
+      3. 否则自动从镜像站下载 {PYTHON_INSTALLER}，再静默安装到 system/python。
+
+    Args:
+        progress_callback: 可选回调 callback(message: str, percent: int)，
+                           percent=-1 表示无确定进度比例
     Returns:
         dict: {"ok": bool, "message": str}
     """
@@ -38,25 +142,40 @@ def ensure_python_installed() -> dict:
     code, out = _run([PYTHON_EXE, "--version"])
     if code == 0:
         return {"ok": True, "message": f"Python 已就绪: {out.strip()}"}
-    
-    # Python 不存在，查找安装包
-    installer = os.path.join(BASE_DIR, "launcher", "python-3.13.12-amd64.exe")
-    if not os.path.exists(installer):
-        return {"ok": False, "message": f"未找到 Python 安装包，请将 python-3.13.12-amd64.exe 放入 launcher 目录"}
-    
+
+    installer = os.path.join(BASE_DIR, "launcher", PYTHON_INSTALLER)
+
+    # 本地安装包不存在（或残缺）→ 自动下载
+    if not os.path.exists(installer) or os.path.getsize(installer) < _MIN_INSTALLER_SIZE:
+        if os.path.exists(installer):
+            _report(progress_callback,
+                    f"⚠️  检测到残缺的安装包（{os.path.getsize(installer) / 1048576:.1f} MB），将重新下载", -1)
+        try:
+            os.makedirs(os.path.dirname(installer), exist_ok=True)
+            _download_installer(PYTHON_DOWNLOAD_URLS, installer, progress_callback)
+        except Exception as e:
+            return {"ok": False, "message": (
+                f"自动下载 Python 失败：{e}\n"
+                f"可手动下载 {PYTHON_INSTALLER}（约 28 MB）放入 launcher 目录后重新点击启动。\n"
+                f"手动下载地址：{PYTHON_DOWNLOAD_URLS[-1]}"
+            )}
+
     # 执行静默安装
     python_dir = os.path.join(BASE_DIR, "system", "python")
     os.makedirs(python_dir, exist_ok=True)
-    
+    _report(progress_callback, "⏳ 正在静默安装 Python，大约需要 1-3 分钟，请稍候…", -1)
+
     try:
         result = subprocess.run(
             [installer, "/quiet", f"TargetDir={python_dir}", "InstallAllUsers=0", "PrependPath=0",
              "Include_launcher=0", "InstallLauncherAllUsers=0", "AssociateFiles=0", "Shortcuts=0"],
-            capture_output=True, text=True, timeout=300
+            capture_output=True, text=True, timeout=300,
+            creationflags=subprocess.CREATE_NO_WINDOW,
         )
-        if result.returncode != 0:
+        # 0=成功；1641/3010=成功但需重启（不影响使用）；1638=同版本已安装，交给后续验证
+        if result.returncode not in (0, 1641, 3010, 1638):
             return {"ok": False, "message": f"Python 安装失败 (code={result.returncode}): {result.stderr}"}
-        
+
         # 验证安装结果
         code2, out2 = _run([PYTHON_EXE, "--version"])
         if code2 == 0:

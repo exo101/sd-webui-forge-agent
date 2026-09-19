@@ -101,7 +101,7 @@ def check_versions():
 
     expected_torch = "2.11.0"
     expected_xformers = "0.0.35"
-    expected_gradio = "4.40.0"
+    expected_gradio = "5.49.1"
 
     outdated: list[str] = []
 

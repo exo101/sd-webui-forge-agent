@@ -1,4 +1,5 @@
 import os
+from urllib.parse import quote
 
 import gradio as gr
 
@@ -7,7 +8,11 @@ from modules.paths import data_path, script_path
 
 
 def webpath(fn):
-    return f"file={util.truncate_path(fn)}?{os.path.getmtime(fn)}"
+    # URLs must use forward slashes.  On Windows, relpath() returns
+    # backslashes; browsers normalize those differently and extension
+    # scripts can fail to load while Gradio remains stuck on "Loading".
+    path = util.truncate_path(fn).replace("\\", "/")
+    return f"gradio_api/file={quote(path, safe='/')}?{os.path.getmtime(fn)}"
 
 
 def javascript_html():
@@ -59,7 +64,14 @@ def reload_javascript():
         res = shared.GradioTemplateResponseOriginal(*args, **kwargs)
         res.body = res.body.replace(b"</head>", f'{js}<meta name="referrer" content="no-referrer"/></head>'.encode("utf8"))
         res.body = res.body.replace(b"</body>", f"{css}</body>".encode("utf8"))
+        # 页面语言声明为中文：阻止 Edge/Chrome 的"翻译此页"功能介入。
+        # 浏览器翻译插件重写文本节点会与 webui 的 DOM 监听回调互相触发，
+        # 形成无限变更循环把页面主线程冻死（表现为"此页面没有响应"）
+        res.body = res.body.replace(b'lang="en"', b'lang="zh-CN"')
         res.init_headers()
+        # 页面 HTML 不缓存：避免浏览器缓存旧页面（引用旧 JS 文件），
+        # 导致修改 JS 后普通刷新仍加载旧代码（本地服务，无性能影响）
+        res.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         return res
 
     gr.routes.templates.TemplateResponse = template_response

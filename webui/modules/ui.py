@@ -205,8 +205,11 @@ def create_ui():
     with gr.Blocks(analytics_enabled=False, head=canvas_head) as txt2img_interface:
         toprow = ui_toprow.Toprow(is_img2img=False)
 
-        dummy_component = gr.Textbox(visible=False)
-        dummy_component_number = gr.Number(visible=False)
+        # Gradio 5 不挂载游离于布局容器之外的根级组件, 导致事件提交时丢失该输入;
+        # 包进隐藏 Group 使其保持挂载(显示状态不受影响)
+        with gr.Group(visible=False):
+            dummy_component = gr.Textbox(visible=False)
+            dummy_component_number = gr.Number(visible=False)
 
         extra_tabs = gr.Tabs(elem_id="txt2img_extra_tabs", elem_classes=["extra-networks"])
         extra_tabs.__enter__()
@@ -882,7 +885,7 @@ def create_ui():
             gr.HTML(
                 """
                 <div id="pnginfo_compare_viewer" class="pnginfo-compare-viewer">
-                    <div class="pnginfo-compare-empty">请上传两张图片进行对比</div>
+                    <div class="pnginfo-compare-empty">上传后自动显示对比</div>
                 </div>
                 """,
                 elem_id="pnginfo_compare_viewer_host",
@@ -913,14 +916,13 @@ def create_ui():
     for _interface, label, _ifid in interfaces:
         shared.tab_names.append(label)
 
-    with gr.Blocks(theme=shared.gradio_theme, analytics_enabled=False, title="Stable Diffusion", head=canvas_head + """
-<script>
-if (!sessionStorage.getItem('physton_icon_refreshed')) {
-    sessionStorage.setItem('physton_icon_refreshed', '1');
-    setTimeout(function() { location.reload(); }, 2000);
-}
-</script>
-""") as demo:
+    with gr.Blocks(
+        theme=shared.gradio_theme,
+        analytics_enabled=False,
+        title="Stable Diffusion",
+        fill_width=True,
+        head=canvas_head,
+    ) as demo:
         settings.add_quicksettings()
 
         parameters_copypaste.connect_paste_params_buttons()
