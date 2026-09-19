@@ -10,6 +10,13 @@ if not defined PYTHON (
     if exist "%SCRIPT_DIR%..\system\python\python.exe" (
         set "PYTHON=%SCRIPT_DIR%..\system\python\python.exe"
     ) else (
+        rem Portable Python missing: hand off to the GUI launcher, which downloads and installs it automatically
+        for %%F in ("%SCRIPT_DIR%..\forge_neo*.exe") do (
+            echo Portable Python ^(system\python^) not found.
+            echo Starting the Forge Neo launcher, which will download and install Python automatically...
+            start "" "%%~fF"
+            exit /b
+        )
         set PYTHON=python
     )
 )
@@ -25,6 +32,8 @@ mkdir tmp 2>NUL
 if %ERRORLEVEL% == 0 goto :check_pip
 echo Couldn't launch python
 echo If you are using portable deployment, make sure Python is in system\python\
+echo Tip: run the forge_neo launcher .exe in the project root instead of this file,
+echo      it downloads and installs the portable Python automatically on first launch.
 goto :show_stdout_stderr
 
 :check_pip

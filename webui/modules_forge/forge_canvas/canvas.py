@@ -49,12 +49,15 @@ canvas_js_root_path = os.path.dirname(__file__)
 
 def web_js(file_name):
     full_path = os.path.join(canvas_js_root_path, file_name)
-    return f'<script src="file={full_path}?{os.path.getmtime(full_path)}"></script>\n'
+    # Gradio 5: 统一走 webpath, 使用 /gradio_api/file= 前缀与相对路径
+    from modules.ui_gradio_extensions import webpath
+    return f'<script src="{webpath(full_path)}"></script>\n'
 
 
 def web_css(file_name):
     full_path = os.path.join(canvas_js_root_path, file_name)
-    return f'<link rel="stylesheet" href="file={full_path}?{os.path.getmtime(full_path)}">\n'
+    from modules.ui_gradio_extensions import webpath
+    return f'<link rel="stylesheet" href="{webpath(full_path)}">\n'
 
 
 canvas_html = open(os.path.join(canvas_js_root_path, "canvas.html"), encoding="utf-8").read()

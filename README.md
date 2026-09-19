@@ -1,11 +1,11 @@
-# Stable Diffusion WebUI Forge - Neo (中文改良版)
+# sd-webui-agent-forge
 
 <div align="center">
 
-**基于 AUTOMATIC1111 的现代化 AI 图像生成平台 | 支持最新多模态模型 | 智能 GUI 启动器**
+**面向 Agent 智能体时代的 Stable Diffusion WebUI Forge 中文整合平台 | 多模态模型 | MCP / Skill | 智能 GUI 启动器**
 
-[![GitHub stars](https://img.shields.io/github/stars/exo101/sd-webui-forge-neo-v3)](https://github.com/exo101/sd-webui-forge-neo-v3/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/exo101/sd-webui-forge-neo-v3)](https://github.com/exo101/sd-webui-forge-neo-v3/network)
+[![GitHub stars](https://img.shields.io/github/stars/exo101/sd-webui-agent-forge)](https://github.com/exo101/sd-webui-agent-forge/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/exo101/sd-webui-agent-forge)](https://github.com/exo101/sd-webui-agent-forge/network)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.13.12-blue.svg)](https://www.python.org/)
 
@@ -17,12 +17,84 @@
 
 ## 📋 项目介绍
 
-本项目是基于 **Stable Diffusion WebUI Forge** 的中文改良版本，专注于优化和多模态插件融合，目标是通过简单易用的 GUI 运行最新的流行模型。
+**sd-webui-agent-forge** 是基于 **Stable Diffusion WebUI Forge** 的中文智能体增强整合版本，面向国内用户、多模态模型和对话式 AI 工作流进行改良。项目目标不再只是提供一个复杂参数面板，而是让用户通过聊天就能调用 WebUI 能力、组合模型、扩写提示词、处理图像/视频、诊断问题并完成复杂任务。
 
-**原作者**：[Haoming02](https://github.com/Haoming02) · [原项目链接](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo)
 
 > [!NOTE]
-> 本版本为改良版本，部分插件直接安装会发生兼容性错误，为了适应众多新旧插件做了些许修改。
+> 本版本为改良版本，部分插件直接安装会发生兼容性错误，为了适应众多新旧插件做了些许修改，如需要安装旧插件直接让智能体帮忙安装排除修改bug和不兼容性。
+>
+> **版本路线说明**：从 **v3.6.8** 之后，项目名称和发展方向调整为 `sd-webui-agent-forge`，不再继续沿用 `neo-v3` 分支路线，而是转向以智能体（Agent）、MCP 和 Skill 为核心的持续演进路线。后续版本将优先围绕自然语言操作、模型编排、多模态理解、工具调用和易用性进行设计。
+
+---
+
+## 🚀 新路线：Agent 智能体与 MCP / Skill
+
+本项目正在从“手动操作大量参数的 WebUI”逐步进化为“可以通过对话完成复杂任务的 AI 工作台”。用户不必记住所有参数和菜单位置，只需描述目标，智能体就可以理解任务、调用 WebUI 功能，并在必要时向用户确认关键操作。
+
+### 智能体可以做什么
+
+| 能力 | 说明 |
+|------|------|
+| **自然语言生图** | 根据用户描述生成图片，自动选择或调整模型、尺寸、采样器、步数、提示词和相关参数 |
+| **记忆与上下文感知** | 在启用记忆功能后，记录用户偏好、常用模型、风格习惯和当前任务上下文；用户也可以清理或关闭记忆 |
+| **复杂参数设置** | 根据显存、模型类型、画面比例和任务目标，自动组合生成参数，减少手动调整负担 |
+| **模型组合调配** | 读取可用模型、VAE、文本编码器、LoRA、ControlNet 和预处理器，并按任务需要组合使用 |
+| **提示词扩写与整理** | 将简单描述扩展为更完整的正向提示词，整理负面提示词、权重、风格、构图和主体细节 |
+| **批量任务处理** | 执行批量生图、批量放大、批量抠图、批量格式处理和多步骤图像工作流 |
+| **多模态理解** | 在支持相应工具和模型的情况下，读取并分析文档、图像、代码、视频、网页内容和工作区文件 |
+| **图像与视频处理** | 调用图生图、后期处理、放大、抠图、图层分离、视频抽帧、视频生成 |
+| **扩展与 WebUI 检查** | 查看已安装扩展、调研扩展功能、诊断 WebUI 文件和定位常见内部错误 |
+| **对话式任务编排** | 将“读取资料 → 分析 → 生成提示词 → 选择模型 → 批量生成 → 对比结果”串成连续任务 |
+
+> 智能体的实际能力取决于已安装的扩展、可用模型、显存、操作系统权限以及配置的 AI 模型/API。涉及删除文件、执行命令、修改代码或外部服务调用时，应先确认范围并做好备份；智能体不会替代人工审核生成结果和代码修改。
+
+### MCP 与 Skill
+
+- **MCP**：为智能体提供标准化工具接口，使其能够访问 WebUI 功能、模型管理、工作区文件、网页内容、图像/视频处理和其他外部工具。
+- **Skill**：以 `SKILL.md` 形式描述某类任务的使用规则和步骤。智能体可以发现可用 Skill，读取对应说明后按规范执行任务。
+- **工具调用**：智能体可以调用文生图、图生图、模型切换、参数更新、模型列表、后期处理、视频处理、文档分析、网页读取、扩展诊断等工具。
+- **可扩展性**：用户可以根据自己的工作流增加模型、扩展、MCP 服务或 Skill，使智能体逐步适应个人的生产流程。
+
+### 智能体大脑
+
+项目支持使用云端 API 模型或本地模型作为智能体大脑：
+
+- **API 模型**：可配置兼容 OpenAI 接口的云端模型，也可以使用项目中支持的图像/视频 API 服务。
+- **本地模型**：可通过本地 OpenAI 兼容服务或 `llama.cpp` 运行 GGUF 模型，适合重视隐私、希望离线使用或网络条件有限的用户。
+- **混合工作流**：使用本地模型负责对话、参数规划和工具调用，使用云端模型负责复杂推理或图像/视频生成；具体组合取决于用户的配置。
+
+### 面向新手的 UI 方向
+
+后续版本将全面简化高频 UI 参数设置：保留必要的高级选项，同时让智能体承担参数解释、自动配置和任务编排工作。新手可以直接描述“生成一张某种风格、某种比例的图片”，熟悉 WebUI 的用户仍然可以继续使用传统界面和高级参数。
+
+---
+
+## 🖼️ 图像对比模块
+
+项目内置图像对比功能，用于快速查看生成前后或两次生成结果之间的差异：
+
+- **文生图**：第一次生成单张图片时不显示对比；再次生成后自动比较上一次和本次结果。
+- **图生图**：生成完成后自动对比原图和生成结果。
+- **后期处理**：处理完成后自动对比原图和处理结果。
+- **PNG 图片信息**：上传图片后自动显示可对比结果。
+- **滑动查看**：通过滑动条调整分界线，适合查看细节、放大效果、重绘差异和风格变化。
+
+---
+
+## 🇨🇳 国内用户与 ModelScope（魔搭社区）支持
+
+项目集成了面向国内用户的 ModelScope（魔搭社区）模型下载能力。用户可以在 WebUI 的模型下载器中浏览或填写模型仓库 ID，下载完整仓库或指定文件，并保存到对应模型目录。
+
+支持的主要方式包括：
+
+- ModelScope（魔搭社区）模型仓库下载；
+- Hugging Face 模型仓库下载；
+- 完整仓库下载和单文件下载；
+- 多文件选择、下载历史和自定义保存路径；
+- 国内网络环境下优先使用 ModelScope，减少跨境网络访问带来的不稳定；
+- 已下载模型可继续由 WebUI 或智能体发现、切换和调用。
+
+> ModelScope 下载速度和可用性仍取决于网络、仓库权限、模型大小和平台服务状态。部分模型还需要额外的文本编码器、VAE、LoRA 或其他组件，下载后请按照模型说明放入正确目录。
 
 ---
 
@@ -36,7 +108,7 @@
 |------|---------|---------|
 | **操作系统** | Windows 10/11 (64位) | Windows 11 |
 | **Python** | 3.13.12 | 3.13.12 |
-| **GPU** | NVIDIA GPU 4GB+ 显存 | NVIDIA GPU 12GB+ 显存 |
+| **GPU** | NVIDIA GPU 8GB+ 显存 | NVIDIA GPU 12GB+ 显存 |
 | **内存** | 16GB | 32GB |
 | **磁盘空间** | 50GB 可用空间 | 100GB+ SSD |
 
@@ -51,8 +123,8 @@
 #### 第二步：下载项目代码
 
 ```bash
-git clone https://github.com/exo101/sd-webui-forge-neo-v3.git
-cd sd-webui-forge-neo-v3
+git clone https://github.com/exo101/sd-webui-agent-forge.git
+cd sd-webui-agent-forge
 ```
 
 或直接下载 ZIP 解压到任意目录（**路径不要包含中文和空格**）。
@@ -141,8 +213,8 @@ cd sd-webui-forge-neo-v3
 |---------|---------|---------|
 | **4-6 GB** | TAESD + 分块处理 | SD1.5, SD2.1 |
 | **8 GB** | 默认配置 | SDXL, Flux.2-Klein 4B |
-| **12 GB** | 全功能 | Flux, Anima, Qwen-Image |
-| **16 GB+** | 无限制 | Wan 2.2, Flux.2-Klein 9B |
+| **12 GB** | 全功能 | Flux, Anima,  |
+| **16 GB+** | 无限制 | Qwen-Image, Flux.2-Klein 9B |
 
 ### 其他增强
 
@@ -245,22 +317,6 @@ models/VAE/
 └── qwen_image_vae.safetensors
 ```
 
-#### Wan 2.2 视频模型
-
-视频生成模型：
-
-```
-models/Stable-diffusion/
-├── wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors
-└── wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors
-
-models/text_encoder/
-├── umt5-xx-fp8-scaled.safetensors
-└── umt5-xxl-enc-bf16.safetensors
-
-models/VAE/
-└── wan_2.2_vae.safetensors
-```
 
 > [!TIP]
 > 导出视频需要安装 **[FFmpeg](https://ffmpeg.org/)**
@@ -337,7 +393,6 @@ models/VAE/
 | **sd-webui-agent-dev-2.4** | 智能体 Agent，支持自然语言对话式生图 |
 | **sd-webui-bsk-camera-control-forge-neo** | 3D 相机角度选择器，多角度提示词 |
 | **sd-webui-forge-neo-seedvr2** | SeedVR2 视频超分辨率增强 |
-| **sd-webui-lobe-theme** | Lobe 主题美化界面 |
 | **sd-webui-model-keyword** | 自动识别模型关键词，避免漏触发 |
 | **sd-webui-model_downloader** | 模型批量下载工具 |
 | **sd-webui-multimodal-media** | 多媒体处理：TTS 语音、唇形同步、Qwen 视频、ACE-Step 音乐 |
@@ -380,7 +435,7 @@ models/VAE/
 
 ## 🙏 致谢
 
-- **Haoming02** — [sd-webui-forge-classic](https://github.com/Haoming02/sd-webui-forge-classic) 原作者
+- **Haoming02** — [sd-webui-forge-classic](https://github.com/Haoming02/sd-webui-forge-classic) 分支作者
 - **AUTOMATIC1111** — Stable Diffusion WebUI 原始项目
 - **lllyasviel** — Forge 优化框架
 - **comfyanonymous** — ComfyUI 项目

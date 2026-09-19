@@ -137,10 +137,7 @@
         if (!viewer) return;
 
         if (!beforeData || !afterData) {
-            const hint = !beforeData
-                ? "未检测到原图：请在左侧模式标签页上传/绘制原图，生成后自动显示对比"
-                : "生成图片后，可在此拖动滑块对比原图与生成结果";
-            viewer.innerHTML = '<div class="img2img-compare-empty">' + hint + "</div>";
+            viewer.innerHTML = '<div class="img2img-compare-empty">生成后自动显示对比</div>';
             return;
         }
 
@@ -271,11 +268,184 @@
         return true;
     }
 
+    function setupExtrasCompare() {
+        const source = document.getElementById("extras_image");
+        const gallery = document.getElementById("extras_gallery");
+        const viewer = document.getElementById("extras_compare_viewer");
+        if (!source || !gallery || !viewer) return false;
+
+        if (!document.getElementById("extras-compare-styles")) {
+            const style = document.createElement("style");
+            style.id = "extras-compare-styles";
+            style.textContent =
+                "#extras_compare_viewer_host { width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; }" +
+                ".extras-compare-viewer { width: 100%; max-width: 720px; margin: 12px auto 0; box-sizing: border-box; }" +
+                ".extras-compare-stage { position: relative; width: 100%; max-width: 100%; min-height: 160px; overflow: hidden; background: #111; border-radius: 6px; box-sizing: border-box; }" +
+                ".extras-compare-image { display: block; width: 100%; max-width: 100%; height: 260px; object-fit: contain; user-select: none; pointer-events: none; }" +
+                ".extras-compare-overlay { position: absolute; inset: 0; overflow: hidden; }" +
+                ".extras-compare-overlay .extras-compare-image { width: 100%; max-width: none; }" +
+                ".extras-compare-divider { position: absolute; top: 0; bottom: 0; width: 2px; transform: translateX(-1px); background: #fff; box-shadow: 0 0 4px #000; pointer-events: none; }" +
+                ".extras-compare-divider span { position: absolute; top: 50%; left: 50%; width: 28px; height: 28px; border: 2px solid #fff; border-radius: 50%; transform: translate(-50%, -50%); background: #333; }" +
+                ".extras-compare-divider span::before, .extras-compare-divider span::after { content: \"\"; position: absolute; top: 7px; width: 7px; height: 7px; border-top: 2px solid #fff; border-right: 2px solid #fff; }" +
+                ".extras-compare-divider span::before { left: 4px; transform: rotate(-135deg); }" +
+                ".extras-compare-divider span::after { right: 4px; transform: rotate(45deg); }" +
+                ".extras-compare-slider { display: block; width: 100%; height: 22px; margin: 12px 0 4px; cursor: ew-resize; accent-color: #4ea1ff; }" +
+                ".extras-compare-labels { display: flex; justify-content: space-between; color: #aaa; font-size: 12px; }" +
+                ".extras-compare-empty { padding: 70px 12px; color: #888; text-align: center; background: #111; border-radius: 6px; }";
+            document.head.appendChild(style);
+        }
+
+        function readFirstImage(root) {
+            const imgs = root.querySelectorAll("img");
+            for (const img of imgs) {
+                const src = img.getAttribute("src") || img.currentSrc;
+                if (isUsableSrc(src)) return src;
+            }
+            return null;
+        }
+
+        function renderExtras() {
+            const before = readFirstImage(source);
+            const after = readFirstImage(gallery);
+            if (!before || !after) {
+                viewer.innerHTML = '<div class="extras-compare-empty">生成后自动显示对比</div>';
+                return;
+            }
+
+            viewer.innerHTML =
+                '<div class="extras-compare-stage">' +
+                '    <img class="extras-compare-image" src="' + before + '" alt="原图">' +
+                '    <div class="extras-compare-overlay" style="clip-path: inset(0 0 0 50%);">' +
+                '        <img class="extras-compare-image" src="' + after + '" alt="处理结果">' +
+                "    </div>" +
+                '    <div class="extras-compare-divider" style="left: 50%;"><span></span></div>' +
+                "</div>" +
+                '<input class="extras-compare-slider" type="range" min="0" max="100" value="50" aria-label="调整图像对比分界线">' +
+                '<div class="extras-compare-labels"><span>原图（左）</span><span>处理结果（右）</span></div>';
+
+            const slider = viewer.querySelector(".extras-compare-slider");
+            const overlay = viewer.querySelector(".extras-compare-overlay");
+            const divider = viewer.querySelector(".extras-compare-divider");
+            slider.addEventListener("input", function () {
+                const value = Number(slider.value);
+                overlay.style.clipPath = "inset(0 0 0 " + value + "%)";
+                divider.style.left = value + "%";
+            });
+        }
+
+        if (!viewer.dataset.extrasCompareBound) {
+            viewer.dataset.extrasCompareBound = "1";
+            new MutationObserver(renderExtras).observe(source, { childList: true, subtree: true, attributes: true, attributeFilter: ["src"] });
+            new MutationObserver(renderExtras).observe(gallery, { childList: true, subtree: true, attributes: true, attributeFilter: ["src", "class"] });
+        }
+
+        renderExtras();
+        return true;
+    }
+
+    function setupTxt2imgCompare() {
+        const gallery = document.getElementById("txt2img_gallery");
+        const viewer = document.getElementById("txt2img_compare_viewer");
+        if (!gallery || !viewer) return false;
+
+        if (!document.getElementById("txt2img-compare-styles")) {
+            const style = document.createElement("style");
+            style.id = "txt2img-compare-styles";
+            style.textContent =
+                "#txt2img_compare_viewer_host { width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; }" +
+                ".txt2img-compare-viewer { width: 100%; max-width: 720px; margin: 12px auto 0; box-sizing: border-box; }" +
+                ".txt2img-compare-stage { position: relative; width: 100%; max-width: 100%; min-height: 160px; overflow: hidden; background: #111; border-radius: 6px; box-sizing: border-box; }" +
+                ".txt2img-compare-image { display: block; width: 100%; max-width: 100%; height: 260px; object-fit: contain; user-select: none; pointer-events: none; }" +
+                ".txt2img-compare-overlay { position: absolute; inset: 0; overflow: hidden; }" +
+                ".txt2img-compare-overlay .txt2img-compare-image { width: 100%; max-width: none; }" +
+                ".txt2img-compare-divider { position: absolute; top: 0; bottom: 0; width: 2px; transform: translateX(-1px); background: #fff; box-shadow: 0 0 4px #000; pointer-events: none; }" +
+                ".txt2img-compare-divider span { position: absolute; top: 50%; left: 50%; width: 28px; height: 28px; border: 2px solid #fff; border-radius: 50%; transform: translate(-50%, -50%); background: #333; }" +
+                ".txt2img-compare-divider span::before, .txt2img-compare-divider span::after { content: \"\"; position: absolute; top: 7px; width: 7px; height: 7px; border-top: 2px solid #fff; border-right: 2px solid #fff; }" +
+                ".txt2img-compare-divider span::before { left: 4px; transform: rotate(-135deg); }" +
+                ".txt2img-compare-divider span::after { right: 4px; transform: rotate(45deg); }" +
+                ".txt2img-compare-slider { display: block; width: 100%; height: 22px; margin: 12px 0 4px; cursor: ew-resize; accent-color: #4ea1ff; }" +
+                ".txt2img-compare-labels { display: flex; justify-content: space-between; color: #aaa; font-size: 12px; }" +
+                ".txt2img-compare-empty { padding: 70px 12px; color: #888; text-align: center; background: #111; border-radius: 6px; }";
+            document.head.appendChild(style);
+        }
+
+        function galleryImages() {
+            const images = [];
+            for (const img of gallery.querySelectorAll("img")) {
+                const src = img.getAttribute("src") || img.currentSrc;
+                if (isUsableSrc(src) && !images.includes(src)) images.push(src);
+            }
+            return images;
+        }
+
+        function renderCompare(left, right) {
+            const host = document.getElementById("txt2img_compare_viewer_host");
+            if (!left || !right || left === right) {
+                if (host) host.style.display = "none";
+                viewer.innerHTML = '<div class="txt2img-compare-empty">生成后自动显示对比</div>';
+                return;
+            }
+            if (host) host.style.display = "block";
+            viewer.innerHTML =
+                '<div class="txt2img-compare-stage">' +
+                '    <img class="txt2img-compare-image" src="' + left + '" alt="上一次生成结果">' +
+                '    <div class="txt2img-compare-overlay" style="clip-path: inset(0 0 0 50%);">' +
+                '        <img class="txt2img-compare-image" src="' + right + '" alt="本次生成结果">' +
+                "    </div>" +
+                '    <div class="txt2img-compare-divider" style="left: 50%;"><span></span></div>' +
+                "</div>" +
+                '<input class="txt2img-compare-slider" type="range" min="0" max="100" value="50" aria-label="调整文生图结果对比分界线">' +
+                '<div class="txt2img-compare-labels"><span>上一次生成</span><span>本次生成</span></div>';
+
+            const slider = viewer.querySelector(".txt2img-compare-slider");
+            const overlay = viewer.querySelector(".txt2img-compare-overlay");
+            const divider = viewer.querySelector(".txt2img-compare-divider");
+            slider.addEventListener("input", function () {
+                const value = Number(slider.value);
+                overlay.style.clipPath = "inset(0 0 0 " + value + "%)";
+                divider.style.left = value + "%";
+            });
+        }
+
+        function refreshTxt2imgCompare() {
+            const images = galleryImages();
+            const signature = images.join("|");
+            if (!signature || signature === gallery.dataset.txt2imgCompareSignature) return;
+            const previous = gallery.dataset.txt2imgCompareLastImage || "";
+            gallery.dataset.txt2imgCompareSignature = signature;
+            gallery.dataset.txt2imgCompareLastImage = images[0];
+
+            if (images.length >= 2) {
+                renderCompare(images[0], images[1]);
+            } else if (previous && previous !== images[0]) {
+                renderCompare(previous, images[0]);
+            }
+        }
+
+        if (!gallery.dataset.txt2imgCompareBound) {
+            gallery.dataset.txt2imgCompareBound = "1";
+            new MutationObserver(refreshTxt2imgCompare).observe(gallery, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ["src", "class"],
+            });
+        }
+
+        refreshTxt2imgCompare();
+        return true;
+    }
+
     onUiLoaded(function () {
-        if (setup()) return;
-        // The img2img tab may render its components lazily; poll until they exist.
+        const img2imgReady = setup();
+        const extrasReady = setupExtrasCompare();
+        const txt2imgReady = setupTxt2imgCompare();
+        if (img2imgReady && extrasReady && txt2imgReady) return;
         const timer = setInterval(function () {
-            if (setup()) clearInterval(timer);
+            const currentImg2imgReady = img2imgReady || setup();
+            const currentExtrasReady = extrasReady || setupExtrasCompare();
+            const currentTxt2imgReady = txt2imgReady || setupTxt2imgCompare();
+            if (currentImg2imgReady && currentExtrasReady && currentTxt2imgReady) clearInterval(timer);
         }, 100);
     });
 })();

@@ -21,6 +21,17 @@ from modules.sd_samplers_common import images_tensor_to_samples
 from modules.shared import device, opts, sd_model
 from modules.ui_components import InputAccordion
 
+# [Image Stitch] 调试日志开关：默认关闭（控制台不打印 [Image Stitch] 日志）。
+# 需要排查问题时，启动前设置环境变量 IMAGE_STITCH_DEBUG=1 再启动 webui，
+# 或直接把下面这行改成 True。
+IMAGE_STITCH_DEBUG = os.environ.get("IMAGE_STITCH_DEBUG", "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def _log(message):
+    if IMAGE_STITCH_DEBUG:
+        print(f"[Image Stitch] {message}")
+
+
 # 全局变量用于存储主界面组件
 txt2img_w_slider = None
 txt2img_h_slider = None
@@ -81,7 +92,7 @@ class BatchTaskManager:
         )
         with self._lock:
             self.tasks.append(task)
-        print(f"[Image Stitch Batch] 添加任务 {task.id}: {prompt[:40]}...")
+        _log(f"[Batch] 添加任务 {task.id}: {prompt[:40]}...")
         return task
 
     def get_status(self) -> list[dict]:
@@ -171,14 +182,14 @@ class BatchTaskManager:
                     t.status = "processing"
 
         total = len(all_tasks)
-        print(f"[Image Stitch Batch] 开始批量处理，共 {total} 个任务")
+        _log(f"[Batch] 开始批量处理，共 {total} 个任务")
 
         completed_results = []
         failed_results = []
 
         for i, task in enumerate(all_tasks):
             if self._stop_requested:
-                print(f"[Image Stitch Batch] 批量处理已停止（第 {i+1}/{total} 个任务）")
+                _log(f"[Batch] 批量处理已停止（第 {i+1}/{total} 个任务）")
                 # 将未处理的任务恢复为 waiting
                 with self._lock:
                     for remaining in all_tasks[i:]:
@@ -187,7 +198,7 @@ class BatchTaskManager:
                 break
 
             progress((i + 1) / total, desc=f"正在处理任务 {i+1}/{total}: {task.prompt[:30]}...")
-            print(f"[Image Stitch Batch] 处理任务 {task.id}: {task.prompt[:40]}...")
+            _log(f"[Batch] 处理任务 {task.id}: {task.prompt[:40]}...")
 
             try:
                 result = self._process_single_task(task)
@@ -195,17 +206,17 @@ class BatchTaskManager:
                     task.result_image = result
                     task.status = "completed"
                     completed_results.append(result)
-                    print(f"[Image Stitch Batch] ✅ 任务 {task.id} 完成")
+                    _log(f"[Batch] ✅ 任务 {task.id} 完成")
                 else:
                     raise RuntimeError("生成失败，未返回图片")
             except Exception as e:
                 task.status = "failed"
                 task.error_message = str(e)
                 failed_results.append(task)
-                print(f"[Image Stitch Batch] ❌ 任务 {task.id} 失败: {e}")
+                _log(f"[Batch] ❌ 任务 {task.id} 失败: {e}")
 
         self._is_running = False
-        print(f"[Image Stitch Batch] 批量处理完成: {len(completed_results)} 成功, {len(failed_results)} 失败")
+        _log(f"[Batch] 批量处理完成: {len(completed_results)} 成功, {len(failed_results)} 失败")
         return completed_results, failed_results
 
     def _process_single_task(self, task: BatchTask) -> Optional[Image.Image]:
@@ -224,7 +235,7 @@ class BatchTaskManager:
                     main_entry.checkpoint_change(checkpoint, preset=None, save=False, refresh=True)
                 forge_model_reload()
             except Exception as e:
-                print(f"[Image Stitch Batch] 尝试加载模型失败: {e}")
+                _log(f"[Batch] 尝试加载模型失败: {e}")
                 raise RuntimeError("模型未加载，请先在 WebUI 中选择并加载模型")
 
         # 获取当前主界面参数
@@ -252,14 +263,14 @@ class BatchTaskManager:
             # API 模式：通过 api_providers 传参考图，不用本地编码
             from modules_forge.api_providers import set_reference_images, get_session_api_key
             api_key = get_session_api_key()
-            print(f"[Image Stitch Batch] API Key check: key='{api_key[:4] if api_key else '(empty)'}...', forge_model_mode='{forge_model_mode}'")
+            _log(f"[Batch] API Key check: key='{api_key[:4] if api_key else '(empty)'}...', forge_model_mode='{forge_model_mode}'")
             if not api_key:
                 # 尝试从 shared.opts 读取
                 fallback_key = getattr(shared.opts, 'forge_api_key', '')
                 if fallback_key:
                     from modules_forge.api_providers import set_session_api_key
                     set_session_api_key(fallback_key)
-                    print(f"[Image Stitch Batch] 已从 opts 恢复 API Key")
+                    _log(f"[Batch] 已从 opts 恢复 API Key")
                     api_key = fallback_key
             set_reference_images([task.reference_image])
             processed = process_images(p)
@@ -503,7 +514,7 @@ class ImageStitch(scripts.Script):
                 presets_dir = get_preset_prompts_dir()
                 prompts = []
 
-                print(f"[Image Stitch] 开始扫描目录: {presets_dir}")
+                _log(f"开始扫描目录: {presets_dir}")
 
                 for file in sorted(os.listdir(presets_dir)):
                     if file.endswith('.txt'):
@@ -511,13 +522,13 @@ class ImageStitch(scripts.Script):
                         try:
                             with open(filepath, 'r', encoding='utf-8') as f:
                                 prompt_text = f.read().strip()
-                                print(f"[Image Stitch] 读取文件 {file}: '{prompt_text}' (长度: {len(prompt_text)})")
+                                _log(f"读取文件 {file}: '{prompt_text}' (长度: {len(prompt_text)})")
                                 if prompt_text:
                                     prompts.append(prompt_text)
                         except Exception as e:
-                            print(f"[Image Stitch] 加载提示词失败 {file}: {e}")
+                            _log(f"加载提示词失败 {file}: {e}")
 
-                print(f"[Image Stitch] ✅ 成功加载 {len(prompts)} 个预设提示词: {prompts}")
+                _log(f"✅ 成功加载 {len(prompts)} 个预设提示词: {prompts}")
                 return gr.update(choices=prompts, value=(prompts[0] if prompts else None))
 
             def save_preset_prompt(prompt_text):
@@ -539,20 +550,20 @@ class ImageStitch(scripts.Script):
                 try:
                     with open(filepath, 'w', encoding='utf-8') as f:
                         f.write(prompt_text)
-                    print(f"[Image Stitch] 已保存提示词: {filepath}")
+                    _log(f"已保存提示词: {filepath}")
                     return gr.update(value=""), load_preset_prompts(), f"✅ 已保存: {os.path.basename(filepath)}"
                 except Exception as e:
-                    print(f"[Image Stitch] 保存提示词失败: {e}")
+                    _log(f"保存提示词失败: {e}")
                     return gr.update(), load_preset_prompts(), f"❌ 保存失败: {str(e)}"
 
             def delete_selected_preset(selected_prompt):
                 """Delete the selected preset prompt."""
                 if not selected_prompt:
-                    print("[Image Stitch] ❌ 删除失败：未选择提示词")
+                    _log("❌ 删除失败：未选择提示词")
                     return load_preset_prompts(), "❌ 请先从下拉列表选择要删除的提示词"
 
                 presets_dir = get_preset_prompts_dir()
-                print(f"[Image Stitch] 开始删除提示词: '{selected_prompt}'")
+                _log(f"开始删除提示词: '{selected_prompt}'")
 
                 deleted = False
                 deleted_file = None
@@ -567,10 +578,10 @@ class ImageStitch(scripts.Script):
                                 if content == selected_prompt:
                                     target_filepath = filepath
                                     deleted_file = file
-                                    print(f"[Image Stitch] 🎯 找到目标文件: {file}")
+                                    _log(f"🎯 找到目标文件: {file}")
                                     break
                         except Exception as e:
-                            print(f"[Image Stitch] ⚠️ 读取文件失败 {file}: {e}")
+                            _log(f"⚠️ 读取文件失败 {file}: {e}")
 
                 if target_filepath:
                     max_retries = 3
@@ -578,25 +589,25 @@ class ImageStitch(scripts.Script):
                         try:
                             os.remove(target_filepath)
                             deleted = True
-                            print(f"[Image Stitch] ✅ 成功删除文件: {deleted_file}")
+                            _log(f"✅ 成功删除文件: {deleted_file}")
                             break
                         except PermissionError as e:
                             if attempt < max_retries - 1:
                                 wait_time = 0.5 * (attempt + 1)
-                                print(f"[Image Stitch] ⚠️ 文件被占用，{wait_time}秒后重试 ({attempt + 1}/{max_retries})...")
+                                _log(f"⚠️ 文件被占用，{wait_time}秒后重试 ({attempt + 1}/{max_retries})...")
                                 time.sleep(wait_time)
                             else:
-                                print(f"[Image Stitch] ❌ 删除失败（重试{max_retries}次后仍被占用）: {e}")
+                                _log(f"❌ 删除失败（重试{max_retries}次后仍被占用）: {e}")
                                 return load_preset_prompts(), f"❌ 文件被占用，请关闭相关程序后重试: {deleted_file}"
                         except Exception as e:
-                            print(f"[Image Stitch] ❌ 删除失败: {e}")
+                            _log(f"❌ 删除失败: {e}")
                             return load_preset_prompts(), f"❌ 删除失败: {str(e)}"
                 else:
-                    print(f"[Image Stitch] ❌ 未找到匹配的文件")
+                    _log(f"❌ 未找到匹配的文件")
                     return load_preset_prompts(), f"❌ 未找到提示词: {selected_prompt[:30]}..."
 
                 if deleted:
-                    print(f"[Image Stitch] ✅ 删除成功，刷新列表")
+                    _log(f"✅ 删除成功，刷新列表")
                     return load_preset_prompts(), f"✅ 已删除: {deleted_file}"
                 else:
                     return load_preset_prompts(), f"❌ 删除失败: {deleted_file}"
@@ -605,7 +616,7 @@ class ImageStitch(scripts.Script):
                 """Use the selected preset prompt."""
                 if not selected_prompt:
                     return "", "❌ 请先从下拉列表选择提示词"
-                print(f"[Image Stitch] 使用提示词: {selected_prompt[:50]}...")
+                _log(f"使用提示词: {selected_prompt[:50]}...")
                 return selected_prompt, f"✅ 已加载提示词"
 
             # ===== Pose 素材库 =====
@@ -616,7 +627,7 @@ class ImageStitch(scripts.Script):
                 pose_dir = os.path.join(plugin_dir, "..", "pose")
 
                 if not os.path.exists(pose_dir):
-                    print(f"[Image Stitch] Pose 目录不存在: {pose_dir}")
+                    _log(f"Pose 目录不存在: {pose_dir}")
                     return [], "❌ 目录不存在"
 
                 supported_extensions = ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.gif", "*.bmp"]
@@ -628,7 +639,7 @@ class ImageStitch(scripts.Script):
 
                 image_files.sort()
 
-                print(f"[Image Stitch] 找到 {len(image_files)} 个 Pose 素材")
+                _log(f"找到 {len(image_files)} 个 Pose 素材")
                 return image_files, f"✅ 共 {len(image_files)} 个素材"
 
             def init_default_prompts():
@@ -637,7 +648,7 @@ class ImageStitch(scripts.Script):
 
                 existing_files = [f for f in os.listdir(presets_dir) if f.endswith('.txt')]
                 if existing_files:
-                    print(f"[Image Stitch] 已存在 {len(existing_files)} 个预设提示词，跳过初始化")
+                    _log(f"已存在 {len(existing_files)} 个预设提示词，跳过初始化")
                     return
 
                 default_prompts = [
@@ -662,11 +673,11 @@ class ImageStitch(scripts.Script):
                     try:
                         with open(filepath, 'w', encoding='utf-8') as f:
                             f.write(prompt)
-                        print(f"[Image Stitch] 创建默认提示词: {prompt}")
+                        _log(f"创建默认提示词: {prompt}")
                     except Exception as e:
-                        print(f"[Image Stitch] 创建默认提示词失败: {e}")
+                        _log(f"创建默认提示词失败: {e}")
 
-                print(f"[Image Stitch] 默认提示词初始化完成")
+                _log(f"默认提示词初始化完成")
 
             # 从素材库添加图片到主列表
             def add_pose_to_gallery(current_images, pose_path):
@@ -685,10 +696,10 @@ class ImageStitch(scripts.Script):
                         updated_images = current_images.copy()
                         updated_images.append(new_image)
 
-                    print(f"[Image Stitch] 已添加 Pose: {os.path.basename(pose_path)}")
+                    _log(f"已添加 Pose: {os.path.basename(pose_path)}")
                     return updated_images
                 except Exception as e:
-                    print(f"[Image Stitch] 添加 Pose 失败: {e}")
+                    _log(f"添加 Pose 失败: {e}")
                     return current_images
 
             # 自动设置尺寸函数
@@ -719,10 +730,10 @@ class ImageStitch(scripts.Script):
                     width, height = first_image.size
                     width = closesteight(width)
                     height = closesteight(height)
-                    print(f"[Image Stitch] 从上传图像设置尺寸: {width}x{height}")
+                    _log(f"从上传图像设置尺寸: {width}x{height}")
                     return width, height
                 else:
-                    print("[Image Stitch] 无法获取图像尺寸")
+                    _log("无法获取图像尺寸")
                     return gr.skip(), gr.skip()
             
             # ===== 图片上传/删除/清空事件 =====
@@ -741,9 +752,9 @@ class ImageStitch(scripts.Script):
                         else:
                             pil_images = images
                     set_reference_images(pil_images)
-                    print(f"[Image Stitch] Synced {len(pil_images)} reference image(s) to global API variable")
+                    _log(f"Synced {len(pil_images)} reference image(s) to global API variable")
                 except Exception as e:
-                    print(f"[Image Stitch] Sync to global failed: {e}")
+                    _log(f"Sync to global failed: {e}")
 
             def _add_image(new_img, current_list):
                 """Add one uploaded image to the list."""
@@ -763,7 +774,7 @@ class ImageStitch(scripts.Script):
                         try:
                             updated.append(Image.open(new_img) if isinstance(new_img, (str, bytes)) else Image.open(BytesIO(new_img)))
                         except Exception:
-                            print(f"[Image Stitch] Unknown upload format: {type(new_img)}")
+                            _log(f"Unknown upload format: {type(new_img)}")
                 _sync_to_api(updated)
                 choices = [f"图片 {i+1}" for i in range(len(updated))]
                 return updated, updated, gr.update(choices=choices, value=None)

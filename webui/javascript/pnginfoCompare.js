@@ -39,7 +39,7 @@
         if (!viewer) return;
 
         if (!beforeData || !afterData) {
-            viewer.innerHTML = '<div class="pnginfo-compare-empty">请上传两张图片进行对比（"原图" 与 "对比图" 各一张，支持点击选择、拖拽或粘贴）</div>';
+            viewer.innerHTML = '<div class="pnginfo-compare-empty">上传后自动显示对比</div>';
             return;
         }
 

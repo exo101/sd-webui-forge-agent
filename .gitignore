@@ -34,6 +34,35 @@ webui/outputs/
 webui/extensions/tmp/
 webui/extensions/*/see-through/workspace/
 webui/extensions/*/outputs/
+# Publish only the two requested extensions
+!webui/extensions/sd-webui-agent-dev-2.4/
+!webui/extensions/sd-webui-agent-dev-2.4/**
+!webui/extensions/forge-h3-studio/
+!webui/extensions/forge-h3-studio/**
+webui/extensions/sd-webui-agent-dev-2.4/outputs/
+webui/extensions/sd-webui-agent-dev-2.4/tmp/
+webui/extensions/sd-webui-agent-dev-2.4/data/agent_memory.json
+
+# Generated caches and local databases
+**/__pycache__/
+**/*.py[cod]
+**/.cache/
+**/cache/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Large model and runtime artifact formats
+**/*.safetensors
+**/*.ckpt
+**/*.pth
+**/*.pt
+**/*.bin
+**/*.onnx
+**/*.h5
+**/*.msgpack
+**/*.incomplete
+
 .agent_backups/
 .trae/
 _launch_tmp_*.bat

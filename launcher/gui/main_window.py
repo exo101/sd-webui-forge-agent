@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QTabWidget, QLabel, QPushButton, QFrame
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 from .theme import MAIN_STYLE, COLORS
 from .tab_launch import LaunchTab
@@ -25,11 +25,76 @@ from core.comfy_launcher import ComfyUIWorker
 from core.paths import BASE_DIR
 
 
+class PreflightWorker(QThread):
+    """
+    启动前环境检测（后台线程，避免下载/安装 Python 时界面卡死）：
+      1. Python 缺失时自动下载安装包并静默安装（日志实时回报进度）
+      2. Git 检测
+      3. 端口占用处理
+    """
+    log_line = pyqtSignal(str)
+    checked  = pyqtSignal(dict)   # {"ok": bool, "error"?: str}
+
+    def __init__(self, config: dict):
+        super().__init__()
+        self.config = config
+
+    def run(self):
+        result = {"ok": False}
+        try:
+            import time
+            from core.env_checker import ensure_python_installed, ensure_git_installed
+            from core.config import is_port_in_use, find_available_port
+            from core.launcher import kill_process_on_port
+
+            def progress(message: str, percent: int = -1):
+                self.log_line.emit(message)
+
+            # 1. Python 检测 / 自动下载安装
+            py_result = ensure_python_installed(progress_callback=progress)
+            self.log_line.emit(py_result["message"])
+            if not py_result["ok"]:
+                self.log_line.emit("❌  Python 未就绪，无法启动 WebUI")
+                self.checked.emit(result)
+                return
+
+            # 2. Git 检测（失败不阻断启动）
+            try:
+                git_result = ensure_git_installed()
+                self.log_line.emit(git_result["message"])
+                if not git_result["ok"]:
+                    self.log_line.emit("⚠️  Git 未就绪，但 WebUI 仍可尝试启动")
+            except Exception as e:
+                self.log_line.emit(f"⚠️  Git 检测失败：{str(e)}")
+
+            # 3. 端口占用检测
+            try:
+                original_port = self.config.get("port", 7869)
+                if is_port_in_use(original_port):
+                    self.log_line.emit(f"⚠️  检测到端口 {original_port} 被占用")
+                    if kill_process_on_port(original_port):
+                        self.log_line.emit(f"✅ 已清理端口 {original_port} 的占用进程")
+                        time.sleep(0.5)  # 等待端口释放
+                    else:
+                        new_port = find_available_port(original_port)
+                        self.config["port"] = new_port
+                        save_config(self.config)
+                        self.log_line.emit(f"⚠️  无法清理端口，自动切换到端口 {new_port}")
+            except Exception as e:
+                self.log_line.emit(f"⚠️  端口检测失败：{str(e)}")
+
+            result["ok"] = True
+        except Exception as e:
+            result["error"] = str(e)
+        self.checked.emit(result)
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.config = None
         self.worker: LaunchWorker | None = None
+        self.preflight: PreflightWorker | None = None
         self.llama_worker: LlamaWorker | None = None
         self.comfy_worker: ComfyUIWorker | None = None
         
@@ -492,100 +557,21 @@ class MainWindow(QMainWindow):
                 if hasattr(self.tab_log, 'append_line'):
                     self.tab_log.append_line(f"⚠️  保存配置失败：{str(e)}")
             
-            # 启动前检测 Python 是否可用，不可用时自动安装
-            try:
-                from core.env_checker import ensure_python_installed
-                py_result = ensure_python_installed()
+            # 防止重复点击：环境检测（可能在下载 Python）运行中直接忽略
+            if self.preflight and self.preflight.isRunning():
                 if hasattr(self.tab_log, 'append_line'):
-                    self.tab_log.append_line(py_result["message"])
-                if not py_result["ok"]:
-                    if hasattr(self.tab_log, 'append_line'):
-                        self.tab_log.append_line("❌  Python 未就绪，无法启动 WebUI")
-                    return
-            except Exception as e:
-                if hasattr(self.tab_log, 'append_line'):
-                    self.tab_log.append_line(f"⚠️  Python 检测失败：{str(e)}")
-            
-            # 启动前检测 Git 是否可用，不可用时自动安装
-            try:
-                from core.env_checker import ensure_git_installed
-                git_result = ensure_git_installed()
-                if hasattr(self.tab_log, 'append_line'):
-                    self.tab_log.append_line(git_result["message"])
-                if not git_result["ok"]:
-                    if hasattr(self.tab_log, 'append_line'):
-                        self.tab_log.append_line("⚠️  Git 未就绪，但 WebUI 仍可尝试启动")
-            except Exception as e:
-                if hasattr(self.tab_log, 'append_line'):
-                    self.tab_log.append_line(f"⚠️  Git 检测失败：{str(e)}")
-            
-            # 启动前检测端口
-            try:
-                from core.config import is_port_in_use, find_available_port
-                from core.launcher import kill_process_on_port
-                
-                original_port = self.config.get("port", 7869)
-                if is_port_in_use(original_port):
-                    # 尝试清理占用端口的进程
-                    if hasattr(self.tab_log, 'append_line'):
-                        self.tab_log.append_line(f"⚠️  检测到端口 {original_port} 被占用")
-                    if kill_process_on_port(original_port):
-                        if hasattr(self.tab_log, 'append_line'):
-                            self.tab_log.append_line(f"✅ 已清理端口 {original_port} 的占用进程")
-                        import time
-                        time.sleep(0.5)  # 等待端口释放
-                    else:
-                        # 如果清理失败，自动切换到新端口
-                        new_port = find_available_port(original_port)
-                        self.config["port"] = new_port
-                        save_config(self.config)
-                        if hasattr(self.tab_log, 'append_line'):
-                            self.tab_log.append_line(f"⚠️  无法清理端口，自动切换到端口 {new_port}")
-                
-                if hasattr(self, 'lbl_port'):
-                    self.lbl_port.setText(f"端口: {self.config.get('port', 7869)}")
-            except Exception as e:
-                if hasattr(self.tab_log, 'append_line'):
-                    self.tab_log.append_line(f"⚠️  端口检测失败：{str(e)}")
-            
-            # 启动进程
-            try:
-                self.worker = LaunchWorker(self.config)
-                # 将日志输出到LogTab
-                if hasattr(self, 'tab_log') and hasattr(self.tab_log, 'append_line'):
-                    self.worker.log_line.connect(self.tab_log.append_line)
-                self.worker.finished.connect(self._on_finished)
-                self.worker.start()
-                
-                if hasattr(self.tab_launch, 'set_running'):
-                    self.tab_launch.set_running(True)
-                if hasattr(self, 'tab_log') and hasattr(self.tab_log, 'set_running'):
-                    self.tab_log.set_running(True, 1)
-                if hasattr(self, 'hw_bar') and hasattr(self.hw_bar, 'set_proc_count'):
-                    self.hw_bar.set_proc_count(1)
-                if hasattr(self, 'lbl_status'):
-                    self.lbl_status.setText("● 运行中")
-                    self.lbl_status.setStyleSheet(f"color:{COLORS['green']};font-weight:bold;font-size:11px;")
-                
-                # 保持在主控台
-                self._switch_tab(0)
-                
-                # 自动启动 ComfyUI（如果启用）
-                if self.config.get("comfyui", {}).get("enabled", False):
-                    try:
-                        if hasattr(self.tab_log, 'append_line'):
-                            self.tab_log.append_line("⏱  WebUI 启动后自动启动 ComfyUI...")
-                        from PyQt6.QtCore import QTimer
-                        QTimer.singleShot(4000, self._on_comfy_launch)
-                    except Exception as e:
-                        if hasattr(self.tab_log, 'append_line'):
-                            self.tab_log.append_line(f"⚠️  ComfyUI 自动启动失败：{str(e)}")
-            except Exception as e:
-                if hasattr(self.tab_log, 'append_line'):
-                    self.tab_log.append_line(f"❌  启动失败：{str(e)}")
-                import traceback
-                if hasattr(self.tab_log, 'append_line'):
-                    self.tab_log.append_line(traceback.format_exc())
+                    self.tab_log.append_line("⚠️  环境检测正在进行中，请勿重复点击启动")
+                return
+
+            # 启动前环境检测放到后台线程（Python 自动下载安装 / Git / 端口），
+            # 避免下载安装期间界面卡死；检测完成后回调 _on_preflight_finished 再启动进程
+            if hasattr(self.tab_log, 'append_line'):
+                self.tab_log.append_line("⏳ 正在检查运行环境（首次运行需自动下载并安装 Python，请耐心等待）...")
+            self.preflight = PreflightWorker(self.config)
+            if hasattr(self.tab_log, 'append_line'):
+                self.preflight.log_line.connect(self.tab_log.append_line)
+            self.preflight.checked.connect(self._on_preflight_finished)
+            self.preflight.start()
         except Exception as e:
             try:
                 from PyQt6.QtWidgets import QMessageBox
@@ -596,6 +582,69 @@ class MainWindow(QMainWindow):
                 )
             except Exception:
                 pass
+
+    def _on_preflight_finished(self, result: dict):
+        """环境检测完成：通过则真正启动 WebUI 进程，否则中止"""
+        # 释放预检线程引用
+        pf = self.preflight
+        self.preflight = None
+        if pf is not None:
+            try:
+                pf.deleteLater()
+            except Exception:
+                pass
+
+        try:
+            if result.get("error"):
+                if hasattr(self.tab_log, 'append_line'):
+                    self.tab_log.append_line(f"❌  环境检测异常：{result['error']}")
+                return
+
+            if not result.get("ok"):
+                if hasattr(self.tab_log, 'append_line'):
+                    self.tab_log.append_line("❌  运行环境未就绪，已取消启动")
+                return
+
+            if hasattr(self, 'lbl_port'):
+                self.lbl_port.setText(f"端口: {self.config.get('port', 7869)}")
+
+            # 启动进程
+            self.worker = LaunchWorker(self.config)
+            # 将日志输出到LogTab
+            if hasattr(self, 'tab_log') and hasattr(self.tab_log, 'append_line'):
+                self.worker.log_line.connect(self.tab_log.append_line)
+            self.worker.finished.connect(self._on_finished)
+            self.worker.start()
+
+            if hasattr(self.tab_launch, 'set_running'):
+                self.tab_launch.set_running(True)
+            if hasattr(self, 'tab_log') and hasattr(self.tab_log, 'set_running'):
+                self.tab_log.set_running(True, 1)
+            if hasattr(self, 'hw_bar') and hasattr(self.hw_bar, 'set_proc_count'):
+                self.hw_bar.set_proc_count(1)
+            if hasattr(self, 'lbl_status'):
+                self.lbl_status.setText("● 运行中")
+                self.lbl_status.setStyleSheet(f"color:{COLORS['green']};font-weight:bold;font-size:11px;")
+
+            # 保持在主控台
+            self._switch_tab(0)
+
+            # 自动启动 ComfyUI（如果启用）
+            if self.config.get("comfyui", {}).get("enabled", False):
+                try:
+                    if hasattr(self.tab_log, 'append_line'):
+                        self.tab_log.append_line("⏱  WebUI 启动后自动启动 ComfyUI...")
+                    from PyQt6.QtCore import QTimer
+                    QTimer.singleShot(4000, self._on_comfy_launch)
+                except Exception as e:
+                    if hasattr(self.tab_log, 'append_line'):
+                        self.tab_log.append_line(f"⚠️  ComfyUI 自动启动失败：{str(e)}")
+        except Exception as e:
+            if hasattr(self.tab_log, 'append_line'):
+                self.tab_log.append_line(f"❌  启动失败：{str(e)}")
+            import traceback
+            if hasattr(self.tab_log, 'append_line'):
+                self.tab_log.append_line(traceback.format_exc())
 
     def _on_stop(self):
         if self.worker:

@@ -6,7 +6,9 @@ from modules.ui_components import ResizeHandleRow
 
 
 def create_ui():
-    dummy_component = gr.Textbox(visible=False)
+    # Gradio 5 不挂载游离于布局容器之外的根级组件, 包进隐藏 Group 保持挂载
+    with gr.Group(visible=False):
+        dummy_component = gr.Textbox(visible=False)
     tab_index = gr.State(value=0)
 
     with ResizeHandleRow(equal_height=False, variant="compact"):
