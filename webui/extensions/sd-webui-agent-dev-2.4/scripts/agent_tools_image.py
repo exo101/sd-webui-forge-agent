@@ -28,6 +28,23 @@ from scripts.agent_tools_common import _ui_aspect_size
 from scripts.agent_tools_models import MODEL_GUIDE, set_model_components_tool
 
 
+def _final_generated_images(processed, batch_size=1, n_iter=1):
+    """Return only final generated images, excluding grids and denoising previews."""
+    images = [img for img in getattr(processed, "images", []) if isinstance(img, Image.Image)]
+    start = int(getattr(processed, "index_of_first_image", 0) or 0)
+    images = images[start:]
+    expected = max(1, int(batch_size) * int(n_iter))
+    return images[-expected:]
+
+
+def _run_process_images(p):
+    try:
+        from modules_forge import main_thread
+        return main_thread.run_and_wait_result(process_images, p)
+    except Exception:
+        return process_images(p)
+
+
 def txt2img_tool(prompt, negative_prompt="", steps=None, width=None, height=None,
                  sampler_name=None, cfg_scale=None, seed=-1, batch_size=1, n_iter=1):
     """文生图：根据文字描述生成图片。"""
@@ -74,16 +91,11 @@ def txt2img_tool(prompt, negative_prompt="", steps=None, width=None, height=None
     p.sd_model = shared.sd_model
     print(f"[Agent] txt2img: '{prompt[:60]}...' {p.width}x{p.height} steps={p.steps}")
     # 通过 Forge main_thread 调度，确保线程安全
-    try:
-        from modules_forge import main_thread
-        processed = main_thread.run_and_wait_result(process_images, p)
-    except Exception:
-        # 回退到直接调用
-        processed = process_images(p)
+    processed = _run_process_images(p)
     if processed is None or not hasattr(processed, 'images'):
         return None, {"status": "error", "error": "模型加载或生图失败，process_images 返回 None",
                       "hint": "可能是主模型与文本编码器/VAE 不匹配，请检查模型组合是否正确"}
-    images = [img for img in processed.images]
+    images = _final_generated_images(processed, batch_size, n_iter)
     info = {
         "prompt": prompt, "negative_prompt": negative_prompt,
         "steps": p.steps, "width": p.width, "height": p.height,
@@ -160,15 +172,11 @@ def img2img_tool(prompt, image, negative_prompt="", denoising_strength=0.75,
     p.sd_model = shared.sd_model
     print(f"[Agent] img2img: '{prompt[:60]}...' denoise={denoising_strength} size={target_w}x{target_h} (参考图 {ref_w}x{ref_h})")
     # 通过 Forge main_thread 调度，确保线程安全
-    try:
-        from modules_forge import main_thread
-        processed = main_thread.run_and_wait_result(process_images, p)
-    except Exception:
-        processed = process_images(p)
+    processed = _run_process_images(p)
     if processed is None or not hasattr(processed, 'images'):
         return None, {"status": "error", "error": "模型加载或生图失败，process_images 返回 None",
                       "hint": "可能是主模型与文本编码器/VAE 不匹配，请检查模型组合是否正确"}
-    images = [img for img in processed.images]
+    images = _final_generated_images(processed)
     info = {
         "prompt": prompt, "negative_prompt": negative_prompt,
         "denoising_strength": denoising_strength,
@@ -306,7 +314,7 @@ def _edit_with_image_stitch(image, instruction, cfg=None):
         if processed is None or not hasattr(processed, 'images'):
             return None, {"status": "error", "error": "编辑生成失败"}
 
-        images = [img for img in processed.images if isinstance(img, Image.Image)]
+        images = _final_generated_images(processed)
         info = {
             "prompt": instruction,
             "steps": p.steps,
