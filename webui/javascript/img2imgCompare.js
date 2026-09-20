@@ -369,9 +369,13 @@
             document.head.appendChild(style);
         }
 
+        // Only collect images from actual gallery thumbnails (.gallery-item),
+        // NOT from intermediate denoising live-preview frames.
         function galleryImages() {
             const images = [];
-            for (const img of gallery.querySelectorAll("img")) {
+            for (const item of gallery.querySelectorAll(".gallery-item")) {
+                const img = item.querySelector("img");
+                if (!img) continue;
                 const src = img.getAttribute("src") || img.currentSrc;
                 if (isUsableSrc(src) && !images.includes(src)) images.push(src);
             }
@@ -407,12 +411,25 @@
             });
         }
 
+        // Debounce: wait for gallery to settle before comparing, so that
+        // intermediate denoising preview frames don't trigger a refresh.
+        let txt2imgDebounceTimer = null;
         function refreshTxt2imgCompare() {
+            if (txt2imgDebounceTimer !== null) clearTimeout(txt2imgDebounceTimer);
+            txt2imgDebounceTimer = setTimeout(function () {
+                txt2imgDebounceTimer = null;
+                doRefreshTxt2imgCompare();
+            }, 400);
+        }
+
+        function doRefreshTxt2imgCompare() {
             const images = galleryImages();
+            if (!images.length) return;
             const signature = images.join("|");
-            if (!signature || signature === gallery.dataset.txt2imgCompareSignature) return;
+            if (signature === gallery.dataset.txt2imgCompareSignature) return;
             const previous = gallery.dataset.txt2imgCompareLastImage || "";
             gallery.dataset.txt2imgCompareSignature = signature;
+            // Only store as "last image" when we're seeing actual gallery items
             gallery.dataset.txt2imgCompareLastImage = images[0];
 
             if (images.length >= 2) {
