@@ -160,11 +160,11 @@ class UserMetadataEditor:
         self.setup_save_handler(self.button_save, self.save_user_metadata, [self.edit_description, self.edit_notes])
 
     def create_ui(self):
-        with gr.Group(visible=False, elem_id=self.id_part, elem_classes="edit-user-metadata") as box:
+        with gr.Group(elem_id=self.id_part, elem_classes=["edit-user-metadata", "extra-network-user-metadata-popup-source"]) as box:
             self.box = box
 
-            self.edit_name_input = gr.Textbox("Edit user metadata card id", visible=False, elem_id=f"{self.id_part}_name")
-            self.button_edit = gr.Button("Edit user metadata", visible=False, elem_id=f"{self.id_part}_button")
+            self.edit_name_input = gr.Textbox("Edit user metadata card id", elem_id=f"{self.id_part}_name", elem_classes=["extra-network-hidden-trigger"])
+            self.button_edit = gr.Button("Edit user metadata", elem_id=f"{self.id_part}_button", elem_classes=["extra-network-hidden-trigger"])
 
             self.create_editor()
 

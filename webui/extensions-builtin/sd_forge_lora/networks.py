@@ -25,6 +25,17 @@ setup_logger(logger)
 load_lora_state_dict = functools.partial(load_torch_file, safe_load=True)
 
 
+def unescape_lora_name(name: str) -> str:
+    return name.replace("\\_", "_")
+
+
+def network_on_disk_for_name(name: str):
+    if name.lower() in forbidden_network_aliases:
+        return available_networks.get(name, None)
+
+    return available_network_aliases.get(name, None)
+
+
 def process_anima(lora: dict[str, torch.Tensor]):
     # LLMAdapter was moved from transformer to text_encoder
 
@@ -100,18 +111,16 @@ def load_networks(names: list[str], te_multipliers: list[float] = None, unet_mul
 
     unavailable_networks = []
     for name in names:
-        if name.lower() in forbidden_network_aliases and available_networks.get(name) is None:
-            unavailable_networks.append(name)
-        elif available_network_aliases.get(name) is None:
+        if network_on_disk_for_name(name) is None and network_on_disk_for_name(unescape_lora_name(name)) is None:
             unavailable_networks.append(name)
 
     if unavailable_networks:
         update_available_networks_by_names(unavailable_networks)
 
-    networks_on_disk = [available_networks.get(name, None) if name.lower() in forbidden_network_aliases else available_network_aliases.get(name, None) for name in names]
+    networks_on_disk = [network_on_disk_for_name(name) or network_on_disk_for_name(unescape_lora_name(name)) for name in names]
     if any(x is None for x in networks_on_disk):
         list_available_networks()
-        networks_on_disk = [available_networks.get(name, None) if name.lower() in forbidden_network_aliases else available_network_aliases.get(name, None) for name in names]
+        networks_on_disk = [network_on_disk_for_name(name) or network_on_disk_for_name(unescape_lora_name(name)) for name in names]
 
     for network_on_disk, name in zip(networks_on_disk, names):
         try:
@@ -120,7 +129,7 @@ def load_networks(names: list[str], te_multipliers: list[float] = None, unet_mul
             network_on_disk.read_hash()
             loaded_networks.append(net)
         except Exception:
-            logger.error(f'Failed to load LoRA: "{name}"')
+            logger.exception(f'Failed to load LoRA: "{name}"')
             continue
 
     online_mode = dynamic_args.online_lora or False
