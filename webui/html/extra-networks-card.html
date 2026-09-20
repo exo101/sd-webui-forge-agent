@@ -1,4 +1,4 @@
-<div class="card" style="{style}" onclick="{card_clicked}" data-name="{name}" {sort_keys}>
+<div class="card" style="{style}" onclick="if (event.target.closest('.card-button')) return false; {card_clicked}" data-name="{name}" {sort_keys}>
 	{background_image}
 	<div class="button-row">{copy_path_button}{metadata_button}{edit_button}</div>
 	<div class="actions">

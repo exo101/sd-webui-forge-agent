@@ -129,10 +129,22 @@ div.gradio-html.min {
 
 .block.gradio-gallery {
     background: var(--input-background-fill);
+    position: relative;
 }
 
-.gradio-gallery>button.preview {
+.gradio-gallery>button.preview,
+.gradio-gallery .gallery-container>button.preview {
     width: 100%;
+    z-index: 9000;
+}
+
+.gradio-gallery .livePreview,
+[id$="_results"]:has(.gradio-gallery .gallery-container>button.preview),
+[id$="_results_panel"]:has(.gradio-gallery .gallery-container>button.preview),
+[id$="_gallery_container"]:has(.gradio-gallery .gallery-container>button.preview),
+.gradio-gallery:has(.gallery-container>button.preview) {
+    position: relative;
+    z-index: 9000;
 }
 
 .gradio-container .prose a,
@@ -766,6 +778,7 @@ table.popup-table .link {
     position: fixed;
     right: 0.25em;
     top: 0;
+    z-index: 1002;
     cursor: pointer;
     color: white;
     font-size: 32pt;
@@ -1101,7 +1114,9 @@ footer {
 .extra-network-pane .card .button-row {
     position: absolute;
     right: 0;
-    z-index: 1;
+    z-index: 20;
+    pointer-events: auto;
+    visibility: visible;
 }
 
 .extra-network-pane .card:hover .button-row {
@@ -1125,10 +1140,17 @@ footer {
 }
 
 .extra-network-pane .card-button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    position: relative;
+    z-index: 21;
     width: 1.5em;
     text-shadow: 2px 2px 3px black;
     color: white;
     padding: 0.25em 0.1em;
+    line-height: 1;
+    cursor: pointer;
 }
 
 .extra-network-pane .card-button:hover {
@@ -1148,6 +1170,10 @@ footer {
     object-fit: cover;
     width: 100%;
     height: 100%;
+}
+
+.extra-network-pane .card .preview {
+    pointer-events: none;
 }
 
 .extra-network-pane .card,
@@ -1236,6 +1262,23 @@ footer {
     width: 56em;
     background: var(--body-background-fill) !important;
     padding: 2em !important;
+}
+
+.extra-page .extra-network-user-metadata-popup-source {
+    display: none !important;
+}
+
+.global-popup-inner .extra-network-user-metadata-popup-source {
+    display: block !important;
+}
+
+.extra-network-hidden-trigger {
+    position: fixed !important;
+    left: -10000px !important;
+    top: -10000px !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 .edit-user-metadata .extra-network-name {

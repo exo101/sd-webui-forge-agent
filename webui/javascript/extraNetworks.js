@@ -15,9 +15,18 @@ function toggleCss(key, css, enable) {
     }
 }
 
+// Gradio 5.x 兼容：Textbox DOM 多了 .input-container 一层，旧的 `> label > textarea` 直接子级选择器不再匹配
+function findTextareas(elemId) {
+    let box = gradioApp().getElementById(elemId);
+    if (!box) return null;
+    return box.querySelector("textarea");
+}
+
 function setupExtraNetworksForTab(tabname) {
     function registerPrompt(tabname, id) {
-        let textarea = gradioApp().querySelector("#" + id + " > label > textarea");
+        let textarea = findTextareas(id);
+
+        if (!textarea) return;
 
         if (!activePromptTextarea[tabname]) {
             activePromptTextarea[tabname] = textarea;
@@ -288,11 +297,16 @@ let re_extranet_g = /<([^:^>]+:[^:]+):[\d.]+>/g;
 
 let re_extranet_neg = /\(([^:^>]+:[\d.]+)\)/;
 let re_extranet_g_neg = /\(([^:^>]+:[\d.]+)\)/g;
+
+function extraNetworksAddTextSeparator() {
+    return opts.extra_networks_add_text_separator ?? " ";
+}
+
 function tryToRemoveExtraNetworkFromPrompt(textarea, text, isNeg) {
     let m = text.match(isNeg ? re_extranet_neg : re_extranet);
     let replaced = false;
     let newTextareaText;
-    let extraTextBeforeNet = opts.extra_networks_add_text_separator;
+    let extraTextBeforeNet = extraNetworksAddTextSeparator();
     if (m) {
         let extraTextAfterNet = m[2];
         let partToSearch = m[1];
@@ -349,12 +363,23 @@ function tryToRemoveExtraNetworkFromPrompt(textarea, text, isNeg) {
 }
 
 function updatePromptArea(text, textArea, isNeg) {
+    if (!textArea) return;
     if (!tryToRemoveExtraNetworkFromPrompt(textArea, text, isNeg)) {
         textArea.value =
-            textArea.value + opts.extra_networks_add_text_separator + text;
+            textArea.value + extraNetworksAddTextSeparator() + text;
     }
 
     updateInput(textArea);
+}
+
+function extraNetworksCardFromEvent(event) {
+    return event.target.closest("[data-name]");
+}
+
+function gradioButton(elemId) {
+    let elem = gradioApp().getElementById(elemId);
+    if (!elem) return null;
+    return elem.matches("button") ? elem : elem.querySelector("button");
 }
 
 function cardClicked(
@@ -366,27 +391,24 @@ function cardClicked(
     if (textToAddNegative.length > 0) {
         updatePromptArea(
             textToAdd,
-            gradioApp().querySelector("#" + tabname + "_prompt > label > textarea"),
+            findTextareas(tabname + "_prompt"),
         );
         updatePromptArea(
             textToAddNegative,
-            gradioApp().querySelector(
-                "#" + tabname + "_neg_prompt > label > textarea",
-            ),
+            findTextareas(tabname + "_neg_prompt"),
             true,
         );
     } else {
         let textarea = allowNegativePrompt
-            ? activePromptTextarea[tabname]
-            : gradioApp().querySelector("#" + tabname + "_prompt > label > textarea");
+            ? (activePromptTextarea[tabname] || findTextareas(tabname + "_prompt"))
+            : findTextareas(tabname + "_prompt");
         updatePromptArea(textToAdd, textarea);
     }
 }
 
 function saveCardPreview(event, tabname, filename) {
-    let textarea = gradioApp().querySelector(
-        "#" + tabname + "_preview_filename  > label > textarea",
-    );
+    let textarea = findTextareas(tabname + "_preview_filename");
+    if (!textarea) return;
     let button = gradioApp().getElementById(tabname + "_save_preview");
 
     textarea.value = filename;
@@ -680,7 +702,7 @@ function popup(contents) {
         globalPopupInner.classList.add("global-popup-inner");
         globalPopup.appendChild(globalPopupInner);
 
-        gradioApp().querySelector(".main").appendChild(globalPopup);
+        (gradioApp().querySelector(".main") || document.body).appendChild(globalPopup);
     }
 
     globalPopupInner.innerHTML = "";
@@ -799,10 +821,14 @@ function requestGet(url, data, handler, errorHandler) {
 }
 
 function extraNetworksCopyCardPath(event) {
+    let button = event.target.closest("[data-clipboard-text]");
+    if (!button) return;
+
     navigator.clipboard.writeText(
-        event.target.getAttribute("data-clipboard-text"),
+        button.getAttribute("data-clipboard-text"),
     );
     event.stopPropagation();
+    event.preventDefault();
 }
 
 function extraNetworksRequestMetadata(event, extraPage) {
@@ -810,15 +836,9 @@ function extraNetworksRequestMetadata(event, extraPage) {
         extraNetworksShowMetadata("there was an error getting metadata");
     };
 
-    let cardName =
-        event.target.parentElement.parentElement.getAttribute("data-name");
-    if (cardName == null) {
-        // from tree
-        cardName =
-            event.target.parentElement.parentElement.parentElement.getAttribute(
-                "data-name",
-            );
-    }
+    let card = extraNetworksCardFromEvent(event);
+    let cardName = card ? card.getAttribute("data-name") : null;
+    if (cardName == null) return showError();
 
     requestGet(
         "./sd_extra_networks/metadata",
@@ -834,41 +854,41 @@ function extraNetworksRequestMetadata(event, extraPage) {
     );
 
     event.stopPropagation();
+    event.preventDefault();
 }
 
 let extraPageUserMetadataEditors = {};
 
 function extraNetworksEditUserMetadata(event, tabname, extraPage) {
+    event.stopPropagation();
+    event.preventDefault();
+
     let id = tabname + "_" + extraPage + "_edit_user_metadata";
 
     let editor = extraPageUserMetadataEditors[id];
     if (!editor) {
         editor = {};
-        editor.page = gradioApp().getElementById(id);
-        editor.nameTextarea = gradioApp().querySelector(
-            "#" + id + "_name" + " textarea",
-        );
-        editor.button = gradioApp().querySelector("#" + id + "_button");
         extraPageUserMetadataEditors[id] = editor;
     }
 
-    let cardName =
-        event.target.parentElement.parentElement.getAttribute("data-name");
-    if (cardName == null) {
-        // from tree
-        cardName =
-            event.target.parentElement.parentElement.parentElement.getAttribute(
-                "data-name",
-            );
-    }
+    editor.page = gradioApp().getElementById(id);
+    editor.nameTextarea = gradioApp().querySelector("#" + id + "_name" + " textarea");
+    editor.button = gradioButton(id + "_button");
+
+    let card = extraNetworksCardFromEvent(event);
+    let cardName = card ? card.getAttribute("data-name") : null;
+    if (cardName == null) return;
+    if (!editor.page || !editor.nameTextarea || !editor.button) return;
+
     editor.nameTextarea.value = cardName;
     updateInput(editor.nameTextarea);
 
     editor.button.click();
 
-    popup(editor.page);
-
-    event.stopPropagation();
+    setTimeout(function() {
+        popup(editor.page);
+        editor.page.style.display = "";
+    }, 100);
 }
 
 function extraNetworksRefreshSingleCard(page, tabname, name) {
