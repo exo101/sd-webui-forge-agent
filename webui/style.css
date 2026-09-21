@@ -236,6 +236,11 @@ input[type="checkbox"].input-accordion-checkbox {
     margin-right: 0.5em;
 }
 
+/* The source checkbox must remain mounted for Gradio to submit its value. */
+.input-accordion-source {
+    display: none !important;
+}
+
 /* txt2img/img2img specific */
 
 .block.token-counter {

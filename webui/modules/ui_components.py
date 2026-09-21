@@ -120,10 +120,18 @@ class InputAccordionImpl(gr.Checkbox):
             self.accordion_id = f"input-accordion-{InputAccordionImpl.global_index}"
             InputAccordionImpl.global_index += 1
 
+        source_classes = kwargs.get("elem_classes") or []
+        if isinstance(source_classes, str):
+            source_classes = [source_classes]
+
         kwargs_checkbox = {
             **kwargs,
             "elem_id": f"{self.accordion_id}-checkbox",
-            "visible": False,
+            # Keep the source checkbox in the Gradio DOM. Gradio 5 can omit
+            # invisible components from the client state, which leaves the
+            # accordion's visual checkbox disconnected from the API input.
+            "visible": True,
+            "elem_classes": [*source_classes, "input-accordion-source"],
         }
         super().__init__(value=value, **kwargs_checkbox)
 

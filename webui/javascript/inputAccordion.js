@@ -1,13 +1,22 @@
 function inputAccordionChecked(id, checked) {
     let accordion = gradioApp().getElementById(id);
+    if (!accordion?.visibleCheckbox) {
+        return;
+    }
     accordion.visibleCheckbox.checked = checked;
     accordion.onVisibleCheckboxChange();
 }
 
 function setupAccordion(accordion) {
     let labelWrap = accordion.querySelector(".label-wrap");
-    let gradioCheckbox = gradioApp().querySelector(
-        "#" + accordion.id + "-checkbox input",
+    // Gradio 5 may render the element with the id on the input itself, or on
+    // a wrapper. Support both layouts so the visible toggle can be created.
+    let checkboxHost = gradioApp().getElementById(accordion.id + "-checkbox");
+    let gradioCheckbox = checkboxHost?.matches("input[type=checkbox]")
+        ? checkboxHost
+        : checkboxHost?.querySelector("input[type=checkbox]");
+    gradioCheckbox ??= gradioApp().querySelector(
+        "#" + accordion.id + "-checkbox input[type=checkbox]",
     );
     let extra = gradioApp().querySelector("#" + accordion.id + "-extra");
     let span = labelWrap.querySelector("span");
@@ -47,7 +56,7 @@ function setupAccordion(accordion) {
     visibleCheckbox.checked = isOpen();
     visibleCheckbox.id = accordion.id + "-visible-checkbox";
     visibleCheckbox.className =
-        gradioCheckbox.className + " input-accordion-checkbox";
+        (gradioCheckbox?.className || "") + " input-accordion-checkbox";
     span.insertBefore(visibleCheckbox, span.firstChild);
 
     accordion.visibleCheckbox = visibleCheckbox;
@@ -56,8 +65,13 @@ function setupAccordion(accordion) {
             labelWrap.click();
         }
 
-        gradioCheckbox.checked = visibleCheckbox.checked;
-        updateInput(gradioCheckbox);
+        if (gradioCheckbox) {
+            // Use the native click so Gradio receives its normal change event
+            // and includes the value in the generation request.
+            if (gradioCheckbox.checked != visibleCheckbox.checked) {
+                gradioCheckbox.click();
+            }
+        }
     };
 
     visibleCheckbox.addEventListener("click", function (event) {
