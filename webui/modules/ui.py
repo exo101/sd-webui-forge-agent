@@ -891,7 +891,8 @@ def create_ui():
                 elem_id="pnginfo_compare_viewer_host",
             )
 
-    modelmerger_ui = ui_checkpoint_merger.UiCheckpointMerger()
+    # 已移除 Checkpoint Merger（模型融合）内置标签页
+    # modelmerger_ui = ui_checkpoint_merger.UiCheckpointMerger()
 
     loadsave = ui_loadsave.UiLoadsave(cmd_opts.ui_config_file)
     ui_settings_from_file = loadsave.ui_settings.copy()
@@ -903,7 +904,7 @@ def create_ui():
         (img2img_interface, "img2img", "img2img"),
         (extras_interface, "Extras", "extras"),
         (pnginfo_interface, "PNG Info", "pnginfo"),
-        (modelmerger_ui.blocks, "Checkpoint Merger", "modelmerger"),
+        # (modelmerger_ui.blocks, "Checkpoint Merger", "modelmerger"),
     ]
 
     interfaces += script_callbacks.ui_tabs_callback()
@@ -957,7 +958,7 @@ def create_ui():
         settings.text_settings.change(fn=update_image_cfg_scale_visibility, outputs=[image_cfg_scale])
         demo.load(fn=update_image_cfg_scale_visibility, outputs=[image_cfg_scale])
 
-        modelmerger_ui.setup_ui(dummy_component=dummy_component, sd_model_checkpoint_component=main_entry.ui_checkpoint)
+        # modelmerger_ui.setup_ui(dummy_component=dummy_component, sd_model_checkpoint_component=main_entry.ui_checkpoint)
 
         main_entry.forge_main_entry()
 

@@ -1,29 +1,53 @@
 class GradioTextAreaBind {
     constructor(id, className) {
+        this.id = id;
+        this.className = className;
         this.target = document.querySelector(`#${id}.${className} textarea`);
         this.sync_lock = false;
         this.previousValue = "";
     }
 
+    // 重新查询目标 textarea。Gradio 5 在某些时机（如组件重渲染、visibility 切换）
+    // 会替换 DOM 节点，使缓存的 this.target 指向已脱离文档的旧节点，导致写值/读值无效。
+    // 检测到缓存失效时回填到当前 DOM 中对应的 textarea。
+    _refreshTarget() {
+        if (!this.target || !this.target.isConnected) {
+            this.target = document.querySelector(`#${this.id}.${this.className} textarea`);
+        }
+        return this.target;
+    }
+
     set_value(value) {
         if (this.sync_lock) return;
+        const target = this._refreshTarget();
+        if (!target) return;
         this.sync_lock = true;
-        this.target.value = value;
+        target.value = value;
         this.previousValue = value;
-        const event = new Event("input", { bubbles: true });
-        Object.defineProperty(event, "target", { value: this.target });
-        this.target.dispatchEvent(event);
+        // Svelte 的 bind:value 监听原生 input 事件来读取 el.value 并写入 value prop，
+        // 触发响应式 handle_change → 派发 change 事件 → Gradio 后端同步。
+        // 优先用 InputEvent（语义更准），失败回退到普通 Event。
+        try {
+            target.dispatchEvent(new InputEvent("input", { bubbles: true, data: value }));
+        } catch (e) {
+            const ev = new Event("input", { bubbles: true });
+            target.dispatchEvent(ev);
+        }
+        // 部分 Svelte/Gradio 版本还需要 change 事件才会把值提交到后端，冗余派发一次更稳。
+        target.dispatchEvent(new Event("change", { bubbles: true }));
         this.previousValue = value;
         this.sync_lock = false;
     }
 
     listen(callback) {
         setInterval(() => {
-            if (this.target.value !== this.previousValue) {
-                this.previousValue = this.target.value;
+            const target = this._refreshTarget();
+            if (!target) return;
+            if (target.value !== this.previousValue) {
+                this.previousValue = target.value;
                 if (this.sync_lock) return;
                 this.sync_lock = true;
-                callback(this.target.value);
+                callback(target.value);
                 this.sync_lock = false;
             }
         }, 100);
@@ -48,9 +72,11 @@ class ForgeCanvas {
         scribbleAlphaFixed = false,
         scribbleSoftness = 0,
         scribbleSoftnessFixed = false,
+        elemId = "",
     ) {
         this.gradio_config = gradio_config;
         this.uuid = uuid;
+        this.elem_id = elemId;
 
         this.no_upload = no_upload;
         this.no_scribbles = no_scribbles;
@@ -63,6 +89,11 @@ class ForgeCanvas {
         this.orgHeight = 0;
         this.imgScale = 1.0;
         this.initial_height = initial_height;
+
+        // 记录最后一次生成/更新的 base64 数据，供提交钩子直接读取
+        // （Gradio 5 下 textarea 事件链路不可靠，提交时从这里取数）
+        this.lastBackground = "";
+        this.lastForeground = "";
 
         this.dragging = false;
         this.dragged_just_now = false;
@@ -97,6 +128,12 @@ class ForgeCanvas {
         this._held_S = false;
 
         this._original_alpha = null;
+
+        // 注册到全局，供 Gradio 提交 _js 钩子读取画布数据
+        window.__FORGE_CANVASES__ = window.__FORGE_CANVASES__ || {};
+        if (this.elem_id) {
+            window.__FORGE_CANVASES__[this.elem_id] = this;
+        }
     }
 
     init() {
@@ -605,7 +642,8 @@ class ForgeCanvas {
 
     loadImage(base64) {
         if (typeof this.gradio_config !== "undefined") {
-            if (!this.gradio_config.version.startsWith("4.")) return;
+            const majorVersion = parseInt(this.gradio_config.version.split(".")[0], 10);
+            if (isNaN(majorVersion) || majorVersion < 4) return;
         } else {
             return;
         }
@@ -640,6 +678,9 @@ class ForgeCanvas {
             this.drawImage();
             this.saveState();
             this.updateUndoRedoButtons();
+            // 同步清空提交钩子读取的数据
+            this.updateBackgroundImageData();
+            this.updateDrawingData();
         }
     }
 
@@ -778,6 +819,7 @@ class ForgeCanvas {
 
     updateBackgroundImageData() {
         if (!this.img) {
+            this.lastBackground = "";
             this.background_gradio_bind.set_value("");
             return;
         }
@@ -788,16 +830,19 @@ class ForgeCanvas {
         tempCanvas.height = this.orgHeight;
         tempCtx.drawImage(image, 0, 0, this.orgWidth, this.orgHeight);
         const dataUrl = tempCanvas.toDataURL("image/png");
+        this.lastBackground = dataUrl;
         this.background_gradio_bind.set_value(dataUrl);
     }
 
     updateDrawingData() {
         if (!this.img) {
+            this.lastForeground = "";
             this.foreground_gradio_bind.set_value("");
             return;
         }
         const canvas = document.getElementById(`drawingCanvas_${this.uuid}`);
         const dataUrl = canvas.toDataURL("image/png");
+        this.lastForeground = dataUrl;
         this.foreground_gradio_bind.set_value(dataUrl);
     }
 

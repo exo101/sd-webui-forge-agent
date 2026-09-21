@@ -9,7 +9,7 @@ function set_theme(theme) {
 
 function all_gallery_buttons() {
     let allGalleryButtons = gradioApp().querySelectorAll(
-        '[style="display: block;"].tabitem div[id$=_gallery].gradio-gallery .thumbnails > .thumbnail-item.thumbnail-small',
+        '[style*="display: flex"].tabitem div[id$=_gallery].gradio-gallery .thumbnails > .thumbnail-item.thumbnail-small',
     );
     let visibleGalleryButtons = [];
     allGalleryButtons.forEach(function (elem) {
@@ -203,6 +203,16 @@ function submit_txt2img_upscale() {
     return res;
 }
 
+// 从 ForgeCanvas 实例读取画布数据（Gradio 5 下 textarea 事件链路不可靠，
+// 提交时直接从 JS 实例状态取 base64，绕过失效的 Svelte 状态同步）
+function forgeCanvasValue(elemId, kind) {
+    const c = (window.__FORGE_CANVASES__ || {})[elemId];
+    if (!c) {
+        return "";
+    }
+    return kind === "background" ? (c.lastBackground || "") : (c.lastForeground || "");
+}
+
 function submit_img2img() {
     showSubmitButtons("img2img", false);
 
@@ -223,6 +233,15 @@ function submit_img2img() {
     let res = create_submit_args(arguments);
 
     res[0] = id;
+
+    // 用画布实例数据覆盖 LogicalImage（textarea）槽位，对应 submit_img2img_inputs[5..11]
+    res[5] = forgeCanvasValue("img2img_image", "background");
+    res[6] = forgeCanvasValue("img2img_sketch", "background");
+    res[7] = forgeCanvasValue("img2img_sketch", "foreground");
+    res[8] = forgeCanvasValue("img2maskimg", "background");
+    res[9] = forgeCanvasValue("img2maskimg", "foreground");
+    res[10] = forgeCanvasValue("inpaint_sketch", "background");
+    res[11] = forgeCanvasValue("inpaint_sketch", "foreground");
 
     return res;
 }
@@ -474,7 +493,7 @@ function selectCheckpoint(name) {
 
 function currentImg2imgSourceResolution(w, h, r) {
     let img = gradioApp().querySelector(
-        '#mode_img2img > div[style="display: block;"] :is(img, canvas)',
+        '#mode_img2img > div[style*="display: flex"] :is(img, canvas)',
     );
     if (!img) return [0, 0, r];
     const width = img.naturalWidth || img.width;

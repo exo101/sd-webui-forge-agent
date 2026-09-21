@@ -187,6 +187,45 @@ function showNotification(message, type = 'info') {
 // 暴露函数到全局作用域
 window.copyPromptToMainInterface = copyPromptToMainInterface;
 
+/**
+ * 将首张参考图的尺寸同步到主界面 (txt2img/img2img) 的宽高滑块
+ * @param {string} tab - 'txt2img' 或 'img2img'
+ * @param {number} w - 宽度
+ * @param {number} h - 高度
+ */
+window.syncSizeToMainUI = function(tab, w, h) {
+    try {
+        if (!tab || typeof w !== 'number' || typeof h !== 'number' || !isFinite(w) || !isFinite(h)) {
+            showNotification('参数无效，无法同步尺寸', 'error');
+            return false;
+        }
+        const widthInput = document.querySelector(`#${tab}_width input[type=number]`);
+        const heightInput = document.querySelector(`#${tab}_height input[type=number]`);
+        if (!widthInput || !heightInput) {
+            showNotification(`未找到主界面 ${tab} 的尺寸输入框`, 'error');
+            return false;
+        }
+        const wInt = Math.round(w);
+        const hInt = Math.round(h);
+        widthInput.value = String(wInt);
+        heightInput.value = String(hInt);
+        // 触发 Gradio 滑块联动（ui.js 提供的全局 helper）
+        if (typeof updateInput === 'function') {
+            updateInput(widthInput);
+            updateInput(heightInput);
+        } else {
+            widthInput.dispatchEvent(new Event('input', { bubbles: true }));
+            heightInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        showNotification(`✅ 已同步尺寸 ${wInt}×${hInt} 到主界面`, 'success');
+        return true;
+    } catch (error) {
+        console.error('[Image Stitch] 同步尺寸失败:', error);
+        showNotification('同步尺寸失败: ' + error.message, 'error');
+        return false;
+    }
+};
+
 console.log('[Image Stitch] 提示词传递功能已加载');
 
 function makeGallerySortable(gallery) {
