@@ -125,6 +125,92 @@ def check_python() -> dict:
     return {"ok": ok, "version": out if ok else "未找到", "path": PYTHON_EXE}
 
 
+def _find_existing_python_dir(min_version=(3, 10)):
+    """
+    查找本机已存在的 CPython（按版本从高到低），返回 ≥ min_version 的安装目录。
+    用于静默安装被系统已有 Python 阻挡（1638/降级拒绝）时的兜底。
+    优先读注册表登记的 InstallPath，其次扫描默认个人安装位置。
+    """
+    candidates = []  # (version_tuple, path)
+
+    def _add(ver_str, path):
+        if not path:
+            return
+        s = str(ver_str)
+        m = re.match(r"(\d+)\.(\d+)(?:\.(\d+))?", s)
+        if m:
+            v = (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0))
+        else:
+            # 目录名形如 Python313 → 3.13
+            m2 = re.match(r"Python(\d)(\d+)", s)
+            if not m2:
+                return
+            v = (int(m2.group(1)), int(m2.group(2)), 0)
+        if v >= min_version and os.path.isfile(os.path.join(path, "python.exe")):
+            candidates.append((v, path))
+
+    # 1. 注册表中的个人安装登记
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Python\PythonCore") as core:
+            i = 0
+            while True:
+                try:
+                    sub = winreg.EnumKey(core, i)
+                except OSError:
+                    break
+                i += 1
+                try:
+                    with winreg.OpenKey(core, sub) as sk:
+                        try:
+                            ver, _ = winreg.QueryValueEx(sk, "Version")
+                        except OSError:
+                            ver = sub
+                        try:
+                            loc, _ = winreg.QueryValueEx(sk, "InstallPath")
+                            _add(ver, loc)
+                        except OSError:
+                            pass
+                except OSError:
+                    pass
+    except Exception:
+        pass
+
+    # 2. 默认个人安装位置 C:\Users\<user>\AppData\Local\Programs\Python\Python3xx
+    default_root = os.path.join(os.path.expandvars("%LOCALAPPDATA%"), "Programs", "Python")
+    if os.path.isdir(default_root):
+        for name in os.listdir(default_root):
+            if name.startswith("Python3"):
+                _add(name, os.path.join(default_root, name))
+
+    if not candidates:
+        return None
+    candidates.sort(key=lambda x: x[0], reverse=True)
+    return candidates[0][1]
+
+
+def _link_existing_python(python_dir: str, fallback_dir: str) -> tuple[bool, str]:
+    """
+    用 NTFS 目录联接（mklink /J）把 python_dir 指向本机已存在的 Python 安装目录。
+    返回 (是否成功, python --version 输出)。
+    """
+    import shutil
+    if os.path.isdir(python_dir) and not os.path.isfile(os.path.join(python_dir, "python.exe")):
+        shutil.rmtree(python_dir, ignore_errors=True)
+    elif os.path.islink(python_dir):
+        os.rmdir(python_dir)
+    try:
+        subprocess.run(
+            ["cmd", "/c", "mklink", "/J", python_dir, fallback_dir],
+            capture_output=True, text=True, timeout=30,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+    except Exception as e:
+        return False, str(e)
+    code, out = _run([PYTHON_EXE, "--version"])
+    return (code == 0), out.strip()
+
+
 def ensure_python_installed(progress_callback=None) -> dict:
     """
     检查 Python 是否可用：
@@ -172,7 +258,8 @@ def ensure_python_installed(progress_callback=None) -> dict:
             capture_output=True, text=True, timeout=300,
             creationflags=subprocess.CREATE_NO_WINDOW,
         )
-        # 0=成功；1641/3010=成功但需重启（不影响使用）；1638=同版本已安装，交给后续验证
+        # 0=成功；1641/3010=成功但需重启（不影响使用）；1638=本机已有相同或更新的 Python，
+        # 安装器视为“降级”并拒绝安装，此时必须靠后续验证/兜底处理
         if result.returncode not in (0, 1641, 3010, 1638):
             return {"ok": False, "message": f"Python 安装失败 (code={result.returncode}): {result.stderr}"}
 
@@ -180,8 +267,26 @@ def ensure_python_installed(progress_callback=None) -> dict:
         code2, out2 = _run([PYTHON_EXE, "--version"])
         if code2 == 0:
             return {"ok": True, "message": f"Python 安装成功: {out2.strip()}"}
-        else:
-            return {"ok": False, "message": "Python 安装完成但无法运行，请检查 system/python 目录"}
+
+        # 安装“成功”但 python.exe 不存在（典型为 1638 降级拒绝）：
+        # 兜底关联本机已存在的兼容 Python（NTFS 目录联接，无需管理员权限）
+        fallback_dir = _find_existing_python_dir()
+        if fallback_dir:
+            _report(progress_callback,
+                    f"⚠️  安装器拒绝安装（本机已有更新 Python），尝试关联现有 Python：{fallback_dir}", -1)
+            linked, ver_out = _link_existing_python(python_dir, fallback_dir)
+            if linked:
+                return {"ok": True, "message": (
+                    f"Python 未独立安装（系统已有更新的 Python 3.13，安装器拒绝降级），"
+                    f"已关联现有 Python: {ver_out}（{fallback_dir}）"
+                )}
+
+        return {"ok": False, "message": (
+            "Python 安装完成但无法运行（system/python 目录为空）。\n"
+            "常见原因：本机已安装更新的 Python 3.13.x，官方安装器把安装 3.13.12 视为降级而拒绝。\n"
+            "解决办法：在 Windows 设置中卸载现有 Python 3.13.x 后重试，"
+            "或将已部署目录的 system\\python 整个复制到本目录。"
+        )}
     except subprocess.TimeoutExpired:
         return {"ok": False, "message": "Python 安装超时（超过 5 分钟），请手动安装"}
     except Exception as e:
