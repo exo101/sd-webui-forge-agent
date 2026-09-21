@@ -120,7 +120,7 @@ def _execute_tool(tool_name, tool_args, uploaded_image=None, uploaded_video=None
                     tool_args["first_frame"] = last_tool_images[-1]
 
         # 多图工具：stitch_images
-        if tool_name == "stitch_images":
+        if tool_name in ("stitch_images", "create_model_comparison_html"):
             if "images" not in tool_args or not tool_args["images"]:
                 if last_tool_images:
                     tool_args["images"] = last_tool_images
@@ -797,6 +797,7 @@ def chat_stream(history, uploaded_image=None, uploaded_video=None, attachments=N
                     psd_path = None
                     video_path = None
                     glb_path = None
+                    html_path = None
                     try:
                         result_data = json.loads(result_str)
                         info = result_data.get("info", result_data.get("data", {}))
@@ -804,6 +805,7 @@ def chat_stream(history, uploaded_image=None, uploaded_video=None, attachments=N
                             psd_path = info.get("psd_path")
                             video_path = info.get("video_path")
                             glb_path = info.get("glb_path")
+                            html_path = info.get("html_path") or info.get("file_path")
                     except Exception:
                         pass
 
@@ -812,6 +814,8 @@ def chat_stream(history, uploaded_image=None, uploaded_video=None, attachments=N
                         pending_files.append(psd_path)
                     elif glb_path and os.path.isfile(glb_path):
                         pending_files.append(glb_path)
+                    elif html_path and os.path.isfile(html_path):
+                        pending_files.append(html_path)
                     else:
                         pending_images.extend(images)
 

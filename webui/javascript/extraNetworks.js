@@ -37,17 +37,23 @@ function setupExtraNetworksForTab(tabname) {
         });
     }
 
-    let tabnav = gradioApp().querySelector(
-        "#" + tabname + "_extra_tabs > div.tab-nav",
-    );
-    let controlsDiv = document.createElement("DIV");
-    controlsDiv.classList.add("extra-networks-controls-div");
-    tabnav.appendChild(controlsDiv);
-    tabnav.insertBefore(controlsDiv, null);
-
+    // Gradio 5 may wrap the tab navigation in an extra container.
     let this_tab = gradioApp().querySelector("#" + tabname + "_extra_tabs");
+    if (!this_tab) return;
+
+    let tabnav = gradioApp().querySelector(
+        "#" + tabname + "_extra_tabs .tab-nav",
+    );
+    if (!tabnav) return;
+    let controlsDiv = tabnav.querySelector(":scope > .extra-networks-controls-div");
+    if (!controlsDiv) {
+        controlsDiv = document.createElement("DIV");
+        controlsDiv.classList.add("extra-networks-controls-div");
+        tabnav.appendChild(controlsDiv);
+    }
+    controlsDiv.innerHTML = "";
     this_tab
-        .querySelectorAll(":scope > [id^='" + tabname + "_']")
+        .querySelectorAll("[id^='" + tabname + "_']")
         .forEach(function (elem) {
             // tabname_full = {tabname}_{extra_networks_tabname}
             let tabname_full = elem.id;
@@ -235,14 +241,20 @@ function extraNetworksMovePromptToTab(
 }
 
 function extraNetworksShowControlsForPage(tabname, tabname_full) {
+    let targetId = tabname_full ? tabname_full + "_controls" : null;
     gradioApp()
-        .querySelectorAll(
-            "#" + tabname + "_extra_tabs .extra-networks-controls-div > div",
-        )
+        .querySelectorAll("#" + tabname + "_extra_tabs .extra-networks-controls-div > div")
         .forEach(function (elem) {
-            let targetId = tabname_full + "_controls";
             elem.style.display = elem.id == targetId ? "" : "none";
         });
+
+    // Gradio 5 can place the component id on a wrapper below the toolbar.
+    // Resolve the target directly as a fallback so refresh/search controls are
+    // still visible after the page HTML is loaded asynchronously.
+    if (targetId) {
+        let target = gradioApp().getElementById(targetId);
+        if (target) target.style.display = "";
+    }
 }
 
 function extraNetworksUnrelatedTabSelected(tabname) {

@@ -4,13 +4,15 @@
 
 import os
 import sys
+import base64
+import html
 import subprocess
 import time
 import traceback
 
 import numpy as np
 import torch
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 from modules import shared, scripts, sd_models, postprocessing
 from modules.processing import (
@@ -46,7 +48,7 @@ def _run_process_images(p):
 
 
 def txt2img_tool(prompt, negative_prompt="", steps=None, width=None, height=None,
-                 sampler_name=None, cfg_scale=None, seed=-1, batch_size=1, n_iter=1):
+                 sampler_name=None, scheduler_name=None, cfg_scale=None, seed=-1, batch_size=1, n_iter=1):
     """文生图：根据文字描述生成图片。"""
     cfg = load_config()
 
@@ -62,6 +64,8 @@ def txt2img_tool(prompt, negative_prompt="", steps=None, width=None, height=None
                 cfg_scale = CFG.get(arch)
             if sampler_name is None:
                 sampler_name = SAMPLERS.get(arch)
+            if scheduler_name is None:
+                scheduler_name = SCHEDULERS.get(arch)
     except Exception:
         pass
 
@@ -85,6 +89,7 @@ def txt2img_tool(prompt, negative_prompt="", steps=None, width=None, height=None
         batch_size=batch_size,
         n_iter=n_iter,
         sampler_name=sampler_name or _get_sampler(),
+        scheduler=scheduler_name,
         do_not_save_samples=False,
         do_not_save_grid=True,
     )
@@ -99,7 +104,7 @@ def txt2img_tool(prompt, negative_prompt="", steps=None, width=None, height=None
     info = {
         "prompt": prompt, "negative_prompt": negative_prompt,
         "steps": p.steps, "width": p.width, "height": p.height,
-        "sampler": p.sampler_name, "seed": p.seed, "model": _get_current_checkpoint(),
+        "sampler": p.sampler_name, "scheduler": p.scheduler, "seed": p.seed, "model": _get_current_checkpoint(),
         "batch_size": batch_size, "n_iter": n_iter,
     }
     return images, info
@@ -602,7 +607,7 @@ def video_to_frames_tool(video_path, interval_seconds=1, max_frames=20):
         return [], {"error": str(e)}
 
 
-def stitch_images_tool(images, columns=2, padding=10, background_color=(255, 255, 255)):
+def stitch_images_tool(images, columns=2, padding=10, background_color=(255, 255, 255), labels=None):
     """图像拼接：把多张图片拼成一张网格图。
 
     参数:
@@ -627,12 +632,14 @@ def stitch_images_tool(images, columns=2, padding=10, background_color=(255, 255
         cols = min(columns, len(pil_images))
         rows = (len(pil_images) + cols - 1) // cols
 
+        labels = list(labels or [])
+        label_height = 34 if labels else 0
         # 计算网格尺寸
         max_w = max(img.width for img in pil_images)
         max_h = max(img.height for img in pil_images)
 
         total_w = cols * max_w + (cols + 1) * padding
-        total_h = rows * max_h + (rows + 1) * padding
+        total_h = rows * (max_h + label_height) + (rows + 1) * padding
 
         result = Image.new("RGB", (total_w, total_h), background_color)
 
@@ -640,7 +647,12 @@ def stitch_images_tool(images, columns=2, padding=10, background_color=(255, 255
             row = i // cols
             col = i % cols
             x = padding + col * (max_w + padding)
-            y = padding + row * (max_h + padding)
+            y = padding + row * (max_h + label_height + padding)
+            if labels:
+                draw = ImageDraw.Draw(result)
+                label = str(labels[i]) if i < len(labels) else f"Image {i + 1}"
+                draw.text((x, y + 6), label, fill=(20, 20, 20))
+                y += label_height
             # 居中放置
             offset_x = x + (max_w - img.width) // 2
             offset_y = y + (max_h - img.height) // 2
@@ -656,6 +668,47 @@ def stitch_images_tool(images, columns=2, padding=10, background_color=(255, 255
         return [result], info
     except Exception as e:
         return [], {"error": str(e)}
+
+
+def create_model_comparison_html_tool(images, models=None, prompt="", notes=None, title="Model comparison"):
+    """Create a self-contained clickable HTML comparison page from generated images."""
+    try:
+        from scripts.agent_config import _get_webui_output_dir
+        image_items = []
+        for index, item in enumerate(images or []):
+            path = item if isinstance(item, str) else None
+            if path and os.path.isfile(path):
+                with open(path, "rb") as handle:
+                    encoded = base64.b64encode(handle.read()).decode("ascii")
+                size = Image.open(path).size
+            elif isinstance(item, Image.Image):
+                from io import BytesIO
+                buffer = BytesIO()
+                item.convert("RGB").save(buffer, format="PNG")
+                encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+                size = item.size
+            else:
+                continue
+            label = str((models or [])[index] if index < len(models or []) else f"Image {index + 1}")
+            note = str((notes or [])[index] if index < len(notes or []) else "")
+            image_items.append((label, encoded, size, note))
+        if not image_items:
+            return {"status": "error", "error": "没有可写入 HTML 的图片"}
+        cards = []
+        for label, encoded, size, note in image_items:
+            cards.append(f'<article><h2>{html.escape(label)}</h2><img src="data:image/png;base64,{encoded}" alt="{html.escape(label)}"><p>{size[0]}×{size[1]}</p><div>{html.escape(note)}</div></article>')
+        output_dir = _get_webui_output_dir()
+        os.makedirs(output_dir, exist_ok=True)
+        filename = f"model-comparison-{int(time.time())}.html"
+        path = os.path.join(output_dir, filename)
+        page = f'''<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>{html.escape(title)}</title>
+<style>body{{font-family:system-ui;background:#111827;color:#f8fafc;margin:24px}}.grid{{display:grid;grid-template-columns:repeat(3,minmax(0,260px));gap:14px;align-items:start}}article{{width:260px;box-sizing:border-box;background:#1f2937;border-radius:12px;padding:10px;overflow:hidden}}img{{width:240px;height:240px;object-fit:contain;display:block;border-radius:7px;background:#0f172a;cursor:zoom-in}}h1{{margin-bottom:8px}}h2{{font-size:16px;margin:0 0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}p,div{{color:#cbd5e1;font-size:12px}}.prompt{{max-width:800px;white-space:pre-wrap;background:#0f172a;padding:12px;border-radius:8px}}@media(max-width:860px){{.grid{{grid-template-columns:repeat(auto-fit,260px)}}}}</style>
+<h1>{html.escape(title)}</h1><p class="prompt">{html.escape(prompt)}</p><main class="grid">{"".join(cards)}</main></html>'''
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(page)
+        return {"status": "success", "html_path": path, "file_path": path, "count": len(image_items), "message": f"HTML 对比页已生成：{path}"}
+    except Exception as exc:
+        return {"status": "error", "error": str(exc)}
 
 
 def list_preprocessors_tool():
