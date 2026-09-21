@@ -11,7 +11,7 @@ VERSIONS_FILE = Path(BASE_DIR / 'launcher' / 'versions.json')
 CURRENT_VERSION_FILE = Path(BASE_DIR / 'launcher' / 'CURRENT_VERSION.txt')
 
 # GitHub仓库配置
-GITHUB_REPO = "exo101/sd-webui-forge-neo-v3"
+GITHUB_REPO = "exo101/sd-webui-forge-agent"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}"
 
 # Git subprocess env: disable SSL verification and use portable Git DLLs for Windows compatibility

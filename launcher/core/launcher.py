@@ -342,7 +342,7 @@ class GitPullWorker(QThread):
             if not os.path.isdir(git_dir):
                 self.log_line.emit("[WARN] Not a git repository (.git not found)")
                 self.log_line.emit("[WARN] This project was likely downloaded as a ZIP, not cloned with git")
-                self.log_line.emit("[WARN] To enable updates, run: git clone https://github.com/exo101/sd-webui-forge-neo-v3.git")
+                self.log_line.emit("[WARN] To enable updates, run: git clone https://github.com/exo101/sd-webui-forge-agent.git")
                 self.finished.emit(False, "Not a git repository")
                 return
 
