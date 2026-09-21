@@ -23,6 +23,7 @@ from scripts.agent_models import (
 from scripts.agent_tools import MODEL_GUIDE, set_model_components_tool
 from scripts.agent_history import _normalize_image_paths
 from scripts.agent_chat import chat_stream, request_stop
+from scripts.agent_skills import discover_skills, read_skill_tool, save_custom_skill, delete_custom_skill
 
 
 # =============================================================================
@@ -904,6 +905,7 @@ def on_ui_tabs():
             state_image = gr.State(None)
             state_video = gr.State(None)
             state_attachments = gr.State([])
+            state_skill = gr.State("")
 
             with gr.Column(scale=1):
                 upload_all = gr.File(
@@ -1055,6 +1057,22 @@ def on_ui_tabs():
                     - "有哪些模型？" / "当前设置是什么？" / "有哪些插件？"
                     """)
 
+                with gr.Accordion("🧩 Skills 技能树（可自定义）", open=False):
+                    gr.Markdown("添加后技能会保存到扩展的 `skills/custom/`，智能体可通过 `list_skills` 发现并用 `read_skill` 读取执行。名称只允许英文、数字、短横线和下划线。")
+                    skill_choices = [s["name"] for s in discover_skills()]
+                    custom_skill_name = gr.Textbox(label="技能名称", placeholder="例如：qwen-image-21")
+                    custom_skill_description = gr.Textbox(label="触发/用途描述", placeholder="说明什么时候使用这个技能")
+                    custom_skill_instructions = gr.Textbox(label="技能执行指令", lines=8, placeholder="写给智能体的完整步骤、工具选择和约束")
+                    with gr.Row():
+                        save_skill_btn = gr.Button("➕ 保存技能", variant="primary", size="sm")
+                        refresh_skill_btn = gr.Button("🔄 刷新技能树", size="sm")
+                    custom_skill_select = gr.Dropdown(label="已安装技能", choices=skill_choices, value="", allow_custom_value=False)
+                    skill_preview = gr.Textbox(label="技能指令预览（只读）", lines=12, interactive=False)
+                    load_skill_btn = gr.Button("📥 加载到当前聊天", variant="secondary", size="sm")
+                    skill_load_status = gr.Textbox(show_label=False, interactive=False)
+                    delete_skill_btn = gr.Button("🗑️ 删除选中的自定义技能", variant="stop", size="sm")
+                    skill_status = gr.Textbox(show_label=False, interactive=False)
+
                 with gr.Accordion("🧠 记忆库管理（记住你 / 重启续作）", open=False):
                     gr.Markdown("Agent 会自动从过往对话中沉淀**事实/偏好/问答**到记忆库（data/agent_memory.json），并滚动记录最近几轮对话——重启 WebUI 后说「继续」即可接着上次。聊天中命中记忆时会显示蓝色记忆块。可在这里查看、按关键词删除或清空。")
                     memory_enabled = gr.Checkbox(label="启用记忆（关闭后不检索、不记录、不抽取）", value=bool(cfg_init.get("memory_enabled", True)))
@@ -1078,7 +1096,7 @@ def on_ui_tabs():
             """全能附件上传：按扩展名分流给图像、视频和普通附件。"""
             return _classify_uploads(files)
 
-        def prepare_message(message, history, image, video, attachments, local_model_value="", api_model_value=""):
+        def prepare_message(message, history, image, video, attachments, loaded_skill="", local_model_value="", api_model_value=""):
             """把用户消息加入 history，清空输入框，返回新 history。
             Gradio 5 Chatbot type='messages' 不支持列表混合格式，
             所以文本和图片分成两条消息。
@@ -1161,6 +1179,8 @@ def on_ui_tabs():
                 hidden_notes.append(api_model_note)
             if tool_hints:
                 hidden_notes.append(tool_hints)
+            if loaded_skill:
+                hidden_notes.append("[已加载 Skill]\n" + str(loaded_skill) + "\n[请严格按该 Skill 执行，本轮生效]")
             if hidden_notes:
                 hint_text = "[系统提示 - 以下是用户 @标签 触发的自动操作]\n" + "\n".join(hidden_notes) + "\n[请根据以上提示执行任务]"
                 # 找到开头连续 system 消息中的最后一条
@@ -1196,7 +1216,7 @@ def on_ui_tabs():
 
         def clear_uploads():
             """发送完成后清除上传组件和 State。"""
-            return None, None, None, []
+            return None, None, None, [], ""
 
         def save_settings(provider, key, url, model):
             cfg = load_config(resolve_local=False)
@@ -1524,6 +1544,41 @@ def on_ui_tabs():
             except Exception as e:
                 return f"❌ 保存失败: {e}"
 
+        def _skill_choices():
+            return [s["name"] for s in discover_skills()]
+
+        def save_skill_ui(name, description, instructions):
+            result = save_custom_skill(name, description, instructions)
+            return gr.update(choices=_skill_choices(), value=result.get("name", "") if result.get("status") == "success" else None), result.get("message", "保存失败")
+
+        def refresh_skill_ui():
+            return gr.update(choices=_skill_choices(), value=""), "✅ 技能树已刷新"
+
+        def preview_skill_ui(name):
+            if not name:
+                return ""
+            result = read_skill_tool(name)
+            if result.get("status") != "success":
+                return result.get("message") or result.get("error") or "读取技能失败"
+            return f"# {result['name']}\n\n{result.get('description', '')}\n\n{result.get('content', '')}"
+
+        def delete_skill_ui(name):
+            result = delete_custom_skill(name)
+            return gr.update(choices=_skill_choices(), value=""), result.get("message", "删除失败")
+
+        def load_skill_ui(name):
+            result = read_skill_tool(name)
+            if result.get("status") != "success":
+                return "", result.get("message") or result.get("error") or "读取技能失败"
+            payload = f"技能名：{result['name']}\n用途：{result.get('description', '')}\n\n{result.get('content', '')}"
+            return payload, f"✅ 已加载「{result['name']}」，发送下一条消息时生效"
+
+        save_skill_btn.click(fn=save_skill_ui, inputs=[custom_skill_name, custom_skill_description, custom_skill_instructions], outputs=[custom_skill_select, skill_status])
+        refresh_skill_btn.click(fn=refresh_skill_ui, outputs=[custom_skill_select, skill_status])
+        custom_skill_select.change(fn=preview_skill_ui, inputs=[custom_skill_select], outputs=[skill_preview])
+        load_skill_btn.click(fn=load_skill_ui, inputs=[custom_skill_select], outputs=[state_skill, skill_load_status])
+        delete_skill_btn.click(fn=delete_skill_ui, inputs=[custom_skill_select], outputs=[custom_skill_select, skill_status])
+
         memory_refresh_btn.click(fn=memory_refresh, inputs=[memory_keyword], outputs=[memory_table, memory_status])
         memory_keyword.change(fn=memory_refresh, inputs=[memory_keyword], outputs=[memory_table, memory_status])
         memory_delete_btn.click(fn=memory_delete, inputs=[memory_keyword], outputs=[memory_table, memory_status])
@@ -1533,7 +1588,7 @@ def on_ui_tabs():
         # 发送按钮：prepare → send_chat → clear_uploads
         send_event = send_btn.click(
             fn=prepare_message,
-            inputs=[msg_input, chatbot, state_image, state_video, state_attachments, local_model_select, api_model_select],
+            inputs=[msg_input, chatbot, state_image, state_video, state_attachments, state_skill, local_model_select, api_model_select],
             outputs=[msg_input, chatbot],
         ).then(
             fn=send_chat,
@@ -1541,13 +1596,13 @@ def on_ui_tabs():
             outputs=[chatbot, status],
         ).then(
             fn=clear_uploads,
-            outputs=[upload_all, state_image, state_video, state_attachments],
+            outputs=[upload_all, state_image, state_video, state_attachments, state_skill],
         )
 
         # 回车发送
         submit_event = msg_input.submit(
             fn=prepare_message,
-            inputs=[msg_input, chatbot, state_image, state_video, state_attachments, local_model_select, api_model_select],
+            inputs=[msg_input, chatbot, state_image, state_video, state_attachments, state_skill, local_model_select, api_model_select],
             outputs=[msg_input, chatbot],
         ).then(
             fn=send_chat,
@@ -1555,7 +1610,7 @@ def on_ui_tabs():
             outputs=[chatbot, status],
         ).then(
             fn=clear_uploads,
-            outputs=[upload_all, state_image, state_video, state_attachments],
+            outputs=[upload_all, state_image, state_video, state_attachments, state_skill],
         )
 
         # 「暂停思考」：置位停止标志。chat_stream 在 LLM 流式循环 / 工具迭代循环中检测到后

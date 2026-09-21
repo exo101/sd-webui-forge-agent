@@ -26,6 +26,46 @@ def _get_skills_dir():
     return os.path.join(_get_extension_root(), "skills")
 
 
+def _get_custom_skills_dir():
+    """用户自定义技能目录；与内置技能隔离，升级扩展时不会覆盖。"""
+    path = os.path.join(_get_skills_dir(), "custom")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def save_custom_skill(name, description, instructions):
+    """创建或覆盖一个用户技能，返回可直接展示给 UI 的结果。"""
+    slug = re.sub(r"[^a-zA-Z0-9_-]+", "-", str(name or "").strip()).strip("-_").lower()
+    description = str(description or "").strip()
+    instructions = str(instructions or "").strip()
+    if not slug or not description or not instructions:
+        return {"status": "error", "message": "技能名称、描述和执行指令都不能为空"}
+    if len(slug) > 64:
+        return {"status": "error", "message": "技能名称不能超过 64 个字符"}
+    skill_dir = os.path.join(_get_custom_skills_dir(), slug)
+    os.makedirs(skill_dir, exist_ok=True)
+    content = f"---\nname: {slug}\ndescription: {description}\nmetadata:\n  source: user\n---\n\n{instructions}\n"
+    path = os.path.join(skill_dir, "SKILL.md")
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(content)
+    return {"status": "success", "message": f"已保存技能：{slug}", "name": slug}
+
+
+def delete_custom_skill(name):
+    """只允许删除 skills/custom 下的用户技能。"""
+    slug = re.sub(r"[^a-zA-Z0-9_-]+", "-", str(name or "").strip()).strip("-_").lower()
+    path = os.path.join(_get_custom_skills_dir(), slug, "SKILL.md")
+    custom_root = os.path.realpath(_get_custom_skills_dir())
+    if not slug or not os.path.realpath(path).startswith(custom_root + os.sep) or not os.path.isfile(path):
+        return {"status": "error", "message": "未找到可删除的自定义技能"}
+    os.remove(path)
+    try:
+        os.rmdir(os.path.dirname(path))
+    except OSError:
+        pass
+    return {"status": "success", "message": f"已删除技能：{slug}"}
+
+
 def _parse_frontmatter(text):
     """解析 SKILL.md 头部的 YAML frontmatter。
 

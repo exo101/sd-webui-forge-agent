@@ -65,7 +65,7 @@ from scripts.agent_tools_models import (
 from scripts.agent_tools_image import (
     txt2img_tool, img2img_tool, _edit_with_image_stitch, upscale_tool,
     video_keyframe_extract_tool, trellis2_image_to_3d_tool, video_to_frames_tool,
-    stitch_images_tool, list_preprocessors_tool, apply_adetailer_tool,
+    stitch_images_tool, create_model_comparison_html_tool, list_preprocessors_tool, apply_adetailer_tool,
     remove_background_tool, layer_separation_tool, edit_image_tool,
     change_background_tool, generate_with_lora_tool,
 )
@@ -130,6 +130,7 @@ TOOL_FUNCTIONS = {
     "h3_video_generate": h3_video_generate_tool,
     "dreamina_video_generate": dreamina_video_generate_tool,
     "stitch_images": stitch_images_tool,
+    "create_model_comparison_html": create_model_comparison_html_tool,
     "list_preprocessors": list_preprocessors_tool,
     "apply_adetailer": apply_adetailer_tool,
     "remove_background": remove_background_tool,

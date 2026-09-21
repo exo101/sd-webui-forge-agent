@@ -17,6 +17,7 @@ TOOLS = [
                     "width": {"type": "integer", "description": "图片宽度，默认1024"},
                     "height": {"type": "integer", "description": "图片高度，默认1024"},
                     "sampler_name": {"type": "string", "description": "采样器名称"},
+                    "scheduler_name": {"type": "string", "description": "调度器名称，留空时使用当前模型 preset"},
                     "cfg_scale": {"type": "number", "description": "CFG引导强度，默认7.0"},
                     "seed": {"type": "integer", "description": "随机种子，-1为随机"},
                     "batch_size": {"type": "integer", "description": "每批生成数量，默认1"},
@@ -322,6 +323,7 @@ TOOLS = [
                 "properties": {
                     "columns": {"type": "integer", "description": "列数，默认2"},
                     "padding": {"type": "integer", "description": "图片间距像素，默认10"},
+                    "labels": {"type": "array", "items": {"type": "string"}, "description": "每张图片上方的标签，可用于模型对比表头"},
                 },
             },
         },
@@ -332,6 +334,22 @@ TOOLS = [
             "name": "list_preprocessors",
             "description": "列出所有可用的 ControlNet/ControlLLLite 预处理器。",
             "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_model_comparison_html",
+            "description": "把多张生成结果制作成可点击打开的自包含 HTML 对比页，适合模型测试结果展示。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "models": {"type": "array", "items": {"type": "string"}, "description": "每张图片对应的模型名称"},
+                    "prompt": {"type": "string", "description": "本次测试提示词"},
+                    "notes": {"type": "array", "items": {"type": "string"}, "description": "每个模型的参数或观察备注"},
+                    "title": {"type": "string", "description": "HTML 页面标题"},
+                },
+            },
         },
     },
     {
