@@ -1,7 +1,7 @@
 {
   "port": 7869,
   "theme": "dark",
-  "listen": false,
+  "listen": true,
   "autolaunch": true,
   "cuda_malloc": true,
   "cuda_stream": true,

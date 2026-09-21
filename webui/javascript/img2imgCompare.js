@@ -61,15 +61,26 @@
         reader.readAsDataURL(file);
     }
 
-    // Find the currently active mode tab's content panel
+    // 各 mode tab 对应的源图像块（画布 gr.HTML / Inpaint upload 的 gr.Image）
+    const MODE_SOURCE_IDS = [
+        "img2img_image",
+        "img2img_sketch",
+        "img2maskimg",
+        "inpaint_sketch",
+        "img_inpaint_base",
+    ];
+
+    // Find the currently active mode tab's source image block.
+    // Gradio 5: tab 按钮的 aria-controls 可能为空，且部分 tab 会被挤进
+    // overflow 菜单，因此直接探测哪个源图像块当前可见（非激活 tab 内容被隐藏）。
     function activeSourcePanel() {
         const tabs = document.getElementById(MODE_TABS_ID);
         if (!tabs) return null;
-        const selected = tabs.querySelector('button[role="tab"].selected') ||
-            tabs.querySelector('button[role="tab"][aria-selected="true"]');
-        if (!selected) return null;
-        const controls = selected.getAttribute("aria-controls");
-        return controls ? document.getElementById(controls) : null;
+        for (let i = 0; i < MODE_SOURCE_IDS.length; i++) {
+            const el = document.getElementById(MODE_SOURCE_IDS[i]);
+            if (el && el.offsetParent !== null) return el;
+        }
+        return null;
     }
 
     // Synchronously extract the original image URL for the active mode
