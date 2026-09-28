@@ -299,23 +299,6 @@ TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "dreamina_video_generate",
-            "description": "【Dreamina SeaDance 视频生成】用户明确使用 @dreamina-seedance-2-5-hc 或 @dreamina-seedance-2-0-hc 时必须使用。走 Agent 独立视频生成 API 设置，不依赖 forge-h3-studio、MiniMax Key 或本地 H3 模型。",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "prompt": {"type": "string", "description": "视频内容描述提示词"},
-                    "duration": {"type": "integer", "description": "视频时长（秒），范围 4-15，默认 5", "default": 5},
-                    "aspect_ratio": {"type": "string", "description": "视频比例", "enum": ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], "default": "16:9"},
-                    "model": {"type": "string", "description": "Dreamina 模型 ID，如 dreamina-seedance-2-0-hc 或 dreamina-seedance-2-5-hc"},
-                },
-                "required": ["prompt"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
             "name": "stitch_images",
             "description": "把多张图片拼成一张网格图。当用户要求拼图、拼接多张图片时使用。",
             "parameters": {
@@ -397,7 +380,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "api_image_generate",
-            "description": "外部/API 图像生成工具。当前图像生成模型选择远程 API 模型时，用它进行文生图，不需要用户输入 @模型标签。支持 negative_prompt 和 quality 参数（YoboxAI gpt-image-2 等模型可用）。",
+            "description": "外部/API 图像生成工具。当前图像生成模型选择远程 API 模型时，用它进行文生图，不需要用户输入 @模型标签。支持 negative_prompt 和 quality 可选参数。",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -415,12 +398,12 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "api_image_edit",
-            "description": "外部/API 图像编辑工具。用户使用 @banana2、@bananapro、@gpt-image-2、@gpt-image-2.5 等 API 图像编辑模型标签时必须优先使用此工具。不要改用 remove_background、change_background 或本地 Klein 编辑。",
+            "description": "外部/API 图像编辑工具。当前图像编辑模型为远程 API 模型、或用户使用 @API 图像模型标签时必须优先使用此工具。不要改用 remove_background、change_background 或本地 Klein 编辑。",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "instruction": {"type": "string", "description": "图像编辑指令，如 'change the image background to pure white, preserve the subject exactly'"},
-                    "model": {"type": "string", "description": "API 模型 ID。若用户标签指定了模型，必须填写该模型 ID，如 banana2"},
+                    "model": {"type": "string", "description": "API 模型 ID。若用户标签指定了模型，必须填写该模型 ID"},
                     "size": {"type": "string", "description": "输出尺寸（像素），默认 auto(保持原图尺寸)。如需指定比例：1024x1792(9:16竖版)、1792x1024(16:9横版)、1024x1024(1:1)", "default": "auto"},
                 },
                 "required": ["instruction", "model"],

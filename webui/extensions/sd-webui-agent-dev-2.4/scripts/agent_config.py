@@ -3,12 +3,10 @@
 # =============================================================================
 
 import os
-import io
 import sys
 import json
 import time
 import uuid
-import base64
 import tempfile
 import traceback
 from pathlib import Path
@@ -44,13 +42,13 @@ DEFAULT_CONFIG = {
     "model": "Qwen/Qwen3.8-27B",
     "image_api_key": "",
     "image_api_provider": "ModelScope",
-    "image_base_url": "https://api.yoboxai.com/v1",
+    "image_base_url": "https://api-inference.modelscope.cn/v1",
     "image_model": "",
     "image_aspect_ratio": "1:1",
     "video_api_key": "",
-    "video_api_provider": "YoboxAI",
-    "video_base_url": "https://api.yoboxai.com/api/v3/contents/generations",
-    "video_model": "dreamina-seedance-2-0-hc",
+    "video_api_provider": "ModelScope",
+    "video_base_url": "https://api-inference.modelscope.cn/v1",
+    "video_model": "",
     "custom_providers": [],
     "custom_models": {"llm": {}, "image": {}, "video": {}},
     "max_tool_iterations": 60,
@@ -66,10 +64,6 @@ API_PROVIDERS = {
     "ModelScope": {
         "base_url": "https://api-inference.modelscope.cn/v1",
         "note": "ModelScope API",
-    },
-    "YoboxAI": {
-        "base_url": "https://api.yoboxai.com/v1",
-        "note": "YoboxAI API，支持 GPT Image 2、Nano Banana、Gemini 3 Pro、Gemini Flash Lite、Gemini Flash、MiniMax H3 等模型标签",
     },
 }
 
@@ -101,10 +95,7 @@ def provider_choices(cfg=None):
 
 def normalize_base_url(url):
     """Normalize OpenAI-compatible base URLs."""
-    value = (url or "").strip().rstrip("/")
-    if value == "https://api.yoboxai.com":
-        return "https://api.yoboxai.com/v1"
-    return value
+    return (url or "").strip().rstrip("/")
 
 
 def provider_base_url(provider):
@@ -273,16 +264,9 @@ def _scan_model_dir(subdir, extensions=None):
 # 📐 画面比例设置（Agent Aspect Ratio）
 # - 设置页新增「📐 画面比例」选项卡：1:1 / 9:16 / 16:9，持久化到 agent_config.json
 # - 作为所有图像模型（本地模型与 API 模型）的默认输出比例；对话中明确指定的比例优先。
-# - Gemini/YoboxAI 额外使用原生 imageConfig.aspectRatio 传递比例。
 # =============================================================================
 
 ASPECT_RATIOS = ["1:1", "9:16", "16:9", "参考图比例"]
-_SUPPORTED_RATIOS = ["1:1", "16:9", "9:16", "4:3", "3:4", "2:3", "3:2"]
-_NOT_EXPLICIT_SIZES = {"", "auto", "1024x1024", "1:1", "square"}
-GEMINI_MODEL_KEYWORDS = ("banana", "gemini")
-
-_orig_api_image_generate = None
-_orig_api_image_edit = None
 
 
 def _ar_cfg():
@@ -295,281 +279,6 @@ def _ar_cfg():
 def _ui_ratio():
     value = str(_ar_cfg().get("image_aspect_ratio") or "1:1").strip().lower()
     return value if value in {x.lower() for x in ASPECT_RATIOS} else "1:1"
-
-
-def _is_yoboxai_gemini_model(model):
-    m = str(model or "").lower()
-    if not any(k in m for k in GEMINI_MODEL_KEYWORDS):
-        return False
-    cfg = _ar_cfg()
-    provider = str(cfg.get("image_api_provider") or "").lower()
-    base_url = str(cfg.get("image_base_url") or "").lower()
-    return "yoboxai" in provider or "yoboxai" in base_url
-
-
-def _yoboxai_api_key():
-    cfg = _ar_cfg()
-    key = str(cfg.get("image_api_key") or "").strip()
-    if not key:
-        try:
-            from modules_forge.api_providers import get_session_api_key
-            key = str(get_session_api_key() or "").strip()
-        except Exception:
-            pass
-    return key
-
-
-def _pixels_to_ratio(size):
-    s = str(size or "").strip().lower().replace(" ", "")
-    if not s:
-        return None
-    if s in _SUPPORTED_RATIOS:
-        return s
-    if "x" in s:
-        try:
-            w_str, h_str = s.split("x", 1)
-            w, h = int(w_str), int(h_str)
-        except Exception:
-            return None
-        if w <= 0 or h <= 0:
-            return None
-        target = w / h
-        best, best_diff = None, 1e9
-        for r in _SUPPORTED_RATIOS:
-            a, b = r.split(":")
-            diff = abs(target - int(a) / int(b))
-            if diff < best_diff:
-                best, best_diff = r, diff
-        return best
-    return None
-
-
-def _resolve_ratio(size):
-    s = str(size or "").strip().lower().replace(" ", "")
-    if s in _NOT_EXPLICIT_SIZES:
-        return _ui_ratio()
-    return _pixels_to_ratio(s) or _ui_ratio()
-
-
-def _prompt_states_ratio(text):
-    """提示词/指令中是否已明确说明画面比例。
-
-    LLM 按系统提示词规则会针对用户要求传对应 size（如"方形头像"→ 1024x1024），
-    但 _NOT_EXPLICIT_SIZES 把 1024x1024/1:1 视为"未指定"而回退 UI 保存的比例，
-    会把"1:1 方形头像"误改成 UI 里的 9:16。提示词里已有明确比例词时，
-    应尊重 LLM 传的 size，跳过 UI 比例回退。
-    注意：英文 "portrait" 不算——它在生图提示词里多是题材词（肖像/头像）。
-    """
-    t = str(text or "").lower()
-    return any(tok in t for tok in (
-        "1:1", "16:9", "9:16", "4:3", "3:4", "2:3", "3:2", "21:9",
-        "square", "横版", "横屏", "竖版", "竖屏", "宽幅",
-        "手机壁纸", "桌面壁纸", "wide", "landscape", "vertical",
-    ))
-
-
-def _resolve_ratio_with_prompt(size, text):
-    s = str(size or "").strip().lower().replace(" ", "")
-    if s in _NOT_EXPLICIT_SIZES:
-        if _prompt_states_ratio(text):
-            return _pixels_to_ratio(s) or _ui_ratio()
-        return _ui_ratio()
-    return _pixels_to_ratio(s) or _ui_ratio()
-
-
-def _pil_to_inline(img):
-    try:
-        if isinstance(img, str):
-            if not os.path.isfile(img):
-                return None
-            img = Image.open(img).convert("RGB")
-        elif isinstance(img, dict):
-            p = img.get("path")
-            if not (p and os.path.isfile(p)):
-                return None
-            img = Image.open(p).convert("RGB")
-        elif not isinstance(img, Image.Image):
-            return None
-    except Exception:
-        return None
-    try:
-        img = img.convert("RGB")
-        w, h = img.size
-        if max(w, h) > 1024:
-            scale = 1024 / max(w, h)
-            img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=85)
-        # Gemini generateContent 协议要求图片放在 parts[].inlineData 内，
-        # 平铺 mimeType/data 会被网关丢弃，导致 "parts[i].data: required oneof
-        # field 'data' must have one initialized field" (HTTP 400)。
-        return {"inlineData": {"mimeType": "image/jpeg", "data": base64.b64encode(buf.getvalue()).decode("utf-8")}}
-    except Exception:
-        return None
-
-
-def _call_yoboxai_gemini(parts, model, api_key, aspect_ratio, quality=""):
-    import requests
-
-    model = str(model or "banana2").strip()
-    url = f"https://api.yoboxai.com/gemini/v1beta/models/{model}:generateContent"
-    image_config = {"aspectRatio": aspect_ratio, "imageSize": "2K"}
-    if quality in ("low", "medium", "high"):
-        image_config["quality"] = quality
-    payload = {
-        "contents": [{"role": "user", "parts": parts}],
-        "generationConfig": {
-            "responseModalities": ["IMAGE"],
-            "imageConfig": image_config,
-        },
-    }
-    print(f"[Agent] YoboxAI Gemini 原生调用: model={model}, aspectRatio={aspect_ratio}")
-    # [诊断] 记录每个 part 的结构与数据长度，定位 "parts[i].data 为空" 问题。
-    # 写文件（启动器实例的 stdout 不可读），webui/tmp/gemini_diag.jsonl
-    try:
-        import os as _os
-        _diag_parts = []
-        for _i, _p in enumerate(parts):
-            if isinstance(_p, dict):
-                _info = {"idx": _i, "keys": list(_p.keys())}
-                if "data" in _p:
-                    _info["data_len"] = len(_p.get("data") or "")
-                    _info["data_head"] = str(_p.get("data") or "")[:40]
-                if "text" in _p:
-                    _info["text_len"] = len(str(_p.get("text") or ""))
-                if "inlineData" in _p:
-                    _d = _p.get("inlineData") or {}
-                    _info["inlineData.data_len"] = len((_d.get("data") or "") if isinstance(_d, dict) else "")
-            else:
-                _info = {"idx": _i, "type": type(_p).__name__}
-            _diag_parts.append(_info)
-        _diag_dir = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))), "tmp")
-        _os.makedirs(_diag_dir, exist_ok=True)
-        _diag_file = _os.path.join(_diag_dir, "gemini_diag.jsonl")
-        with open(_diag_file, "a", encoding="utf-8") as _df:
-            _df.write(json.dumps({"model": model, "aspect_ratio": aspect_ratio, "parts": _diag_parts}, ensure_ascii=False) + "\n")
-        print(f"[Agent] [DIAG] Gemini parts 共 {len(parts)} 个 -> {_diag_file}")
-    except Exception as _e:
-        print(f"[Agent] [DIAG] 记录失败: {_e}")
-    resp = requests.post(
-        url,
-        params={"key": api_key},
-        headers={"Content-Type": "application/json"},
-        json=payload,
-        timeout=600,
-    )
-    if resp.status_code != 200:
-        raise RuntimeError(f"YoboxAI API 错误 HTTP {resp.status_code}: {resp.text[:500]}")
-    result = resp.json()
-    if isinstance(result, dict) and result.get("error"):
-        err = result["error"]
-        msg = err.get("message", err) if isinstance(err, dict) else err
-        raise RuntimeError(f"YoboxAI 返回错误: {msg}")
-    for cand in (result.get("candidates") or []):
-        for part in (((cand.get("content") or {}).get("parts")) or []):
-            inline = part.get("inlineData") or part.get("inline_data")
-            if inline and inline.get("data"):
-                return Image.open(io.BytesIO(base64.b64decode(inline["data"]))).convert("RGB")
-    raise RuntimeError(
-        "YoboxAI 未返回图片（可能被安全过滤或模型 ID 不正确），响应: "
-        + json.dumps(result, ensure_ascii=False)[:300]
-    )
-
-
-def _gemini_generate(kwargs):
-    prompt = str(kwargs.get("prompt") or "").strip()
-    if not prompt:
-        return None, {"error": "缺少提示词 prompt"}
-    model = str(kwargs.get("model") or _ar_cfg().get("image_model") or "banana2").strip()
-    api_key = _yoboxai_api_key()
-    if not api_key:
-        return None, {"error": "未配置 YoboxAI API Key，请在绘梦助手的图像 API 设置中填写"}
-    aspect_ratio = _resolve_ratio_with_prompt(kwargs.get("size"), kwargs.get("prompt"))
-    negative = str(kwargs.get("negative_prompt") or "").strip()
-    text = prompt if not negative else f"{prompt}\n\n(Avoid: {negative})"
-    try:
-        img = _call_yoboxai_gemini(
-            [{"text": text}], model, api_key, aspect_ratio, str(kwargs.get("quality") or "")
-        )
-    except Exception as e:
-        return None, {"error": str(e)}
-    return [img], {
-        "status": "success",
-        "method": "yoboxai-gemini-native",
-        "model": model,
-        "aspect_ratio": aspect_ratio,
-        "width": img.width,
-        "height": img.height,
-        "message": f"已按 {aspect_ratio} 比例生成",
-    }
-
-
-def _gemini_edit(kwargs):
-    instruction = str(kwargs.get("instruction") or "").strip()
-    model = str(kwargs.get("model") or _ar_cfg().get("image_model") or "banana2").strip()
-    api_key = _yoboxai_api_key()
-    if not api_key:
-        return None, {"error": "未配置 YoboxAI API Key，请在绘梦助手的图像 API 设置中填写"}
-    parts = []
-    # image 可能是 Gradio 多图路径列表；逐张转换，不能把列表整体传给
-    # _pil_to_inline，否则主图会被静默丢弃，只剩全局参考图。
-    main_images = kwargs.get("image")
-    if not isinstance(main_images, (list, tuple)):
-        main_images = [main_images]
-    for main_image in main_images:
-        inline = _pil_to_inline(main_image)
-        if inline is not None:
-            parts.append(inline)
-
-    # 只有没有从工具参数拿到图片时，才回退到 Forge 全局参考图，避免重复
-    # 注入并改变用户上传图片的顺序。
-    if not parts:
-        try:
-            from modules_forge.api_providers import get_reference_images
-            for ref in (get_reference_images() or []):
-                inline = _pil_to_inline(ref)
-                if inline is not None:
-                    parts.append(inline)
-        except Exception:
-            pass
-    if not parts:
-        return None, {"error": "需要参考图片：请先上传图片再执行编辑"}
-    if not instruction:
-        instruction = "Apply the requested changes to the reference image."
-    aspect_ratio = _resolve_ratio_with_prompt(kwargs.get("size"), instruction)
-    try:
-        img = _call_yoboxai_gemini(
-            [{"text": instruction}] + parts, model, api_key, aspect_ratio, str(kwargs.get("quality") or "")
-        )
-    except Exception as e:
-        return None, {"error": str(e)}
-    return [img], {
-        "status": "success",
-        "method": "yoboxai-gemini-native-edit",
-        "model": model,
-        "aspect_ratio": aspect_ratio,
-        "width": img.width,
-        "height": img.height,
-        "message": f"已按 {aspect_ratio} 比例编辑生成",
-    }
-
-
-def _patched_api_image_generate(**kwargs):
-    model = str(kwargs.get("model") or _ar_cfg().get("image_model") or "").strip()
-    if _is_yoboxai_gemini_model(model):
-        return _gemini_generate(kwargs)
-    if _orig_api_image_generate is not None:
-        return _orig_api_image_generate(**kwargs)
-    return None, {"error": "api_image_generate 原始工具未找到"}
-
-
-def _patched_api_image_edit(**kwargs):
-    model = str(kwargs.get("model") or _ar_cfg().get("image_model") or "").strip()
-    if _is_yoboxai_gemini_model(model):
-        return _gemini_edit(kwargs)
-    if _orig_api_image_edit is not None:
-        return _orig_api_image_edit(**kwargs)
-    return None, {"error": "api_image_edit 原始工具未找到"}
 
 
 def _save_ratio():
@@ -616,53 +325,13 @@ def _on_ar_ui_settings():
             section=("agent_ar", "📐 画面比例"),
         ).info(
             "所有图像模型（本地与 API）的默认画面比例；对话中明确指定的比例优先。"
-            "Gemini/YoboxAI 模型会额外通过官方 aspectRatio 参数传递。"
             "像素参考：1:1=1024×1024｜9:16=1024×1792（竖版）｜16:9=1792×1024（横版）。"
             "对话中明确要求其他比例时以对话优先。"
         ),
     )
 
-
-def _install_ar_patches():
-    global _orig_api_image_generate, _orig_api_image_edit
-    import sys
-
-    agent_tools = sys.modules.get("scripts.agent_tools") or sys.modules.get("agent_tools")
-    if agent_tools is None:
-        try:
-            from scripts import agent_tools
-        except Exception:
-            agent_tools = None
-    if agent_tools is None or not hasattr(agent_tools, "TOOL_FUNCTIONS"):
-        print("[Agent] 画面比例: agent_tools 模块不可用，工具补丁未安装")
-        return
-    tf = agent_tools.TOOL_FUNCTIONS
-    if "api_image_generate" in tf and tf["api_image_generate"] is not _patched_api_image_generate:
-        _orig_api_image_generate = tf["api_image_generate"]
-        tf["api_image_generate"] = _patched_api_image_generate
-    if "api_image_edit" in tf and tf["api_image_edit"] is not _patched_api_image_edit:
-        _orig_api_image_edit = tf["api_image_edit"]
-        tf["api_image_edit"] = _patched_api_image_edit
-
-
-def _on_ar_app_started(demo, app):
-    """app_started 回调包装器：接收 (demo, app) 后安装模型兼容适配。
-
-    注意：必须用 on_app_started 注册，而不是调用 app_started_callback。
-    app_started_callback(demo, app) 是"立即执行所有已注册回调"的触发函数，
-    在导入期直接调用它会把 (字符串, 函数) 当成 (demo, app) 传给所有
-    app_started 回调（如 infinite-browsing），导致 app.get 报
-    'function' object has no attribute 'get'。
-    """
-    try:
-        _install_ar_patches()
-    except Exception as e:
-        print(f"[Agent] 画面比例模型适配安装失败: {e}")
-        traceback.print_exc()
-
 try:
     script_callbacks.on_ui_settings(_on_ar_ui_settings)
-    script_callbacks.on_app_started(_on_ar_app_started)
 except Exception as e:
     print(f"[Agent] 注册画面比例功能失败: {e}")
     traceback.print_exc()

@@ -3,15 +3,15 @@
   "api_provider": "local-llama",
   "base_url": "http://127.0.0.1:1234/v1",
   "model": "qwen3.5-4b",
-  "image_api_key": "",
+  "image_api_key": "ms-4588eb2c-142d-4a99-b07e-9d593d3b956c",
   "image_api_provider": "ModelScope",
   "image_base_url": "https://api-inference.modelscope.cn/v1",
   "image_model": "",
   "image_aspect_ratio": "9:16",
-  "video_api_key": "",
+  "video_api_key": "ms-4588eb2c-142d-4a99-b07e-9d593d3b956c",
   "video_api_provider": "ModelScope",
   "video_base_url": "https://api-inference.modelscope.cn/v1",
-  "video_model": "dreamina-seedance-2-0-hc",
+  "video_model": "",
   "custom_providers": [],
   "custom_models": {
     "llm": {
@@ -29,15 +29,8 @@
         "qwen3.5-9b@q8_k_xl",
         "qwen3.8-9b@q6_k",
         "qwen3.8-9b@q8_0",
-        "qwen3.5-4b"
-      ],
-      "YoboxAI": [
-        "gpt-5.5",
-        "gpt-5.5-instant",
-        "gpt-5-chat-latest",
-        "glm-5.3",
-        "glm-5.3-flash",
-        "gemini-2.5-flash"
+        "qwen3.5-4b",
+        "qwen3.8-9b@q4_k_m"
       ]
     },
     "image": {},
