@@ -3,7 +3,7 @@ import json
 import os
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QTabWidget, QLabel, QPushButton, QFrame
+    QTabWidget, QLabel, QPushButton, QFrame, QMessageBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
@@ -752,7 +752,7 @@ class MainWindow(QMainWindow):
         self._git_worker = GitPullWorker()
         self._git_worker.log_line.connect(self.tab_log.append_line)
         
-        def on_update_finished(success, message):
+        def on_update_finished(success, message, highlights):
             self.btn_update.setEnabled(True)
             self.btn_update.setText("  Update  ")
             if success:
@@ -761,9 +761,21 @@ class MainWindow(QMainWindow):
                 self.tab_log.append_line(f"[WARN] Kernel update failed: {message}")
             self._git_worker.deleteLater()
             self._git_worker = None
+            if success and highlights:
+                self._show_update_highlights(highlights)
         
         self._git_worker.finished.connect(on_update_finished)
         self._git_worker.start()
+
+    def _show_update_highlights(self, highlights):
+        """Popup showing what's new in the kernel update"""
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Information)
+        box.setWindowTitle("内核更新完成 - 新增内容")
+        box.setText("内核更新成功！本次更新的新增内容：")
+        box.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
+        box.setDetailedText("\n".join(highlights))
+        box.exec()
 
     def _on_finished(self, code: int):
         self.tab_launch.set_running(False)

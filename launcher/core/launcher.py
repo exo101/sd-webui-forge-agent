@@ -318,7 +318,38 @@ class LaunchWorker(QThread):
 class GitPullWorker(QThread):
     """Background worker for git pull to update the project kernel"""
     log_line = pyqtSignal(str)
-    finished = pyqtSignal(bool, str)  # success, message
+    finished = pyqtSignal(bool, str, list)  # success, message, changelog highlights
+
+    def _read_changelog_highlights(self, new_shas):
+        """Parse CHANGELOG.md and return highlight lines for the given new commit shas"""
+        try:
+            import re
+            from core.paths import BASE_DIR
+            changelog_path = os.path.join(BASE_DIR, "CHANGELOG.md")
+            if not os.path.isfile(changelog_path):
+                return []
+            with open(changelog_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            # Sections are keyed by commit: "## <title> (commit: <sha>)"
+            section_re = re.compile(r"^##\s+(.+?)\s*\(commit:\s*([0-9a-fA-F]{4,40})\)\s*$", re.MULTILINE)
+            matches = list(section_re.finditer(content))
+            highlights = []
+            for i, m in enumerate(matches):
+                sha = m.group(2).lower()
+                if not any(sha.startswith(s.lower()) or s.lower().startswith(sha) for s in new_shas):
+                    continue
+                start = m.end()
+                end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
+                category = ""
+                for line in content[start:end].splitlines():
+                    line = line.rstrip()
+                    if line.startswith("### "):
+                        category = line[4:].strip()
+                    elif line.startswith("- ") and category:
+                        highlights.append(f"【{category}】{line[2:].strip()}")
+            return highlights
+        except Exception:
+            return []
 
     def run(self):
         from core.paths import GIT_EXE, BASE_DIR
@@ -343,7 +374,7 @@ class GitPullWorker(QThread):
                 self.log_line.emit("[WARN] Not a git repository (.git not found)")
                 self.log_line.emit("[WARN] This project was likely downloaded as a ZIP, not cloned with git")
                 self.log_line.emit("[WARN] To enable updates, run: git clone https://github.com/exo101/sd-webui-forge-agent.git")
-                self.finished.emit(False, "Not a git repository")
+                self.finished.emit(False, "Not a git repository", [])
                 return
 
             # Step 2: Get current branch
@@ -367,7 +398,7 @@ class GitPullWorker(QThread):
             if r3.returncode != 0:
                 error_msg = (r3.stderr or "").strip() or "Fetch failed"
                 self.log_line.emit(f"[FAIL] Fetch failed: {error_msg}")
-                self.finished.emit(False, error_msg)
+                self.finished.emit(False, error_msg, [])
                 return
             self.log_line.emit("[OK] Fetch completed")
 
@@ -407,7 +438,7 @@ class GitPullWorker(QThread):
 
             if local_commit == remote_commit:
                 self.log_line.emit(f"[OK] Already up to date ({local_commit})")
-                self.finished.emit(True, "Already up to date")
+                self.finished.emit(True, "Already up to date", [])
                 return
 
             # Step 6: Pull the latest code
@@ -434,18 +465,32 @@ class GitPullWorker(QThread):
                         self.log_line.emit(f"      {entry}")
                 else:
                     self.log_line.emit("[OK] Update completed!")
-                self.finished.emit(True, "Update successful")
+
+                # Look up CHANGELOG.md for highlights of the newly pulled commits
+                new_shas = [
+                    line.split(" ", 1)[0]
+                    for line in log_entries.splitlines()
+                    if line.strip()
+                ]
+                highlights = self._read_changelog_highlights(new_shas)
+                if highlights:
+                    self.log_line.emit("")
+                    self.log_line.emit("📦 本次更新新增内容:")
+                    for h in highlights:
+                        self.log_line.emit(f"   {h}")
+                    self.log_line.emit("")
+                self.finished.emit(True, "Update successful", highlights)
             else:
                 error_msg = (r7.stderr or "").strip() or "Pull failed"
                 self.log_line.emit(f"[FAIL] Pull failed: {error_msg}")
-                self.finished.emit(False, error_msg)
+                self.finished.emit(False, error_msg, [])
 
         except subprocess.TimeoutExpired as e:
             self.log_line.emit(f"[FAIL] Operation timed out: {str(e)}")
-            self.finished.emit(False, f"Timeout: {str(e)}")
+            self.finished.emit(False, f"Timeout: {str(e)}", [])
         except Exception as e:
             self.log_line.emit(f"[FAIL] Update failed: {str(e)}")
-            self.finished.emit(False, str(e))
+            self.finished.emit(False, str(e), [])
 
 
 def cleanup_all_temp_files():
