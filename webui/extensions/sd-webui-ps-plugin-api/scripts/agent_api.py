@@ -255,7 +255,6 @@ def _get_providers():
         return {
             "ModelScope": "https://api-inference.modelscope.cn/v1",
             "DashScope": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-            "YoboxAI": "https://api.yoboxai.com/v1",
         }
 
 
@@ -725,8 +724,7 @@ def agent_chat(body: dict, on_event=None):
     # 模型感知的 tool_choice 策略
     model_name = str(cfg.get("model", "")).lower()
     provider_name = str(cfg.get("api_provider", "")).lower()
-    # Qwen 系列（ModelScope/DashScope）原生支持 auto 模式 function calling
-    # gpt-5.4-mini 等 YoboxAI 模型需要 required 强制调用
+    # Qwen 系列（ModelScope/DashScope）原生支持 auto 模式 function calling，其他模型需 required 强制调用
     use_required_for_model = not (
         "qwen" in model_name or
         provider_name in ("modelscope", "dashscope")
@@ -740,7 +738,7 @@ def agent_chat(body: dict, on_event=None):
 
         # 模型感知策略：
         # - Qwen/ModelScope/DashScope 模型：原生支持 auto function calling
-        # - gpt-5.4-mini 等 YoboxAI 模型：auto 忽略 tools，必须 required
+        # - 其他模型：auto 可能忽略 tools，必须 required
         # - 已生成图片后切换到 auto 让 LLM 给出最终回复
         has_intent = _has_tool_intent(user_message)
         has_images = bool(generated_images)
@@ -1084,7 +1082,7 @@ def agent_api_callbacks(_: gr_or_blocks, app: FastAPI):
             if agent_mod:
                 by_provider = getattr(agent_mod, "IMAGE_GENERATION_MODELS_BY_PROVIDER", {})
                 provider = cfg.get("image_api_provider", "")
-                models = by_provider.get(provider, []) or by_provider.get("YoboxAI", [])
+                models = by_provider.get(provider, [])
         except Exception:
             pass
         return _cors_response({
@@ -1118,10 +1116,10 @@ def agent_api_callbacks(_: gr_or_blocks, app: FastAPI):
             "llm_base_url": "https://api-inference.modelscope.cn/v1",
             "llm_api_key": "ms-xxx",
             "llm_model": "Qwen/Qwen3.8-27B",
-            "image_provider": "YoboxAI",
-            "image_base_url": "https://api.yoboxai.com/v1",
-            "image_api_key": "sk-xxx",
-            "image_model": "nano-banana"
+            "image_provider": "ModelScope",
+            "image_base_url": "https://api-inference.modelscope.cn/v1",
+            "image_api_key": "ms-xxx",
+            "image_model": "Qwen/Qwen-Image-2.1"
         }
         """
         # 构建更新字典
@@ -1178,10 +1176,10 @@ def agent_api_callbacks(_: gr_or_blocks, app: FastAPI):
             "llm_base_url": "...",         // 可选，LLM base_url
             "llm_api_key": "...",          // 可选，LLM API Key
             "llm_model": "model_id",      // 可选，用户选择的 LLM 模型
-            "image_provider": "YoboxAI",   // 可选，图片供应商
+            "image_provider": "ModelScope",   // 可选，图片供应商
             "image_base_url": "...",       // 可选，图片 base_url
             "image_api_key": "...",        // 可选，图片 API Key
-            "image_model": "nano-banana"   // 可选，图片模型
+            "image_model": "Qwen/Qwen-Image-2.1"   // 可选，图片模型
         }
         返回: { "status": "success", "reply": "...", "images": [...] }
         """

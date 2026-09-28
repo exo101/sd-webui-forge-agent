@@ -9,7 +9,6 @@ from __future__ import annotations
 import base64
 import mimetypes
 import time
-import uuid
 from pathlib import Path
 from typing import Any
 
@@ -33,15 +32,6 @@ _ASPECT_MAP = {
     "3:4": "3:4",
     "21:9": "21:9",
     "adaptive": "adaptive",
-}
-
-_YOBOX_2K_SIZES = {
-    "21:9": (3360, 1440),
-    "16:9": (2560, 1440),
-    "4:3": (1920, 1440),
-    "1:1": (1440, 1440),
-    "3:4": (1440, 1920),
-    "9:16": (1440, 2560),
 }
 
 
@@ -91,17 +81,11 @@ class CloudClient:
     def enabled(self) -> bool:
         return bool(self.api_key)
 
-    def _is_yobox(self) -> bool:
-        return "yoboxai.com" in self.base.lower()
-
-    def _headers(self, *, yobox: bool = False) -> dict[str, str]:
-        headers = {
+    def _headers(self) -> dict[str, str]:
+        return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
-        if yobox:
-            headers["Idempotency-Key"] = f"h3-{uuid.uuid4().hex}"
-        return headers
 
     @staticmethod
     def _json_response(response: httpx.Response, action: str) -> dict[str, Any]:
@@ -202,70 +186,16 @@ class CloudClient:
 
         return payload
 
-    def _build_yobox_payload(self, request: dict[str, Any]) -> dict[str, Any]:
-        """Build the YoboxAI /v1/videos request shape."""
-        prompt = str(request.get("prompt") or "").strip()
-        if not prompt:
-            raise H3StudioError("提示词不能为空")
-        frames = int(request.get("frames") or (5 * H3_FPS))
-        duration = max(MIN_DURATION, min(MAX_DURATION, round(frames / H3_FPS)))
-        aspect = str(request.get("aspect_ratio") or "16:9").strip()
-        aspect = aspect if aspect in _YOBOX_2K_SIZES else "16:9"
-        width, height = _YOBOX_2K_SIZES[aspect]
-        payload_input: dict[str, Any] = {
-            "prompt": prompt,
-            "aspect_ratio": aspect,
-            # YoboxAI's MiniMax-H3 endpoint accepts 2K for async billing.
-            # Do not send the native MiniMax "768P" value here.
-            "resolution": "2K",
-            "width": width,
-            "height": height,
-            "duration": duration,
-            "audio": True,
-            "n": 1,
-        }
-
-        first = str(request.get("first_frame") or "").strip()
-        last = str(request.get("last_frame") or "").strip()
-        if first:
-            first_url = _image_data_url(first)
-            if first_url:
-                payload_input["start_frames"] = [{"url": first_url}]
-        if last:
-            last_url = _image_data_url(last)
-            if last_url:
-                payload_input["end_frames"] = [{"url": last_url}]
-
-        references = []
-        audio_references = []
-        for ref in request.get("references") or []:
-            data_url = _image_data_url(str(ref.get("file") or ""))
-            if not data_url:
-                continue
-            if ref.get("kind") == "image":
-                references.append({"url": data_url, "strength": "MID"})
-            elif ref.get("kind") == "audio":
-                audio_references.append({"url": data_url})
-        if references and "start_frames" not in payload_input:
-            payload_input["image_references"] = references[:5]
-            # Yobox requires at least one image reference when audio references
-            # are supplied; silently omit audio-only references.
-            if audio_references:
-                payload_input["audio_references"] = audio_references[:3]
-
-        return {"model": "MiniMax-H3", "input": payload_input}
-
     def submit(self, request: dict[str, Any]) -> str:
         """Submit a video generation task, return the task_id."""
         if not self.enabled():
             raise H3StudioError("尚未配置 MiniMax API Key，请在设置中填写")
-        yobox = self._is_yobox()
-        payload = self._build_yobox_payload(request) if yobox else self._build_payload(request)
+        payload = self._build_payload(request)
         try:
             response = httpx.post(
-                f"{self.base}/v1/videos" if yobox else f"{self.base}/v2/video_generation",
+                f"{self.base}/v2/video_generation",
                 json=payload,
-                headers=self._headers(yobox=yobox),
+                headers=self._headers(),
                 timeout=self.timeout,
             )
         except httpx.HTTPError as exc:
@@ -273,10 +203,7 @@ class CloudClient:
         if response.status_code >= 400:
             detail = response.text[:500]
             if response.status_code == 503:
-                raise H3StudioError(
-                    "YoboxAI 当前暂无可用账号（HTTP 503），请稍后重试，"
-                    "或在 H3 设置中切换到其他可用的视频供应商"
-                )
+                raise H3StudioError("MiniMax API 服务暂时不可用（HTTP 503），请稍后重试")
             raise H3StudioError(f"MiniMax API 提交失败（HTTP {response.status_code}）：{detail}")
         data = self._json_response(response, "提交")
         result = data.get("data") if isinstance(data.get("data"), dict) else {}
@@ -295,7 +222,7 @@ class CloudClient:
             raise H3StudioError("尚未配置 MiniMax API Key")
         try:
             response = httpx.get(
-                f"{self.base}/v1/videos/{task_id}" if self._is_yobox() else f"{self.base}/v2/query/video_generation/{task_id}",
+                f"{self.base}/v2/query/video_generation/{task_id}",
                 headers=self._headers(),
                 timeout=self.timeout,
             )
