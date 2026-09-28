@@ -417,14 +417,21 @@ class GitPullWorker(QThread):
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             has_local_changes = bool((r4.stdout or "").strip())
+            stashed = False
             if has_local_changes:
-                self.log_line.emit("[WARN] Local changes detected, stashing...")
-                subprocess.run(
-                    [git_cmd, "stash"],
-                    capture_output=True, timeout=10,
+                # Stash tracked AND untracked files, otherwise untracked files
+                # can block the pull ("untracked working tree files would be overwritten")
+                self.log_line.emit("[WARN] Local changes detected, stashing (including untracked files)...")
+                r4b = subprocess.run(
+                    [git_cmd, "stash", "push", "--include-untracked", "-m", "launcher-auto-stash"],
+                    capture_output=True, text=True, timeout=120,
                     cwd=BASE_DIR, env=git_env,
                     creationflags=subprocess.CREATE_NO_WINDOW
                 )
+                if r4b.returncode == 0:
+                    stashed = True
+                else:
+                    self.log_line.emit(f"[WARN] Stash failed: {((r4b.stderr or r4b.stdout) or '').strip() or 'unknown error'}")
 
             # Step 5: Get the current and remote HEAD
             r5 = subprocess.run(
@@ -445,6 +452,17 @@ class GitPullWorker(QThread):
 
             if local_commit == remote_commit:
                 self.log_line.emit(f"[OK] Already up to date ({local_commit})")
+                if stashed:
+                    r9 = subprocess.run(
+                        [git_cmd, "stash", "pop"],
+                        capture_output=True, text=True, timeout=120,
+                        cwd=BASE_DIR, env=git_env,
+                        creationflags=subprocess.CREATE_NO_WINDOW
+                    )
+                    if r9.returncode == 0:
+                        self.log_line.emit("[OK] Local changes restored (git stash pop)")
+                    else:
+                        self.log_line.emit("[WARN] Could not auto-restore local changes: run 'git stash pop' manually")
                 self.finished.emit(True, "Already up to date", [])
                 return
 
@@ -472,6 +490,20 @@ class GitPullWorker(QThread):
                         self.log_line.emit(f"      {entry}")
                 else:
                     self.log_line.emit("[OK] Update completed!")
+
+                # Restore the local changes stashed before the pull
+                if stashed:
+                    r9 = subprocess.run(
+                        [git_cmd, "stash", "pop"],
+                        capture_output=True, text=True, timeout=120,
+                        cwd=BASE_DIR, env=git_env,
+                        creationflags=subprocess.CREATE_NO_WINDOW
+                    )
+                    if r9.returncode == 0:
+                        self.log_line.emit("[OK] Local changes restored (git stash pop)")
+                    else:
+                        self.log_line.emit("[WARN] Could not auto-restore local changes.")
+                        self.log_line.emit("[WARN] They are kept in the stash: run 'git stash list' / 'git stash pop' manually")
 
                 # Look up CHANGELOG.md for highlights of the newly pulled commits
                 new_shas = [
