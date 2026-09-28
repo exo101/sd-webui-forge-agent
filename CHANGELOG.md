@@ -6,7 +6,7 @@
 > 格式约定：每个 `## 日期 (commit: <7位提交号>)` 为一节，启动器按提交号匹配本次 pull 到的新提交。
 > 子节用 `### 新增` / `### 优化` / `### 修复` 分类，条目用 `- ` 开头。
 
-## 2026-09-28 (commit: 9e9ceb1, 90fe03f)
+## 2026-09-28 (commit: 9e9ceb1, 90fe03f, 81344f3)
 
 ### 新增
 - Qwen-Image-2.1 本地模型：基于 Comfy-Org int8 convrot 引擎，预设 Euler / 30 步 / CFG 1.0，模型下载器提供「qwen-image-2.1」一键组合
@@ -18,3 +18,6 @@
 ### 优化
 - 绘梦智能体助手 @qwen 标签升级为 Qwen-Image-2.1 上下文编辑模型
 - PS 插件模型列表与绘梦智能体助手同步（PS 插件 2.1.0）
+
+### 修复
+- 内核更新：拉取前会连同未跟踪文件一起暂存（git stash --include-untracked），更新成功后自动恢复本地改动，避免「untracked working tree files would be overwritten」导致更新失败、本地配置（如 API Key）丢失
