@@ -485,6 +485,25 @@ PLUGIN_BUNDLES = [
             },
         ],
     },
+    # ── 4. Breeze-TTS-2 语音合成模型（sd-webui-multimodal-media 插件）──
+    # 整仓下载（双分片权重 + 音频分词器 + tokenizer 配置），
+    # 放入 models/Breeze-TTS-2 后，多媒体处理插件的「Breeze-TTS-2 语音合成」标签页可直接使用。
+    {
+        "id": "breeze-tts-2",
+        "name": "Breeze-TTS-2",
+        "cover": "Breeze-TTS-2.png",
+        "role": "语音合成模型（sd-webui-multimodal-media 插件）",
+        "description": "开源双语 TTS：声音克隆 / 声音设计 / 声音引导。整仓下载，含音频分词器，下载完成即可直接使用。",
+        "total_size": "约 7.7 GB",
+        "repos": [
+            {
+                "repo_id": "BreezeBlue/Breeze-TTS-2",
+                "target_dir": os.path.join(models_path, "Breeze-TTS-2"),
+                "display_name": "Breeze-TTS-2 完整模型（双分片权重 + 音频分词器）",
+                "size": "约 7.7 GB",
+            },
+        ],
+    },
 ]
 
 def get_plugin_bundle(bundle_id: str):
@@ -885,9 +904,10 @@ class ModelDownloader:
                     result = ms_snapshot_download(model_id=repo_id, cache_dir=temp_dir) if ms_snapshot_download else None
                     repo_root = result if isinstance(result, str) and os.path.isdir(result) else None
                     if not repo_root:
-                        # 兜底：在临时目录中定位含 model_index.json 的仓库根
+                        # 兜底：在临时目录中定位含 model_index.json 或 config.json 的仓库根
+                        # （Breeze-TTS-2 等仓库无 model_index.json，根目录只有 config.json）
                         for dirpath, _, filenames in os.walk(temp_dir):
-                            if "model_index.json" in filenames:
+                            if "model_index.json" in filenames or "config.json" in filenames:
                                 repo_root = dirpath
                                 break
                     if not repo_root:
