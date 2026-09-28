@@ -330,13 +330,20 @@ class GitPullWorker(QThread):
                 return []
             with open(changelog_path, "r", encoding="utf-8") as f:
                 content = f.read()
-            # Sections are keyed by commit: "## <title> (commit: <sha>)"
-            section_re = re.compile(r"^##\s+(.+?)\s*\(commit:\s*([0-9a-fA-F]{4,40})\)\s*$", re.MULTILINE)
+            # Sections are keyed by commit: "## <title> (commit: <sha>[, <sha>...])"
+            section_re = re.compile(
+                r"^##\s+(.+?)\s*\(commit:\s*([0-9a-fA-F]{4,40}(?:\s*,\s*[0-9a-fA-F]{4,40})*)\)\s*$",
+                re.MULTILINE,
+            )
             matches = list(section_re.finditer(content))
             highlights = []
             for i, m in enumerate(matches):
-                sha = m.group(2).lower()
-                if not any(sha.startswith(s.lower()) or s.lower().startswith(sha) for s in new_shas):
+                section_shas = [s.strip().lower() for s in m.group(2).split(",")]
+                if not any(
+                    a.startswith(b) or b.startswith(a)
+                    for a in section_shas
+                    for b in (s.lower() for s in new_shas)
+                ):
                     continue
                 start = m.end()
                 end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
