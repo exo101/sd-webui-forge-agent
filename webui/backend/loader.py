@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 import torch
 import yaml
-from transformers.modeling_utils import no_init_weights
+from backend.utils import no_init_weights
 
 import backend.args
 from backend import memory_management, utils
@@ -22,7 +22,7 @@ from backend.diffusion_engine.krea import Krea2
 from backend.diffusion_engine.lumina import Lumina2
 from backend.diffusion_engine.mugen import Mugen
 from backend.diffusion_engine.pid import PiD
-from backend.diffusion_engine.qwen import QwenImage
+from backend.diffusion_engine.qwen import QwenImage, QwenImage21
 from backend.diffusion_engine.sd15 import StableDiffusion
 from backend.diffusion_engine.sdxl import StableDiffusionXL, StableDiffusionXLRefiner
 from backend.diffusion_engine.wan import Wan
@@ -43,7 +43,7 @@ from backend.utils import (
 )
 from modules_forge.packages.comfy.utils import convert_diffusers_mmdit
 
-possible_models: tuple["ForgeDiffusionEngine"] = (StableDiffusion, StableDiffusionXLRefiner, StableDiffusionXL, Mugen, Chroma, Flux, Flux2, Wan, QwenImage, Krea2, Lumina2, ZImage, Anima, ErnieImage, PiD)
+possible_models: tuple["ForgeDiffusionEngine"] = (StableDiffusion, StableDiffusionXLRefiner, StableDiffusionXL, Mugen, Chroma, Flux, Flux2, Wan, QwenImage, QwenImage21, Krea2, Lumina2, ZImage, Anima, ErnieImage, PiD)
 
 logger = logging.getLogger("loader")
 setup_logger(logger)
@@ -116,13 +116,18 @@ def load_huggingface_component(guess, component_name, lib_name, cls_name, repo_p
 
             load_state_dict(model, state_dict, ignore_start="loss.")
             return model
-        if cls_name in ["AutoencoderKLWan", "AutoencoderKLQwenImage"]:
+        if cls_name in ["AutoencoderKLWan", "AutoencoderKLQwenImage", "AutoencoderKLQwenImage21"]:
             assert isinstance(state_dict, dict) and len(state_dict) > 16, "You do not have VAE state dict!"
 
             if "post_quant_conv.weight" in state_dict:  # 2D
                 from backend.nn.wan_vae_2d import Qwen2DVAE as WanVAE
 
                 config = {}
+
+            elif "decoder.upsamples.0.upsamples.0.residual.2.weight" in state_dict:  # Wan 2.2 layout (Qwen-Image-2.1 VAE)
+                from backend.nn.wan_vae_22 import WanVAE22 as WanVAE
+
+                config = WanVAE.load_config(config_path)
 
             else:
                 from backend.nn.wan_vae import WanVAE
@@ -354,7 +359,7 @@ def load_huggingface_component(guess, component_name, lib_name, cls_name, repo_p
 
         # region UNet / DiT
 
-        if cls_name in ["UNet2DConditionModel", "FluxTransformer2DModel", "Flux2Transformer2DModel", "ChromaTransformer2DModel", "WanTransformer3DModel", "QwenImageTransformer2DModel", "Lumina2Transformer2DModel", "ZImageTransformer2DModel", "CosmosTransformer3DModel", "ErnieImageTransformer2DModel", "PiDTransformer2DModel", "Krea2Transformer2DModel"]:
+        if cls_name in ["UNet2DConditionModel", "FluxTransformer2DModel", "Flux2Transformer2DModel", "ChromaTransformer2DModel", "WanTransformer3DModel", "QwenImageTransformer2DModel", "QwenImage21Transformer2DModel", "Lumina2Transformer2DModel", "ZImageTransformer2DModel", "CosmosTransformer3DModel", "ErnieImageTransformer2DModel", "PiDTransformer2DModel", "Krea2Transformer2DModel"]:
             assert isinstance(state_dict, dict) and len(state_dict) > 16, "You do not have model state dict!"
             pre_func: Callable[[torch.nn.Module], torch.nn.Module] = lambda mdl: mdl
             model_loader = None
@@ -391,6 +396,10 @@ def load_huggingface_component(guess, component_name, lib_name, cls_name, repo_p
                     from backend.nn.qwen import QwenImageTransformer2DModel
 
                     model_loader = lambda c: QwenImageTransformer2DModel(**c)
+            elif cls_name == "QwenImage21Transformer2DModel":
+                from backend.nn.qwen21 import QwenImage21Transformer2DModel
+
+                model_loader = lambda c: QwenImage21Transformer2DModel(**c)
             elif cls_name in ("Lumina2Transformer2DModel", "ZImageTransformer2DModel"):
                 if guess.nunchaku:
                     guess.unet_config.pop("filename")
@@ -455,6 +464,15 @@ def load_huggingface_component(guess, component_name, lib_name, cls_name, repo_p
 
             if guess.nunchaku:
                 computation_dtype = storage_dtype
+            elif quant_config is not None:
+                # 量化模型：computation_dtype 按硬件能力选择，不能无条件落到 fp32
+                # 否则 attention 输入为 fp32 会导致 flash_attn 报错 + 与量化算子混算产生 NaN
+                if memory_management.should_use_bf16(load_device):
+                    computation_dtype = torch.bfloat16
+                elif memory_management.should_use_fp16(load_device, prioritize_performance=True):
+                    computation_dtype = torch.float16
+                else:
+                    computation_dtype = torch.float32
             else:
                 computation_dtype = memory_management.inference_cast(weight_dtype=storage_dtype, inference_device=load_device, supported_dtypes=guess.supported_inference_dtypes)
 
@@ -721,10 +739,26 @@ def replace_state_dict(sd: dict[str, torch.Tensor], asd: dict[str, torch.Tensor]
                 continue
             sd[f"{text_encoder_key_prefix}gemma2_2b.{k}"] = v
 
-    elif "model.visual.deepstack_merger_list.0.norm.weight" in asd:
-        assert asd["model.visual.merger.linear_fc2.weight"].shape[0] == 2560
+    elif "model.visual.deepstack_merger_list.0.norm.weight" in asd and "model.model.language_model.embed_tokens.weight" not in asd:
+        fc2_dim = asd["model.visual.merger.linear_fc2.weight"].shape[0]
+        _key = "qwen3vl_4b" if fc2_dim == 2560 else ("qwen3vl_8b" if fc2_dim == 4096 else None)
+        assert _key is not None, f"Unknown qwen3vl merger fc2 dim: {fc2_dim}"
         for k, v in asd.items():
-            sd[f"{text_encoder_key_prefix}qwen3vl_4b.transformer.{k}"] = v
+            sd[f"{text_encoder_key_prefix}{_key}.transformer.{k}"] = v
+
+    # DiffSynth/ComfyUI Qwen-Image-2.1 TE exports an extra `model.` wrapper:
+    # model.model.language_model.* and model.model.visual.*.  Normalize it
+    # into the same layout used by the native Forge Qwen3VL loader.  The
+    # weights remain ConvRot/comfy_quant tensors; this only changes prefixes.
+    elif "model.model.language_model.embed_tokens.weight" in asd:
+        for k, v in asd.items():
+            if k.startswith("model.model.language_model."):
+                k = "model." + k[len("model.model.language_model."):]
+            elif k.startswith("model.model.visual."):
+                k = "visual." + k[len("model.model.visual."):]
+            elif k.startswith("model.lm_head."):
+                k = "model.lm_head." + k[len("model.lm_head."):]
+            sd[f"{text_encoder_key_prefix}qwen3vl_8b.transformer.{k}"] = v
 
     elif "model.layers.0.self_attn.k_proj.bias" in asd:
         weight = asd["model.layers.0.self_attn.k_proj.bias"]
@@ -890,6 +924,14 @@ def forge_loader(sd: os.PathLike, additional_state_dicts: list[os.PathLike] = No
     backend.args.dynamic_args.wan = "Wan" in repo_name
     backend.args.dynamic_args.pid = "PiD" in repo_name
     backend.args.dynamic_args.krea2 = "krea" in repo_name.lower() or "Krea2" in str(type(estimated_config))
+    backend.args.dynamic_args.qwen21 = "Qwen-Image-2.1" in repo_name
+    # DiffSynth uses a separate model layout and pipeline.  Route only the
+    # explicit *_ds checkpoint to it; ordinary ConvRot checkpoints stay on
+    # Forge's native comfy_kitchen kernel path.
+    backend.args.dynamic_args.qwen21_diffsynth = (
+        backend.args.dynamic_args.qwen21 and "_ds" in os.path.basename(str(sd)).lower()
+    )
+
 
     if "xl" in repo_name and "rectified" in str(sd).lower():
         estimated_config.sampling_settings["RF"] = True
@@ -904,6 +946,10 @@ def forge_loader(sd: os.PathLike, additional_state_dicts: list[os.PathLike] = No
 
     huggingface_components = {}
     for component_name, v in config.items():
+        # The DiffSynth Qwen21 backend loads its own DiT/TE/VAE files.  Do
+        # not parse its companion files as HuggingFace components.
+        if backend.args.dynamic_args.qwen21_diffsynth:
+            continue
         if isinstance(v, list) and len(v) == 2:
             lib_name, cls_name = v
             component_sd = state_dicts.pop(component_name, None)

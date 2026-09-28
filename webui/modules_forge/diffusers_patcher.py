@@ -1,5 +1,5 @@
 import torch
-from transformers.modeling_utils import no_init_weights
+from backend.utils import no_init_weights
 
 from backend import memory_management
 from backend.operations import using_forge_operations

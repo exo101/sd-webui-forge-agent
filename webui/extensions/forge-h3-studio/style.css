@@ -1774,22 +1774,28 @@
 .h3s-result-view {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   background: #05070b;
 }
 
+/* 视频/图片占满剩余空间，操作条位于其下方，不再遮挡画面 */
 .h3s-result-view video,
-.h3s-result-view img { width: 100%; height: 100%; object-fit: contain; }
-.h3s-result-view audio { width: min(520px, 80%); }
-.h3s-result-empty { color: var(--h3s-muted); font-size: 11px; }
+.h3s-result-view img {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+.h3s-result-view audio { width: min(520px, 80%); margin: auto; }
+.h3s-result-empty { margin: auto; color: var(--h3s-muted); font-size: 11px; }
 
 .h3s-result-overlay {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  left: 10px;
+  position: static;
+  flex: none;
+  margin: 8px 10px 10px;
   display: flex;
   align-items: center;
   gap: 7px;

@@ -17,7 +17,7 @@ from modules import (
     shared_items,
     ui_common,
 )
-from modules_forge.presets import PresetArch, is_video, use_distill, use_shift
+from modules_forge.presets import PresetArch, SAMPLERS, SCHEDULERS, STEPS, CFG, is_video, use_distill, use_shift
 from modules_forge.api_providers import ApiProvider, fetch_models_from_api, set_session_api_key, get_session_api_key
 
 logger = logging.getLogger("ui_models")
@@ -457,6 +457,11 @@ def on_preset_change(preset: str):
     shared.opts.set("forge_preset", preset)
     shared.opts.save(shared.config_filename)
 
+    # Qwen-Image-2.1 使用 DiffSynth 后端，切换预设时强制使用合适的默认参数
+    # （不读用户保存的值，避免旧配置导致采样器/步数不合适）
+    is_qwen21 = (preset == PresetArch.qwen21.name)
+    arch = PresetArch[preset] if preset in PresetArch.__members__ else None
+
     if use_shift(preset):
         d_args = {"visible": getattr(shared.opts, f"{preset}_show_shift", True), "label": "Shift"}
     elif use_distill(preset):
@@ -472,29 +477,53 @@ def on_preset_change(preset: str):
     batch_args_i2i = batch_args_t2i.copy()
     batch_args_i2i["value"] = getattr(shared.opts, f"{preset}_i2i_batch_size", 1)
 
+    # sampler / scheduler / steps / cfg：qwen21 强制用预设默认值
+    if is_qwen21 and arch is not None:
+        t2i_sampler = SAMPLERS[arch]
+        i2i_sampler = SAMPLERS[arch]
+        t2i_scheduler = SCHEDULERS[arch]
+        i2i_scheduler = SCHEDULERS[arch]
+        t2i_step = STEPS[arch]
+        t2i_hr_step = STEPS[arch]
+        i2i_step = STEPS[arch]
+        t2i_cfg = CFG[arch]
+        t2i_hr_cfg = CFG[arch]
+        i2i_cfg = CFG[arch]
+    else:
+        t2i_sampler = getattr(shared.opts, f"{preset}_t2i_sampler", "Euler")
+        i2i_sampler = getattr(shared.opts, f"{preset}_i2i_sampler", "Euler")
+        t2i_scheduler = getattr(shared.opts, f"{preset}_t2i_scheduler", "Simple")
+        i2i_scheduler = getattr(shared.opts, f"{preset}_i2i_scheduler", "Simple")
+        t2i_step = getattr(shared.opts, f"{preset}_t2i_step", 20)
+        t2i_hr_step = getattr(shared.opts, f"{preset}_t2i_hr_step", 20)
+        i2i_step = getattr(shared.opts, f"{preset}_i2i_step", 20)
+        t2i_cfg = getattr(shared.opts, f"{preset}_t2i_cfg", 1.0)
+        t2i_hr_cfg = getattr(shared.opts, f"{preset}_t2i_hr_cfg", 1.0)
+        i2i_cfg = getattr(shared.opts, f"{preset}_i2i_cfg", 1.0)
+
     return [
         # ui_checkpoint, ui_vae, ui_forge_unet_dtype
         gr.update(value=getattr(shared.opts, f"forge_checkpoint_{preset}", shared.opts.sd_model_checkpoint)),
         gr.update(value=[os.path.basename(m) for m in (getattr(shared.opts, f"forge_additional_modules_{preset}", None) or getattr(shared.opts, "forge_additional_modules", []))]),
         gr.update(value=getattr(shared.opts, f"forge_unet_storage_dtype_{preset}", "Automatic")),
         # ui_txt2img_steps, ui_txt2img_hr_steps, ui_img2img_steps
-        gr.update(value=v) if (v := getattr(shared.opts, f"{preset}_t2i_step", 20)) > 0 else gr.skip(),
-        gr.update(value=v) if (v := getattr(shared.opts, f"{preset}_t2i_hr_step", 20)) > 0 else gr.skip(),
-        gr.update(value=v) if (v := getattr(shared.opts, f"{preset}_i2i_step", 20)) > 0 else gr.skip(),
+        gr.update(value=t2i_step) if t2i_step > 0 else gr.skip(),
+        gr.update(value=t2i_hr_step) if t2i_hr_step > 0 else gr.skip(),
+        gr.update(value=i2i_step) if i2i_step > 0 else gr.skip(),
         # ui_txt2img_sampler, ui_img2img_sampler, ui_txt2img_scheduler, ui_img2img_scheduler
-        gr.update(value=getattr(shared.opts, f"{preset}_t2i_sampler", "Euler")),
-        gr.update(value=getattr(shared.opts, f"{preset}_i2i_sampler", "Euler")),
-        gr.update(value=getattr(shared.opts, f"{preset}_t2i_scheduler", "Simple")),
-        gr.update(value=getattr(shared.opts, f"{preset}_i2i_scheduler", "Simple")),
+        gr.update(value=t2i_sampler),
+        gr.update(value=i2i_sampler),
+        gr.update(value=t2i_scheduler),
+        gr.update(value=i2i_scheduler),
         # ui_txt2img_width, ui_img2img_width, ui_txt2img_height, ui_img2img_height
         gr.update(value=v) if (v := getattr(shared.opts, f"{preset}_t2i_width", 1024)) > 0 else gr.skip(),
         gr.update(value=v) if (v := getattr(shared.opts, f"{preset}_i2i_width", 1024)) > 0 else gr.skip(),
         gr.update(value=v) if (v := getattr(shared.opts, f"{preset}_t2i_height", 1024)) > 0 else gr.skip(),
         gr.update(value=v) if (v := getattr(shared.opts, f"{preset}_i2i_height", 1024)) > 0 else gr.skip(),
         # ui_txt2img_cfg, ui_txt2img_hr_cfg, ui_img2img_cfg
-        gr.update(value=v) if (v := getattr(shared.opts, f"{preset}_t2i_cfg", 1.0)) > 0 else gr.skip(),
-        gr.update(value=v) if (v := getattr(shared.opts, f"{preset}_t2i_hr_cfg", 1.0)) > 0 else gr.skip(),
-        gr.update(value=v) if (v := getattr(shared.opts, f"{preset}_i2i_cfg", 1.0)) > 0 else gr.skip(),
+        gr.update(value=t2i_cfg) if t2i_cfg > 0 else gr.skip(),
+        gr.update(value=t2i_hr_cfg) if t2i_hr_cfg > 0 else gr.skip(),
+        gr.update(value=i2i_cfg) if i2i_cfg > 0 else gr.skip(),
         # ui_txt2img_distilled_cfg, ui_img2img_distilled_cfg, ui_txt2img_hr_distilled_cfg
         gr.update(value=getattr(shared.opts, f"{preset}_t2i_dcfg", 3.0), **d_args),
         gr.update(value=getattr(shared.opts, f"{preset}_t2i_hr_dcfg", 3.0), **d_args),

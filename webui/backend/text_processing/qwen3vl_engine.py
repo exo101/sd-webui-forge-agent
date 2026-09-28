@@ -13,6 +13,23 @@ from modules.shared import opts
 KREA2_TAP_LAYERS = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35]
 
 
+def _quantized_matmul_context(model):
+    # Delayed import avoids operations <-> operations_mixed_precision cycle
+    # during WebUI startup.
+    from backend.operations_mixed_precision import use_quantized_matmul
+    return use_quantized_matmul(model)
+
+
+def _quant_stats():
+    from backend.operations_mixed_precision import get_quant_stats
+    return get_quant_stats()
+
+
+def _reset_quant_stats():
+    from backend.operations_mixed_precision import reset_quant_stats
+    reset_quant_stats()
+
+
 class PromptChunk:
     def __init__(self):
         self.tokens = []
@@ -31,13 +48,27 @@ class Qwen3VLTextProcessingEngine:
         self.id_pad = 151643
         self.id_template = 151644
         self.id_image = 151655
+        self.last_image_slots: list[int] = []
+        self.system_prompt = "<|im_start|>system\nComprehend and analyze the provided prompt.<|im_end|>\n"
+        self.qwen21_template = self.system_prompt + "<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n"
 
         self.llama_template = "<|im_start|>system\nDescribe the image by detailing the color, shape, size, texture, quantity, text, spatial relationships of the objects and background:<|im_end|>\n<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n"
         self.image_template = "<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>{}<|im_end|>\n<|im_start|>assistant\n"
         self.vision_block = "<|vision_start|><|image_pad|><|vision_end|>"
 
     def tokenize(self, texts, images=[]):
-        llama_texts = [((self.image_template.replace(self.vision_block, self.vision_block * len(images), 1) if images else self.llama_template).format(text)) if text else " " for text in texts]
+        if dynamic_args.qwen21:
+            if images:
+                # Qwen-Image-2.1 keeps the system turn and puts an <imageN> label before each vision block
+                refs = " ".join("<image{}>{}".format(i + 1, self.vision_block) for i in range(len(images)))
+                image_template = self.qwen21_template.replace("{}", refs + "{}", 1)
+            else:
+                image_template = self.qwen21_template
+        elif images:
+            image_template = self.image_template.replace(self.vision_block, self.vision_block * len(images), 1)
+        else:
+            image_template = self.llama_template
+        llama_texts = [(image_template.format(text)) if text else " " for text in texts]
         return self.tokenizer(llama_texts)["input_ids"]
 
     def tokenize_line(self, line: str, images=[]):
@@ -80,6 +111,7 @@ class Qwen3VLTextProcessingEngine:
 
         zs = []
         cache = {}
+        slots = []
         
         # Handle None images parameter
         if images is None:
@@ -96,16 +128,19 @@ class Qwen3VLTextProcessingEngine:
                     tokens = chunk.tokens
                     multipliers = chunk.multipliers
 
-                    z = self.process_tokens([tokens], [multipliers])
-                    z = self.strip_template(z, tokens)
+                    z, info = self.process_tokens([tokens], [multipliers])
+                    z, chunk_slots = self.strip_template(z, tokens, info)
+                    if chunk_slots:
+                        slots = chunk_slots
                     line_z_values.append(z)
                 cache[line] = line_z_values
 
             zs.extend(line_z_values)
 
+        self.last_image_slots = slots
         return zs
 
-    def strip_template(self, out, tokens):
+    def strip_template(self, out, tokens, info=[]):
         template_end = 0
         count_im_start = 0
 
@@ -118,17 +153,37 @@ class Qwen3VLTextProcessingEngine:
             except TypeError:
                 continue
 
-        if out.shape[2] > (template_end + 3):
+        # Qwen-Image-2.1 keeps the opening user turn, mirroring the reference implementation
+        if out.shape[2] > (template_end + 3) and not dynamic_args.qwen21:
             if int(tokens[template_end + 1]) == 872:
                 if int(tokens[template_end + 2]) == 198:
                     template_end += 3
 
-        out = out[:, :, template_end:]
+        # vision tokens are replaced by reference latents in the DiT: record where each image sits
+        # in the stripped context, then drop the spans (qwen21 only; other models keep the legacy slice)
+        slots = []
+        if dynamic_args.qwen21:
+            keep = torch.ones(out.shape[2], dtype=torch.bool)
+            keep[:template_end] = False
+            for e in info:
+                if e.get("type") != "image":
+                    continue
+                start = e["index"]
+                keep[start:start + e["size"]] = False
+                slots.append(int(keep[:start].sum()))
+            if slots:
+                out = out[:, :, keep.to(out.device)]
+            else:
+                out = out[:, :, template_end:]
+        else:
+            out = out[:, :, template_end:]
 
         b, n, seq, h = out.shape
         out = out.permute(0, 2, 1, 3).reshape(b, seq, n * h)
+        # webui stacks per-prompt conds into the batch dim (torch.stack), so return 2D (seq, dim)
+        out = out.squeeze(0)
 
-        return out
+        return out, slots
 
     def process_embeds(self, batch_tokens):
         device = memory_management.text_encoder_device()
@@ -185,6 +240,7 @@ class Qwen3VLTextProcessingEngine:
         return torch.cat(embeds_out), torch.tensor(attention_masks, device=device, dtype=torch.long), num_tokens, embeds_info
 
     def process_tokens(self, batch_tokens, batch_multipliers):
+        _reset_quant_stats()
         embeds, mask, count, info = self.process_embeds(batch_tokens)
 
         # Expand multipliers to match expanded embedding size (with image tokens inserted)
@@ -226,5 +282,18 @@ class Qwen3VLTextProcessingEngine:
         self.emphasis.after_transformers()
         embeds = self.emphasis.z
 
-        _, z = self.text_encoder(None, embeds=embeds, attention_mask=mask, num_tokens=count, embeds_info=info, intermediate_output=KREA2_TAP_LAYERS, final_layer_norm_intermediate=False)
-        return z
+        if dynamic_args.qwen21:
+            # Qwen-Image-2.1 reads the text encoder from its final hidden state (single 4096-dim layer),
+            # which is the first return value. Unsqueeze to 4D to match strip_template's (b, n, seq, h) contract.
+            with _quantized_matmul_context(self.text_encoder):
+                z, _ = self.text_encoder(None, embeds=embeds, attention_mask=mask, num_tokens=count, embeds_info=info, intermediate_output=None)
+            z = z.unsqueeze(1)
+        else:
+            with _quantized_matmul_context(self.text_encoder):
+                _, z = self.text_encoder(None, embeds=embeds, attention_mask=mask, num_tokens=count, embeds_info=info, intermediate_output=KREA2_TAP_LAYERS, final_layer_norm_intermediate=False)
+        print(
+            f"[Qwen21] TE diagnostic: device={embeds.device}, tokens={embeds.shape[1]}, "
+            f"convrot_linear={_quant_stats()['convrot']}, linear_fallback={_quant_stats()['fallback']}",
+            flush=True,
+        )
+        return z, info

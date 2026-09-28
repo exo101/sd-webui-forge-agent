@@ -11,6 +11,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any
 
+from . import local_backend
 from .comfy_client import ComfyClient
 from .config import EXTENSION_ROOT, load_config
 from .errors import H3StudioError
@@ -125,7 +126,7 @@ class BackendManager:
 
     def start(self) -> dict[str, Any]:
         config = load_config()
-        if config.get("backend_mode") == "api":
+        if config.get("backend_mode") in {"api", "local"}:
             return self.status()
         if config.get("backend_mode") == "external":
             health = ComfyClient().health()
@@ -162,6 +163,8 @@ class BackendManager:
 
     def stop(self) -> dict[str, Any]:
         config = load_config()
+        if config.get("backend_mode") in {"api", "local"}:
+            return self.status()
         if config.get("backend_mode") == "external":
             raise H3StudioError("外接模式不会由 Forge 停止后端")
         with self._lock:
@@ -217,6 +220,8 @@ class BackendManager:
                     "auto_start_on_tab": bool(config.get("auto_start_on_tab", True)),
                     "discovered_paths": self.discover(),
                 }
+            if config.get("backend_mode") == "local":
+                return local_backend.local_status(config)
             process_running = self._process is not None and self._process.poll() is None
             exit_code = None if self._process is None or process_running else self._process.poll()
             health = {"ok": False, "base_url": config.get("comfy_url")}

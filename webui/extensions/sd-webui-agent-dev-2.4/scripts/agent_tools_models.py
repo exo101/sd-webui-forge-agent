@@ -226,6 +226,15 @@ MODEL_GUIDE = {
         "loras": ["Klein-万物迁移", "klein-9b奇幻装饰艺术场景概念", "klein-9b古风场景概念"],
         "tips": "Flux.2-Klein 专用 Qwen3-8B 文本编码器 + Flux2 VAE"
     },
+    "qwen_image_2.1": {
+        "name": "Qwen-Image-2.1",
+        "description": "Qwen-Image-2.1 上下文编辑模型：参考图编码进入潜空间，支持多图参考上下文编辑",
+        "preset_arch": "qwen21",
+        "recommended_te": ["qwen3vl_8b_int8_convrot_ds.safetensors"],
+        "recommended_vae": ["qwen_image_2.1_vae_bf16_ds.safetensors"],
+        "loras": [],
+        "tips": "使用 Qwen3-VL 8B INT8 文本编码器 + Qwen-Image-2.1 VAE，Simple 调度器 / CFG 1.0 / 默认 30 步；可搭配多图参考插件传入参考图"
+    },
     "qwen_image_edit": {
         "name": "Qwen Image Edit",
         "description": "Qwen 图像编辑模型，支持图生图编辑",

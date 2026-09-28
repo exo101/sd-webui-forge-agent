@@ -23,6 +23,7 @@ from .config import (
 )
 from .errors import H3StudioError
 from .jobs import job_store
+from . import local_backend
 from .workflow import build_h3_workflow
 
 API_ROOT = "/h3studio/api"
@@ -37,6 +38,40 @@ def _fail(exc: Exception, status: int = 400):
     if isinstance(exc, HTTPException):
         raise exc
     raise HTTPException(status_code=status, detail=str(exc)) from exc
+
+
+def _quiet_harmless_connection_errors() -> None:
+    """静默 asyncio 事件循环里无害的连接噪音日志。
+
+    客户端（浏览器）中止请求、关闭/刷新页面时，Windows 下服务端连接收尾会报
+    [WinError 10054/10053]，asyncio 默认以 "Exception in callback ..." 的形式
+    打印完整堆栈，看起来像错误但实际是正常断开、不影响后台任务。这里只过滤
+    这类连接类异常，其余异常仍走原有输出，不掩盖真问题。
+    """
+    import asyncio
+
+    loop = asyncio.get_running_loop()
+    if getattr(loop, "_h3_quiet_handler_installed", False):
+        return
+    previous = loop.get_exception_handler()
+
+    def _is_connection_noise(context: dict) -> bool:
+        exc = context.get("exception")
+        if isinstance(exc, (ConnectionResetError, BrokenPipeError, ConnectionAbortedError)):
+            return True
+        message = str(context.get("message") or "")
+        return any(code in message for code in ("WinError 10054", "WinError 10053", "WinError 10061"))
+
+    def _quiet_handler(loop_: Any, context: dict) -> None:
+        if _is_connection_noise(context):
+            return
+        if previous is not None:
+            previous(loop_, context)
+        else:
+            loop_.default_exception_handler(context)
+
+    loop.set_exception_handler(_quiet_handler)
+    loop._h3_quiet_handler_installed = True
 
 
 def _asset_url(item: dict[str, Any]) -> str:
@@ -68,10 +103,10 @@ def _validate_settings(payload: dict[str, Any]) -> dict[str, Any]:
         raise H3StudioError("设置格式无效")
     cleaned: dict[str, Any] = {}
     if "backend_mode" in payload:
-        if payload["backend_mode"] not in {"managed", "external", "api"}:
+        if payload["backend_mode"] not in {"managed", "external", "api", "local"}:
             raise H3StudioError("后端模式无效")
         cleaned["backend_mode"] = payload["backend_mode"]
-    for key in ("comfy_path", "python_executable", "extra_args", "output_prefix"):
+    for key in ("comfy_path", "python_executable", "extra_args", "output_prefix", "local_models_dir", "local_processor_path", "local_vae_variant"):
         if key in payload:
             cleaned[key] = str(payload[key] or "").strip()
     if "comfy_url" in payload:
@@ -108,6 +143,8 @@ def _validate_settings(payload: dict[str, Any]) -> dict[str, Any]:
 def register_api(_: Any, app: FastAPI) -> None:
     if any(getattr(route, "path", None) == f"{API_ROOT}/bootstrap" for route in app.routes):
         return
+
+    app.add_event_handler("startup", _quiet_harmless_connection_errors)
 
     @app.get(f"{API_ROOT}/bootstrap")
     def bootstrap():
@@ -155,7 +192,8 @@ def register_api(_: Any, app: FastAPI) -> None:
 
     @app.get(f"{API_ROOT}/catalog")
     def catalog():
-        if str(load_config().get("backend_mode") or "") == "api":
+        backend_mode = str(load_config().get("backend_mode") or "")
+        if backend_mode == "api":
             return {
                 "models": ["MiniMax-H3"],
                 "cloud_models": [
@@ -164,6 +202,24 @@ def register_api(_: Any, app: FastAPI) -> None:
                 "h3_ready": True,
                 "cloud": True,
             }
+        if backend_mode == "local":
+            try:
+                return local_backend.local_catalog(load_config())
+            except Exception as exc:
+                return {
+                    "models": [],
+                    "text_encoders": [],
+                    "vaes": [],
+                    "loras": [],
+                    "samplers": ["euler"],
+                    "schedulers": ["simple"],
+                    "nodes": [],
+                    "h3_ready": False,
+                    "missing_nodes": [str(exc)],
+                    "supports_lora_model_only": False,
+                    "supports_lora_model_clip": False,
+                    "local": True,
+                }
         try:
             return ComfyClient().catalog()
         except Exception as exc:
@@ -176,7 +232,7 @@ def register_api(_: Any, app: FastAPI) -> None:
             suffix = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
             if suffix not in ASSET_EXTENSIONS:
                 raise H3StudioError("只允许上传常见的图片、视频或音频文件")
-            if load_config().get("backend_mode") == "api":
+            if load_config().get("backend_mode") in {"api", "local"}:
                 # Cloud mode has no local ComfyUI input endpoint. Keep a private
                 # local copy so the cloud client can send it as a data URL.
                 CLOUD_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -223,6 +279,15 @@ def register_api(_: Any, app: FastAPI) -> None:
                     media_type=mimetypes.guess_type(local_path.name)[0] or "application/octet-stream",
                     filename=local_path.name,
                 )
+            # Local WebUI mode: generation results are written to webui/outputs/h3_video
+            if type in {"output", "temp"} and not str(subfolder or ""):
+                local_output = local_backend.LOCAL_OUTPUT_DIR / Path(filename).name
+                if local_output.is_file():
+                    return FileResponse(
+                        str(local_output),
+                        media_type=mimetypes.guess_type(local_output.name)[0] or "application/octet-stream",
+                        filename=local_output.name,
+                    )
             response, iterator = ComfyClient().open_media(
                 filename,
                 subfolder,

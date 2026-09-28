@@ -32,6 +32,13 @@ def find_sampler_config(name):
 
 
 def create_sampler(name, model):
+    # Qwen-Image-2.1 DiffSynth 后端：直接用 DiffSynth pipeline 采样，绕过 k_diffusion
+    if getattr(model, "use_diffsynth", False) and getattr(model, "diffsynth_backend", None) is not None:
+        from backend.diffusion_engine.qwen21_diffsynth import DiffSynthSampler
+        sampler = DiffSynthSampler()
+        sampler.config = find_sampler_config(name)
+        return sampler
+
     config = find_sampler_config(name)
 
     assert config is not None, f"bad sampler name: {name}"

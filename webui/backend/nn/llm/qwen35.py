@@ -25,6 +25,7 @@ def attention_function_factory(device, mask=None, small_input=False):
 
 
 QWEN3VL_VISION = dict(num_heads=16, patch_size=16, temporal_patch_size=2, in_channels=3, spatial_merge_size=2, num_position_embeddings=2304, hidden_size=1024, intermediate_size=4096, depth=24, deepstack_visual_indexes=[5, 11, 17])
+QWEN3VL_VISION_8B = dict(num_heads=16, patch_size=16, temporal_patch_size=2, in_channels=3, spatial_merge_size=2, num_position_embeddings=2304, hidden_size=1152, intermediate_size=4304, depth=27, deepstack_visual_indexes=[8, 16, 24])
 
 
 class Qwen35VisionPatchEmbed(nn.Module):

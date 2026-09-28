@@ -168,8 +168,12 @@ class dynamic_args(metaclass=_DynamicArgsMeta):
     """PiD"""
     krea2: bool = False
     """Krea 2"""
+    qwen21: bool = False
+    """Qwen-Image-2.1"""
     ref_latents: list["torch.Tensor"] = []
     """Reference Latent(s) for Flux Kontext / Qwen-Image-Edit / Flux.2 Klein / Krea 2"""
+    qwen21_image_slots: list[int] = []
+    """Slot(s) of Reference Image(s) in the Qwen-Image-2.1 Context"""
     concat_latent: "torch.Tensor" = None
     """Input Latent for Wan 2.2 I2V"""
     lq_latent: list["torch.Tensor", "torch.Tensor"] = [None, None]
@@ -191,6 +195,7 @@ class dynamic_args(metaclass=_DynamicArgsMeta):
             return
 
         cls.ref_latents.clear()
+        cls.qwen21_image_slots.clear()
         cls.concat_latent = None
         cls.lq_latent = [None, None]
         cls.context_handler = None

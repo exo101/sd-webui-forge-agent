@@ -651,7 +651,12 @@ def using_forge_operations(operations=None, device=None, dtype=None, manual_cast
         # https://github.com/Comfy-Org/ComfyUI/blob/v0.16.4/comfy/ops.py#L950
 
         _device = memory_management.get_torch_device()
-        _dtype = torch.bfloat16 if memory_management.should_use_bf16(_device) else torch.float32
+        if memory_management.should_use_bf16(_device):
+            _dtype = torch.bfloat16
+        elif memory_management.should_use_fp16(_device, prioritize_performance=True):
+            _dtype = torch.float16
+        else:
+            _dtype = torch.float32
         fp8_compute = memory_management.supports_fp8_compute(_device)
         nvfp4_compute = memory_management.supports_nvfp4_compute(_device)
         mxfp8_compute = memory_management.supports_mxfp8_compute(_device)

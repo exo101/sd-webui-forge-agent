@@ -54,11 +54,11 @@ def closesteight(num):
         return round(num + (8 - rem))
 
 t2i_info = """
-插件仅支持编辑模型：Klein，Qwen-Image-Edit，NanoBanana，gpt-image-2，Krea 2
+插件仅支持编辑模型：Klein，Qwen-Image-Edit，Qwen-Image-2.1，NanoBanana，gpt-image-2，Krea 2
 """
 
 i2i_info = """
-插件仅支持编辑模型：Klein，Qwen-Image-Edit，NanoBanana，gpt-image-2，Krea 2
+插件仅支持编辑模型：Klein，Qwen-Image-Edit，Qwen-Image-2.1，NanoBanana，gpt-image-2，Krea 2
 """
 
 # ==================== 批量任务管理器 ====================
@@ -1104,7 +1104,7 @@ class ImageStitch(scripts.Script):
 
     def process(self, p: StableDiffusionProcessing, enable: bool, references: list[str | tuple[Image.Image, str]], max_dim: int):
         # Fallback: 即使 InputAccordion 状态同步失败，只要有参考图就视为启用
-        has_edit_model = any(getattr(dynamic_args, key) for key in ("kontext", "edit", "klein", "wan", "krea2"))
+        has_edit_model = any(getattr(dynamic_args, key) for key in ("kontext", "edit", "klein", "wan", "krea2", "qwen21"))
         effective_enable = enable or bool(references)
         if not (effective_enable and references and has_edit_model):
             if self.cached_parameters is None:

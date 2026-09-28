@@ -231,12 +231,20 @@ def detect_unet_config(state_dict: dict, key_prefix: str) -> dict:
             dit_config["lq_interval"] = (14 + num_gates - 1) // num_gates
         return dit_config
 
+    if "{}txt_in.text_norm.weight".format(key_prefix) in state_dict_keys and "{}modulation.1.weight".format(key_prefix) in state_dict_keys:  # Qwen Image 2.1
+        dit_config = {}
+        dit_config["image_model"] = "qwen_image_21"
+        dit_config["in_channels"] = int(state_dict["{}img_in.weight".format(key_prefix)].shape[1])
+        dit_config["out_channels"] = int(state_dict["{}proj_out.weight".format(key_prefix)].shape[0])
+        dit_config["num_layers"] = count_blocks(state_dict_keys, "{}transformer_blocks.".format(key_prefix) + "{}.")
+        return dit_config
+
     if "{}txt_norm.weight".format(key_prefix) in state_dict_keys:  # Qwen Image
         _qweight: bool = "{}transformer_blocks.0.attn.to_qkv.qweight".format(key_prefix) in state_dict_keys
         dit_config = {"nunchaku": _qweight}
-        dit_config["image_model"] = "qwen_image"
         dit_config["in_channels"] = int(state_dict["{}img_in.weight".format(key_prefix)].shape[1])
         dit_config["num_layers"] = count_blocks(state_dict_keys, "{}transformer_blocks.".format(key_prefix) + "{}.")
+        dit_config["image_model"] = "qwen_image"
         return dit_config
 
     if "{}txtfusion.projector.weight".format(key_prefix) in state_dict_keys:  # Krea 2

@@ -31,9 +31,9 @@
   },
   "comfyui": {
     "enabled": false,
-    "path": "C:\\AI\\sd-webui-forge-neo-v3.6.7\\ComfyUI-aki-v2.2",
+    "path": "D:\\ai\\sd-webui-forge-agent\\ComfyUI-aki-v2.2",
     "port": 8188,
-    "python": "C:\\AI\\sd-webui-forge-neo-v3.6.7\\ComfyUI-aki-v2.2\\python\\python.exe"
+    "python": "D:\\ai\\sd-webui-forge-agent\\ComfyUI-aki-v2.2\\python\\python.exe"
   },
   "paths": {
     "ckpt_dir": "webui\\models\\Stable-diffusion",
@@ -64,6 +64,6 @@
     "proxy_scope_launcher": false,
     "proxy_scope_webui": false
   },
-  "enable_flash": false,
-  "enable_xformers": false
+  "enable_flash": true,
+  "enable_xformers": true
 }

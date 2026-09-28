@@ -608,9 +608,13 @@
   async function ensureBackend(force = false) {
     if (state.backendStarting || state.backend.ready) return;
     if (!force && state.config.auto_start_on_tab === false) return;
-    // 云端 API 模式不需要启动本地 ComfyUI，仅刷新后端状态
-    if (state.config.backend_mode === "api") {
-      try { state.backend = await request("/backend/status"); updateBackendUi(); } catch (_) { }
+    // 云端 API / 本地 DiffSynth 模式不启动 ComfyUI，仅刷新后端状态
+    if (["api", "local"].includes(state.config.backend_mode)) {
+      try {
+        state.backend = await request("/backend/status");
+        updateBackendUi();
+      } catch (_) { }
+      if (state.backend.ready) await loadCatalog(true);
       return;
     }
     state.backendStarting = true;
@@ -657,7 +661,7 @@
     refresh?.classList.add("spinning");
     try {
       state.catalog = await request("/catalog");
-      if (!state.catalog.h3_ready) toast(`H3 节点不完整：${state.catalog.missing_nodes.join(", ")}`, "warning", 9000);
+      if (!state.catalog.h3_ready) toast(`${state.catalog.local ? "本地模型缺失：" : "H3 节点不完整："}${(state.catalog.missing_nodes || []).join(", ")}`, "warning", 9000);
       autoSelectModels();
       renderInspector();
       renderSidebar();
@@ -926,7 +930,7 @@
       return `<option value="${mp}" ${Number(p.megapixels) === Number(mp) ? "selected" : ""}>${label} MP${exact ? ` · ${exact[0]} × ${exact[1]}` : ""}</option>`;
     }).join("");
     const calculated = calculatedResolution();
-    return `<section class="h3s-insp-section open"><header data-action="toggle-section"><div><i>01</i><strong>模型与组件</strong></div><span>⌃</span></header><div class="h3s-insp-body">
+    return `<section class="h3s-insp-section"><header data-action="toggle-section"><div><i>01</i><strong>模型与组件</strong></div><span>⌄</span></header><div class="h3s-insp-body">
       ${field("H3 扩散模型", `<select data-param="model">${modelOptions(state.catalog.models, p.model, state.backend.ready ? "选择 H3 模型" : "连接后端后读取")}</select>`)}
       <label class="h3s-toggle-line"><input type="checkbox" data-param="auto_model" ${p.auto_model ? "checked" : ""}><span><b>按模式自动匹配模型</b><small>首尾帧使用 FL2VA，多参考使用 Ref2VA</small></span></label>
       ${field("MiniMax 文本编码器", `<select data-param="text_encoder">${modelOptions(state.catalog.text_encoders, p.text_encoder, "选择文本编码器")}</select>`)}
@@ -934,7 +938,7 @@
       <div class="h3s-field-grid">${field("模型精度", `<select data-param="weight_dtype"><option>default</option><option ${p.weight_dtype === "fp8_e4m3fn" ? "selected" : ""}>fp8_e4m3fn</option><option ${p.weight_dtype === "fp8_e4m3fn_fast" ? "selected" : ""}>fp8_e4m3fn_fast</option><option ${p.weight_dtype === "fp8_e5m2" ? "selected" : ""}>fp8_e5m2</option></select>`)}${field("编码器设备", `<select data-param="clip_device"><option value="default">自动</option><option value="cpu" ${p.clip_device === "cpu" ? "selected" : ""}>CPU</option></select>`)}</div>
       <button class="h3s-wide-secondary" data-side-tab="loras">管理 LoRA 栈 <b>${state.loras.filter((l) => l.enabled).length}</b></button>
     </div></section>
-    <section class="h3s-insp-section open"><header data-action="toggle-section"><div><i>02</i><strong>画面与时长</strong></div><span>⌃</span></header><div class="h3s-insp-body">
+    <section class="h3s-insp-section"><header data-action="toggle-section"><div><i>02</i><strong>画面与时长</strong></div><span>⌄</span></header><div class="h3s-insp-body">
       ${field("原生宽高比", `<select data-param="aspect_ratio">${Object.keys(ASPECT_RATIOS).map((ratio) => `<option value="${ratio}" ${p.aspect_ratio === ratio ? "selected" : ""}>${ratio}</option>`).join("")}</select>`, "裁剪框会始终和最终输出比例联动")}
       ${field("百万像素", `<select data-param="megapixels">${mpOptions}</select>`, "16:9 且倍数为 32 时使用 H3 原生推荐尺寸表")}
       <div class="h3s-resolution-row">${field("取整倍数", `<input type="number" data-param="rounding_multiple" min="1" max="512" step="1" value="${p.rounding_multiple}">`, "可自由输入，不强制为 32")}<button data-action="apply-resolution">应用比例参数</button></div>
@@ -945,7 +949,7 @@
       <div class="h3s-range-note ${alignFrames(p.frames) < 124 || alignFrames(p.frames) > 362 ? "warning" : ""}"><i></i><span>${alignFrames(p.frames)} 帧 · ${(alignFrames(p.frames) / 24).toFixed(2)} 秒${alignFrames(p.frames) < 124 || alignFrames(p.frames) > 362 ? " · 超出主要训练范围 124–362 帧" : " · 位于推荐训练范围"}</span></div>
       ${state.mode === "ref" ? field("参考图尺寸", `<select data-param="ref_image_size"><option value="match">匹配生成面积（较快）</option><option value="max" ${p.ref_image_size === "max" ? "selected" : ""}>2048 短边（身份更稳、更慢）</option></select>`) : ""}
     </div></section>
-    <section class="h3s-insp-section open"><header data-action="toggle-section"><div><i>03</i><strong>采样参数</strong></div><span>⌃</span></header><div class="h3s-insp-body">
+    <section class="h3s-insp-section"><header data-action="toggle-section"><div><i>03</i><strong>采样参数</strong></div><span>⌄</span></header><div class="h3s-insp-body">
       <div class="h3s-field-grid">${field("Steps", `<input type="number" data-param="steps" min="1" max="200" value="${p.steps}">`)}${field("Denoise", `<input type="number" data-param="denoise" min="0.01" max="1" step="0.01" value="${p.denoise}">`)}</div>
       ${field("Seed", `<div class="h3s-seed"><input type="number" data-param="seed" min="0" value="${p.seed}" ${p.random_seed ? "disabled" : ""}><button data-action="random-seed">${icon("dice")}</button><label><input type="checkbox" data-param="random_seed" ${p.random_seed ? "checked" : ""}>随机</label></div>`)}
       <div class="h3s-field-grid">${field("Sampler", `<select data-param="sampler">${modelOptions(state.catalog.samplers, p.sampler, "euler")}</select>`)}${field("Scheduler", `<select data-param="scheduler">${modelOptions(state.catalog.schedulers, p.scheduler, "simple")}</select>`)}</div>
@@ -1865,22 +1869,37 @@
     const mode = select?.value || state.config.backend_mode || "managed";
     const localSection = $("[data-role='local-backend-section']", modal);
     const cloudSection = $("[data-role='cloud-api-section']", modal);
+    const localDiffSection = $("[data-role='local-diffsynth-section']", modal);
     const isCloud = mode === "api";
-    if (localSection) localSection.hidden = isCloud;
+    const isLocal = mode === "local";
+    if (localSection) localSection.hidden = isCloud || isLocal;
     if (cloudSection) cloudSection.hidden = !isCloud;
-    for (const input of $$("[data-setting]", localSection || modal)) input.disabled = isCloud && !!localSection?.contains(input);
+    if (localDiffSection) localDiffSection.hidden = !isLocal;
+    for (const input of $$("[data-setting]", localSection || modal)) input.disabled = (isCloud || isLocal) && !!localSection?.contains(input);
   }
 
-  function openSettings() {
+  async function openSettings() {
+    // 配置未拉取到（bootstrap 未完成/失败，或刚加载页面就打开弹窗）时，
+    // 空配置会让"Forge 托管"选项被默认选中，看起来像设置被重置。
+    // 这里先从后端读取磁盘上的真实配置再渲染。
+    if (!state.config || !state.config.backend_mode) {
+      try { state.config = await request("/settings"); } catch (_) { }
+    }
     const c = state.config;
     const keySet = !!c.minimax_api_key_set;
     const layer = $("[data-role='modal-layer']", root());
     layer.innerHTML = `<div class="h3s-modal-backdrop" data-action="close-modal"></div><div class="h3s-modal h3s-settings-modal"><header><div><strong>后端连接与启动</strong><span>切换到工作台时可自动启动并连接</span></div><button data-action="close-modal">${icon("close")}</button></header><div class="h3s-settings-grid"><section><h3>连接方式</h3>
-      ${field("后端模式", `<select data-setting="backend_mode" data-role="backend-mode"><option value="managed" ${c.backend_mode === "managed" || (!c.backend_mode && c.backend_mode !== "external" && c.backend_mode !== "api") ? "selected" : ""}>Forge 托管本地 ComfyUI</option><option value="external" ${c.backend_mode === "external" ? "selected" : ""}>连接已经运行的 ComfyUI</option><option value="api" ${c.backend_mode === "api" ? "selected" : ""}>云端 API（MiniMax H3）</option></select>`)}
+      ${field("后端模式", `<select data-setting="backend_mode" data-role="backend-mode"><option value="managed" ${c.backend_mode && !["external", "api", "local"].includes(c.backend_mode) ? "selected" : ""}>Forge 托管本地 ComfyUI</option><option value="external" ${c.backend_mode === "external" ? "selected" : ""}>连接已经运行的 ComfyUI</option><option value="api" ${c.backend_mode === "api" ? "selected" : ""}>云端 API（MiniMax H3）</option><option value="local" ${c.backend_mode === "local" ? "selected" : ""}>本地 WebUI（DiffSynth 进程内）</option></select>`)}
       <div data-role="cloud-api-section" hidden>
         ${field("API Base URL", `<input data-setting="minimax_api_base" value="${esc(c.minimax_api_base || "https://api.minimaxi.com")}" placeholder="https://api.minimaxi.com">`, "国内站默认 https://api.minimaxi.com；国际站可改为 https://api.minimax.io")}
         ${field("API Key", `<div class="h3s-api-key-row"><input type="password" data-setting="minimax_api_key" autocomplete="off" placeholder="${keySet ? "已配置（留空保持不变）" : "sk-api-..."}"><button class="h3s-row-danger" data-action="clear-api-key" ${keySet ? "" : "hidden"}>清除已保存 Key</button></div>`, "密钥仅保存在本机 data/config.json，不会写入项目文件")}
         <div class="h3s-settings-note"><i>i</i><span>云端模式由后端直接调用 MiniMax H3 接口，无需启动本地 ComfyUI。保存后即生效。</span></div>
+      </div>
+      <div data-role="local-diffsynth-section" hidden>
+        ${field("本地模型目录", `<input data-setting="local_models_dir" value="${esc(c.local_models_dir || "")}" placeholder="留空自动探测：webui/models（diffusion_models / text_encoder 子目录，下载器唯一写入位置）→ ComfyUI models（仅读取已下载的权重，不写入）">`, "存放 H3 DiT 与文本编码器量化权重（*.safetensors），按文件哈希自动识别型号，多个候选目录自动合并；下载始终写入 webui/models 下的 diffusion_models / text_encoder（text_encoders 复数目录也兼容识别）")}
+        ${field("Processor 目录", `<input data-setting="local_processor_path" value="${esc(c.local_processor_path || "")}" placeholder="留空则首次生成时自动从 ModelScope 下载">`, "VAE 优先复用 webui/models/vae 下已存在的 minimax_h3_video_vae_*/minimax_h3_audio_vae_* 文件（自动校验兼容性）；其余（标准 VAE、processor）首次生成时自动从 ModelScope 下载并缓存到 webui/models 下")}
+        ${field("VAE 变体", `<select data-setting="local_vae_variant"><option value="original" ${(c.local_vae_variant || "original") === "original" ? "selected" : ""}>标准 fp16/fp32（INT8 组合配套，MiniMax/MiniMax-H3）</option><option value="nf4" ${c.local_vae_variant === "nf4" ? "selected" : ""}>NF4 4bit 量化（DiffSynth-Studio/MiniMax-H3-NF4）</option></select>`, "INT8 组合使用标准 fp16/fp32 VAE（优先自动复用本地 Comfy-Org 命名文件）；NF4 仅用于 NF4 组合。缺失的 VAE 首次使用时自动下载；DiT/文本编码器若放入 NF4 权重也会自动按 NF4 加载")}
+        <div class="h3s-settings-note"><i>i</i><span>本地 WebUI 模式在 Forge 进程内直接运行 DiffSynth 的 MiniMax H3 pipeline，无需启动 ComfyUI；保存后即生效。</span></div>
       </div>
       <div data-role="local-backend-section">
       ${field("ComfyUI 地址", `<input data-setting="comfy_url" value="${esc(c.comfy_url || "http://127.0.0.1:8189")}">`)}

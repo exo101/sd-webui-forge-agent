@@ -567,6 +567,45 @@ class QwenImage(BASE):
         return ModelType.FLUX
 
 
+class QwenImage21(BASE):
+    huggingface_repo = "Comfy-Org/Qwen-Image-2.1"
+
+    unet_config = {
+        "image_model": "qwen_image_21",
+    }
+
+    sampling_settings = {
+        "multiplier": 1.0,
+        "shift": 0.69,
+    }
+
+    memory_usage_factor = 6.0
+
+    unet_extra_config = {}
+    latent_format = latent.QwenImage21
+
+    supported_inference_dtypes = [torch.bfloat16, torch.float32]
+
+    vae_key_prefix = ["vae."]
+    text_encoder_key_prefix = ["text_encoders."]
+
+    unet_target = "transformer"
+
+    def clip_target(self, state_dict: dict):
+        pref = self.text_encoder_key_prefix[0]
+        if "{}qwen3vl_8b.transformer.model.embed_tokens.weight".format(pref) in state_dict:
+            return {"qwen3vl_8b.transformer": "text_encoder"}
+        elif "{}qwen3vl_8b.model.embed_tokens.weight".format(pref) in state_dict:
+            return {"qwen3vl_8b": "text_encoder"}
+        elif "{}model.embed_tokens.weight".format(pref) in state_dict:
+            return {"model": "text_encoder"}
+        else:
+            return {"qwen3vl_8b": "text_encoder"}
+
+    def model_type(self, state_dict):
+        return ModelType.FLUX
+
+
 class Krea2(BASE):
     huggingface_repo = "krea/Krea-2-Raw"
 
@@ -674,6 +713,7 @@ models = [
     WAN21_T2V,
     WAN21_I2V,
     QwenImage,
+    QwenImage21,
     Krea2,
     ErnieImage,
     PiD,

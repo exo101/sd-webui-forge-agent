@@ -13,7 +13,8 @@ CONFIG_PATH = DATA_DIR / "config.json"
 LORA_PRESETS_PATH = DATA_DIR / "lora_presets.json"
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "backend_mode": "managed",
+    # 默认使用 Forge 进程内 DiffSynth 后端，避免每次进页签都要拉起托管 ComfyUI
+    "backend_mode": "local",
     "comfy_url": "http://127.0.0.1:8189",
     "comfy_path": "",
     "python_executable": "",
@@ -25,6 +26,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "output_prefix": "video/Forge_H3_Studio",
     "minimax_api_key": "",
     "minimax_api_base": "https://api.minimaxi.com",
+    "local_models_dir": "",
+    "local_processor_path": "",
+    "local_vae_variant": "original",
 }
 
 _lock = threading.RLock()

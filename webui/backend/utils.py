@@ -1,6 +1,7 @@
 import json
 import math
 import os.path
+from contextlib import contextmanager
 
 import safetensors
 import torch
@@ -16,6 +17,29 @@ from modules_forge.packages.comfy.weight_adapter.base import WeightAdapterBase
 if not hasattr(torch.serialization, "add_safe_globals"):
     logger.critical("Update your PyTorch...")
     raise SystemExit
+
+
+try:
+    # removed in transformers >= 5.0
+    from transformers.modeling_utils import no_init_weights
+except ImportError:
+
+    @contextmanager
+    def no_init_weights(_enable=True):
+        if not _enable:
+            yield
+            return
+
+        if not hasattr(torch.nn.Module, "reset_parameters"):
+            yield
+            return
+
+        original_reset_parameters = torch.nn.Module.reset_parameters
+        torch.nn.Module.reset_parameters = lambda self: None
+        try:
+            yield
+        finally:
+            torch.nn.Module.reset_parameters = original_reset_parameters
 
 
 class ModelCheckpoint:
