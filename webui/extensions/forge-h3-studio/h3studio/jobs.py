@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from . import local_backend
 from .cloud_client import CLOUD_UPLOAD_DIR, CloudClient
 from .comfy_client import ComfyClient
 from .config import load_config
@@ -223,6 +224,8 @@ class JobStore:
         config = load_config()
         if str(config.get("backend_mode") or "") == "api" and CloudClient(config).enabled():
             return self._submit_cloud(request, config)
+        if str(config.get("backend_mode") or "") == "local":
+            return self._submit_local(request)
         client = ComfyClient()
         health = client.health()
         if not health.get("ok"):
@@ -485,6 +488,107 @@ class JobStore:
                     job.error = "云端任务监控超过 24 小时"
                     job.updated_at = time.time()
 
+    def _submit_local(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Local WebUI mode: run MiniMax H3 in-process via DiffSynth (no ComfyUI)."""
+        workflow, summary = build_h3_workflow(request)
+        summary["node_count"] = 1
+        summary["node_titles"] = {"1": "MiniMax H3 本地生成（DiffSynth）"}
+        if request.get("loras"):
+            summary.setdefault("warnings", []).append("本地 WebUI 模式暂不支持 LoRA，已忽略当前 LoRA 设置")
+        requested_client_id = str(request.get("client_id") or "")
+        client_id = requested_client_id if re.fullmatch(r"[A-Za-z0-9_-]{16,128}", requested_client_id) else uuid.uuid4().hex
+        now = time.time()
+        job = StudioJob(
+            id=str(uuid.uuid4()),
+            prompt_id=f"local-{uuid.uuid4().hex}",
+            client_id=client_id,
+            state="queued",
+            created_at=now,
+            updated_at=now,
+            summary=summary,
+            workflow=workflow,
+        )
+        with self._lock:
+            self._jobs[job.id] = job
+            self._trim()
+        threading.Thread(target=self._run_local, args=(job.id,), daemon=True).start()
+        return job.public()
+
+    def _run_local(self, job_id: str) -> None:
+        """Execute one H3 generation in-process and mirror progress onto the job."""
+        phase_titles = {
+            "prepare": "准备本地生成（首次需加载模型并下载 VAE）",
+            "sampling": "H3 本地采样",
+            "write": "解码并写出视频",
+        }
+
+        def progress_cb(event: dict[str, Any]) -> None:
+            if not isinstance(event, dict):
+                return
+            phase = str(event.get("phase") or "prepare")
+            with self._lock:
+                job = self._jobs.get(job_id)
+                if job is None:
+                    return
+                job.state = "running"
+                job.started_at = job.started_at or time.time()
+                job.error = ""
+                job.progress["nodeId"] = "1"
+                job.progress["nodeTitle"] = phase_titles.get(phase, "H3 本地生成")
+                job.progress["step"] = float(event.get("step") or 0)
+                job.progress["maxSteps"] = float(event.get("maxSteps") or 0)
+                if phase == "sampling":
+                    job.progress["nodePercent"] = min(99.0, float(event.get("step") or 0) / max(1, float(event.get("maxSteps") or 1)) * 100.0)
+                elif phase == "write":
+                    job.progress["nodePercent"] = 99.0
+                else:
+                    job.progress["nodePercent"] = 0.0
+                job.progress["completedNodes"] = []
+                self._update_overall(job)
+                job.updated_at = time.time()
+
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                return
+            summary = job.summary
+        # reproducible 是完整归一化参数（prompt/参考素材/shift/输出等都在其中）；
+        # summary 本身只是展示摘要，缺少 prompt 等字段，直接传给本地后端会 KeyError
+        data = summary.get("reproducible") or summary
+        try:
+            outputs = local_backend.run_generation(job_id, data, load_config(), progress_cb)
+        except local_backend.LocalJobCancelled:
+            with self._lock:
+                job = self._jobs.get(job_id)
+                if job is not None and job.state not in {"completed", "failed", "cancelled"}:
+                    job.state = "cancelled"
+                    job.error = "任务已由用户中断"
+                    job.updated_at = time.time()
+                    job.completed_at = job.updated_at
+            return
+        except Exception as exc:
+            with self._lock:
+                job = self._jobs.get(job_id)
+                if job is not None:
+                    job.state = "failed"
+                    job.error = f"本地生成失败：{exc}"
+                    job.updated_at = time.time()
+                    job.completed_at = job.updated_at
+            return
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                return
+            if job.state not in {"completed", "failed", "cancelled"}:
+                job.outputs = outputs
+                job.state = "completed"
+                job.error = ""
+                job.progress["nodePercent"] = 100.0
+                job.progress["overallPercent"] = 100.0
+                job.progress["nodeTitle"] = "生成完成"
+                job.updated_at = time.time()
+                job.completed_at = job.updated_at
+
     def get(self, job_id: str, *, include_workflow: bool = False) -> dict[str, Any]:
         with self._lock:
             job = self._jobs.get(job_id)
@@ -516,7 +620,10 @@ class JobStore:
             if current_state not in {"queued", "running"}:
                 raise H3StudioError("该任务已经结束，无法中断")
         client = ComfyClient()
-        if current_state == "queued":
+        if prompt_id.startswith("local-"):
+            if current_state == "running":
+                local_backend.request_cancel(job_id)
+        elif current_state == "queued":
             client.delete_queued([prompt_id])
         elif current_state == "running":
             client.cancel(prompt_id)
@@ -549,7 +656,12 @@ class JobStore:
                 self._close_stream(job_id)
             return {"cleared": len(ids), "scope": scope}
         client = ComfyClient()
-        client.delete_queued([item.prompt_id for item in queued])
+        local_queued = [item for item in queued if item.prompt_id.startswith("local-")]
+        comfy_queued = [item for item in queued if not item.prompt_id.startswith("local-")]
+        if comfy_queued:
+            client.delete_queued([item.prompt_id for item in comfy_queued])
+        for item in local_queued:
+            local_backend.request_cancel(item.id)
         try:
             queue = client.queue()
             running_ids = {

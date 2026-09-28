@@ -7,7 +7,6 @@ from scripts.agent_models import IMAGE_GENERATION_MODELS
 from scripts.agent_tools import _select_image_api_key
 
 API_IMAGE_EDIT_MODELS = {
-    "Qwen/Qwen-Image-Edit-2511", "FireRedTeam/FireRed-Image-Edit-1.1",
     "banana2", "bananapro", "gpt-image-2",
 }
 

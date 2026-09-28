@@ -11,20 +11,20 @@ LLM_MODELS_BY_PROVIDER = {
 
 IMAGE_GENERATION_MODELS_BY_PROVIDER = {
     "ModelScope": [
-        "krea/Krea-2-Turbo", "Tongyi-MAI/Z-Image", "Qwen/Qwen-Image-2512",
-        "FireRedTeam/FireRed-Image-Edit-1.1", "Qwen/Qwen-Image-Edit-2511",
+        "krea/Krea-2-Turbo", "Tongyi-MAI/Z-Image",
+        "Qwen/Qwen-Image-2.1",
     ],
     "YoboxAI": ["banana2", "bananapro", "gpt-image-2"],
 }
 
 IMAGE_GENERATION_MODELS = [
     "banana2", "bananapro", "gpt-image-2", "krea/Krea-2-Turbo",
-    "Tongyi-MAI/Z-Image", "Qwen/Qwen-Image-2512",
-    "FireRedTeam/FireRed-Image-Edit-1.1", "Qwen/Qwen-Image-Edit-2511",
+    "Tongyi-MAI/Z-Image",
+    "Qwen/Qwen-Image-2.1",
 ]
 
 VIDEO_GENERATION_MODELS = [
-    "dreamina-seedance-2-0-hc", "dreamina-seedance-2-5-hc", "MiniMax-H3",
+    "dreamina-seedance-2-0-hc", "dreamina-seedance-2-5-hc",
 ]
 
 

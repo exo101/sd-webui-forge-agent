@@ -11,6 +11,8 @@ llama.cpp/
 
 # 界面使用参考图片 (非代码)
 ui界面使用参考/
+ui界面*参考/
+ui界面*标准/
 
 # 启动器非代码资源
 launcher/qq群ai交流群.jpg
@@ -20,6 +22,10 @@ launcher/主题壁纸.png
 launcher/*.spec
 launcher/dist/
 launcher/build/
+launcher/build_tmp/
+
+# HuggingFace 运行时模型缓存
+webui/backend/huggingface/
 
 # Python 缓存
 __pycache__/

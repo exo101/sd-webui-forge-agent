@@ -217,8 +217,12 @@ def attention_pytorch(q, k, v, heads, mask=None, attn_precision=None, skip_resha
         if mask.ndim == 3:
             mask = mask.unsqueeze(1)
 
+    enable_gqa = bool(kwargs.pop("enable_gqa", False))
+    if enable_gqa and q.shape[1] == k.shape[1]:
+        enable_gqa = False
+
     if SDP_BATCH_LIMIT >= b:
-        out = operations.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0, is_causal=False)
+        out = operations.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0, is_causal=False, enable_gqa=enable_gqa)
         if not skip_output_reshape:
             out = out.transpose(1, 2).reshape(b, -1, heads * dim_head)
     else:
@@ -229,7 +233,7 @@ def attention_pytorch(q, k, v, heads, mask=None, attn_precision=None, skip_resha
                 if mask.shape[0] > 1:
                     m = mask[i : i + SDP_BATCH_LIMIT]
 
-            out[i : i + SDP_BATCH_LIMIT] = operations.scaled_dot_product_attention(q[i : i + SDP_BATCH_LIMIT], k[i : i + SDP_BATCH_LIMIT], v[i : i + SDP_BATCH_LIMIT], attn_mask=m, dropout_p=0.0, is_causal=False).transpose(1, 2).reshape(-1, q.shape[2], heads * dim_head)
+                out[i : i + SDP_BATCH_LIMIT] = operations.scaled_dot_product_attention(q[i : i + SDP_BATCH_LIMIT], k[i : i + SDP_BATCH_LIMIT], v[i : i + SDP_BATCH_LIMIT], attn_mask=m, dropout_p=0.0, is_causal=False, enable_gqa=enable_gqa).transpose(1, 2).reshape(-1, q.shape[2], heads * dim_head)
 
     return out
 
@@ -291,6 +295,7 @@ def attention_sage(q, k, v, heads, mask=None, attn_precision=None, skip_reshape=
 
 @torch.compiler.disable
 def attention_flash(q, k, v, heads, mask=None, attn_precision=None, skip_reshape=False, skip_output_reshape=False, **kwargs):
+    enable_gqa = bool(kwargs.pop("enable_gqa", False))
     if skip_reshape:
         b, _, _, dim_head = q.shape
     else:
@@ -301,11 +306,27 @@ def attention_flash(q, k, v, heads, mask=None, attn_precision=None, skip_reshape
             (q, k, v),
         )
 
+    # FlashAttention has no enable_gqa argument. Expand KV heads explicitly
+    # for Qwen3-VL (32 query heads / 8 KV heads).
+    if enable_gqa and q.shape[1] != k.shape[1]:
+        if q.shape[1] % k.shape[1] != 0:
+            raise ValueError(f"GQA head mismatch: query={q.shape[1]}, key/value={k.shape[1]}")
+        repeats = q.shape[1] // k.shape[1]
+        k = k.repeat_interleave(repeats, dim=1)
+        v = v.repeat_interleave(repeats, dim=1)
+
     if mask is not None:
         if mask.ndim == 2:
             mask = mask.unsqueeze(0)
         if mask.ndim == 3:
             mask = mask.unsqueeze(1)
+
+    # flash_attn 只支持 fp16/bf16，fp32 时直接走 SDPA fallback，避免每次都抛异常刷日志
+    if q.dtype not in (torch.float16, torch.bfloat16):
+        out = operations.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0, is_causal=False)
+        if not skip_output_reshape:
+            out = out.transpose(1, 2).reshape(b, -1, heads * dim_head)
+        return out
 
     try:
         assert mask is None

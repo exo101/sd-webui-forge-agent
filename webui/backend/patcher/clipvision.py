@@ -1,12 +1,11 @@
 import torch
 from transformers import CLIPVisionConfig, CLIPVisionModelWithProjection
-from transformers.modeling_utils import no_init_weights
 
 from backend import memory_management
 from backend.operations import using_forge_operations
 from backend.patcher.base import ModelPatcher
 from backend.state_dict import state_dict_prefix_replace, transformers_convert
-from backend.utils import load_torch_file
+from backend.utils import load_torch_file, no_init_weights
 
 CLIP_VISION_G = {"attention_dropout": 0.0, "dropout": 0.0, "hidden_act": "gelu", "hidden_size": 1664, "image_size": 224, "initializer_factor": 1.0, "initializer_range": 0.02, "intermediate_size": 8192, "layer_norm_eps": 1e-05, "model_type": "clip_vision_model", "num_attention_heads": 16, "num_channels": 3, "num_hidden_layers": 48, "patch_size": 14, "projection_dim": 1280, "torch_dtype": "float32"}
 

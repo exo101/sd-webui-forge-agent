@@ -415,7 +415,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "api_image_edit",
-            "description": "外部/API 图像编辑工具。用户使用 @banana2、@bananapro、@gpt-image-2、@gpt-image-2.5、@Qwen-Image-Edit-2511、@FireRed-Image-Edit 等 API 图像编辑模型标签时必须优先使用此工具。不要改用 remove_background、change_background 或本地 Klein 编辑。",
+            "description": "外部/API 图像编辑工具。用户使用 @banana2、@bananapro、@gpt-image-2、@gpt-image-2.5 等 API 图像编辑模型标签时必须优先使用此工具。不要改用 remove_background、change_background 或本地 Klein 编辑。",
             "parameters": {
                 "type": "object",
                 "properties": {

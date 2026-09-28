@@ -7,12 +7,10 @@ from typing import Optional
 import torch
 import torch.nn as nn
 
-from backend.memory_management import pytorch_attention_enabled
-
-if pytorch_attention_enabled:
-    from backend.attention import attention_pytorch as attention_function
-else:
-    from backend.attention import attention_basic as attention_function
+# Use Forge's selected optimized attention backend.  Hard-coding
+# attention_pytorch bypasses Sage/Flash/xFormers when they are available and
+# differs from ComfyUI's optimized_attention_for_device() selection.
+from backend.attention import attention_function
 
 from backend.nn.anima import LLMAdapter
 from backend.nn.llm import qwen_vl
@@ -96,6 +94,28 @@ class Qwen3VL_4BConfig(Qwen3_8BConfig):
     hidden_size: int = 2560
     intermediate_size: int = 9728
     lm_head: bool = False
+
+
+@dataclass
+class Qwen3VL_8BConfig(Qwen3_8BConfig):
+    max_position_embeddings: int = 262144
+    rope_theta: float = 5000000.0
+    rope_dims = [24, 20, 20]
+    interleaved_mrope = True
+    hidden_size: int = 4096
+    intermediate_size: int = 12288
+    lm_head: bool = False
+
+
+@dataclass
+class Qwen3VL_32BConfig(Qwen3VL_8BConfig):
+    # MiniMax H3 conditioning checkpoint: truncated to the first 50 of 64 layers,
+    # consumed as the unnormalized hidden state after layer 50 (no final norm, no lm_head)
+    hidden_size: int = 5120
+    intermediate_size: int = 25600
+    num_hidden_layers: int = 50
+    num_attention_heads: int = 64
+    final_norm: bool = False
 
 
 @dataclass
@@ -295,10 +315,18 @@ class Attention(nn.Module):
             else:
                 present_key_value = (xk, xv, index + num_tokens)
 
-        xk = xk.repeat_interleave(self.num_heads // self.num_kv_heads, dim=1)
-        xv = xv.repeat_interleave(self.num_heads // self.num_kv_heads, dim=1)
-
-        output = optimized_attention(xq, xk, xv, self.num_heads, mask=attention_mask, skip_reshape=True)
+        # Preserve grouped-query attention layout.  Expanding K/V with
+        # repeat_interleave is both memory-heavy and very slow for Qwen3-VL.
+        # Forge's SDPA path handles GQA natively through enable_gqa=True.
+        output = optimized_attention(
+            xq,
+            xk,
+            xv,
+            self.num_heads,
+            mask=attention_mask,
+            skip_reshape=True,
+            enable_gqa=True,
+        )
         return self.o_proj(output), present_key_value
 
 
@@ -418,7 +446,7 @@ class TransformerBlockGemma2(nn.Module):
 
 
 class Llama2_(nn.Module):
-    def __init__(self, config: Qwen3_06BConfig | Qwen3_4BConfig | Qwen3_8BConfig | Qwen25_7BVLI_Config | Gemma2_2B_Config):
+    def __init__(self, config: Qwen3_06BConfig | Qwen3_4BConfig | Qwen3_8BConfig | Qwen25_7BVLI_Config | Gemma2_2B_Config | Qwen3VL_4BConfig | Qwen3VL_8BConfig | Qwen3VL_32BConfig):
         super().__init__()
         self.config = config
         self.vocab_size = config.vocab_size
@@ -438,7 +466,11 @@ class Llama2_(nn.Module):
         else:
             self.norm = None
 
-    def forward(self, x, attention_mask=None, embeds=None, num_tokens=None, intermediate_output=None, final_layer_norm_intermediate=True, dtype=None, position_ids=None, embeds_info=[], past_key_values=None):
+        # streaming layer offload for large TEs (e.g. qwen3vl_32b): layers live on offload_device and are moved to x.device one at a time
+        self.stream_layers = False
+        self.offload_device = None
+
+    def forward(self, x, attention_mask=None, embeds=None, num_tokens=None, intermediate_output=None, final_layer_norm_intermediate=True, dtype=None, position_ids=None, embeds_info=[], past_key_values=None, visual_pos_masks=None, deepstack_embeds=None):
         if embeds is not None:
             x = embeds
         else:
@@ -484,6 +516,11 @@ class Llama2_(nn.Module):
 
         next_key_values = []
         for i, layer in enumerate(self.layers):
+            if self.stream_layers and self.offload_device is not None:
+                layer.to(x.device, non_blocking=True)
+                if i > 0:
+                    self.layers[i - 1].to(self.offload_device, non_blocking=True)
+
             if all_intermediate is not None:
                 if only_layers is None or (i in only_layers):
                     all_intermediate.append(x.unsqueeze(1).clone())
@@ -503,8 +540,15 @@ class Llama2_(nn.Module):
             if current_kv is not None:
                 next_key_values.append(current_kv)
 
+            # DeepStack: add per-layer visual features into the first len() decoder layers at image positions (Qwen3-VL)
+            if deepstack_embeds is not None and i < len(deepstack_embeds):
+                x[visual_pos_masks] = x[visual_pos_masks] + deepstack_embeds[i].to(x)
+
             if i == intermediate_output:
                 intermediate = x.clone()
+
+        if self.stream_layers and self.offload_device is not None:
+            self.layers[-1].to(self.offload_device, non_blocking=True)
 
         if self.norm is not None:
             x = self.norm(x)
@@ -668,13 +712,23 @@ class Ministral3_3B(BaseLlama, nn.Module):
         self.model = Llama2_(config)
 
 
-from backend.nn.llm.qwen35 import QWEN3VL_VISION, Qwen3VLVisionModel
+from backend.nn.llm.qwen35 import QWEN3VL_VISION, QWEN3VL_VISION_8B, Qwen3VLVisionModel
 
 
 class Qwen3VL(BaseLlama, nn.Module):
     def __init__(self, config_dict):
         super().__init__()
-        config = Qwen3VL_4BConfig()
+        hidden_size = config_dict.get("hidden_size", config_dict.get("text_config", {}).get("hidden_size", 2560))
+        if hidden_size == 4096:
+            config = Qwen3VL_8BConfig()
+            vision_params = QWEN3VL_VISION_8B
+        elif hidden_size == 5120:
+            # MiniMax H3 32B TE (50 layers, unnormalized hidden after layer 50)
+            config = Qwen3VL_32BConfig()
+            vision_params = QWEN3VL_VISION_8B
+        else:
+            config = Qwen3VL_4BConfig()
+            vision_params = QWEN3VL_VISION
 
         _config_dict = asdict(config)
         for key, value in _config_dict.items():
@@ -683,7 +737,7 @@ class Qwen3VL(BaseLlama, nn.Module):
 
         self.num_layers = config.num_hidden_layers
         self.model = Llama2_(config)
-        vision_config = {**QWEN3VL_VISION, "out_hidden_size": config.hidden_size}
+        vision_config = {**vision_params, "out_hidden_size": config.hidden_size}
         self.visual = Qwen3VLVisionModel(vision_config)
 
     def preprocess_embed(self, embed, device):
@@ -714,3 +768,25 @@ class Qwen3VL(BaseLlama, nn.Module):
             else:
                 deepstack = [torch.cat([deepstack[i], ds[i]], dim=0) for i in range(len(ds))]
         return position_ids, visual_pos_masks, deepstack
+
+    def forward(self, input_ids, attention_mask=None, embeds=None, num_tokens=None, intermediate_output=None, final_layer_norm_intermediate=True, dtype=None, embeds_info=[], **kwargs):
+        position_ids = kwargs.pop("position_ids", None)
+        visual_pos_masks = kwargs.pop("visual_pos_masks", None)
+        deepstack_embeds = kwargs.pop("deepstack_embeds", None)
+        if embeds is not None and position_ids is None:
+            # without images build_image_inputs returns (None, None, None) -> arange position ids, i.e. the plain text path
+            position_ids, visual_pos_masks, deepstack_embeds = self.build_image_inputs(embeds, embeds_info)
+        return self.model(
+            input_ids,
+            attention_mask=attention_mask,
+            embeds=embeds,
+            num_tokens=num_tokens,
+            intermediate_output=intermediate_output,
+            final_layer_norm_intermediate=final_layer_norm_intermediate,
+            dtype=dtype,
+            position_ids=position_ids,
+            embeds_info=embeds_info,
+            visual_pos_masks=visual_pos_masks,
+            deepstack_embeds=deepstack_embeds,
+            **kwargs,
+        )

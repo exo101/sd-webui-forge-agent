@@ -121,11 +121,24 @@ def tiled_scale(samples, function, tile_x=64, tile_y=64, overlap=8, upscale_amou
 
 
 class VAE:
-    def __init__(self, model=None, device=None, dtype=None, no_init=False, *, is_wan=False, is_flux2=False, is_mugen=False):
+    def __init__(self, model=None, device=None, dtype=None, no_init=False, *, is_wan=False, is_flux2=False, is_mugen=False, is_qwen21=False):
         if no_init:
             return
 
-        if not is_wan:
+        self.output_channels = 3
+
+        if is_qwen21:
+            # Qwen-Image-2.1 VAE: Wan 2.2 layout image-only model (64ch latent, 16x, RGBA pixels)
+            self.upscale_ratio = 16
+            self.upscale_index_formula = None
+            self.downscale_ratio = 16
+            self.downscale_index_formula = None
+            self.latent_dim = 2
+            self.latent_channels = int(model.config.z_dim)  # 64
+            self.output_channels = int(getattr(model.config, "image_channels", 4))  # 4 (RGBA)
+            self.memory_used_encode = lambda shape, dtype: 600 * shape[2] * shape[3] * memory_management.dtype_size(dtype)
+            self.memory_used_decode = lambda shape, dtype: 900 * shape[2] * shape[3] * (16 * 16) * memory_management.dtype_size(dtype)
+        elif not is_wan:
             self.upscale_ratio = 8
             self.upscale_index_formula = None
             self.downscale_ratio = 8
@@ -151,7 +164,6 @@ class VAE:
             self.memory_used_encode = lambda shape, dtype: (1500 if shape[2] <= 4 else 6000) * shape[3] * shape[4] * memory_management.dtype_size(dtype)
             self.memory_used_decode = lambda shape, dtype: (2200 if shape[2] <= 4 else 7000) * shape[3] * shape[4] * (8 * 8) * memory_management.dtype_size(dtype)
 
-        self.output_channels = 3
         self.first_stage_model = model.eval()
 
         self.device = device or memory_management.vae_device()
@@ -163,6 +175,7 @@ class VAE:
 
         self.patcher = ModelPatcher(self.first_stage_model, load_device=self.device, offload_device=offload_device)
         self.is_wan = is_wan
+        self.is_qwen21 = is_qwen21
 
     def clone(self):
         n = VAE(no_init=True)
@@ -176,11 +189,18 @@ class VAE:
         n.vae_dtype = self.vae_dtype
         n.output_device = self.output_device
         n.is_wan = self.is_wan
+        n.is_qwen21 = self.is_qwen21
+        n.output_channels = self.output_channels
+        n.upscale_ratio = self.upscale_ratio
+        n.downscale_index_formula = self.downscale_index_formula
+        n.upscale_index_formula = self.upscale_index_formula
         return n
 
     def decode_tiled_(self, samples, tile_x=64, tile_y=64, overlap=16):
         decode_fn = lambda a: self.first_stage_model.decode(a.to(self.vae_dtype).to(self.device)).float()
-        output = self.process_output((tiled_scale(samples, decode_fn, tile_x // 2, tile_y * 2, overlap, upscale_amount=self.upscale_ratio, output_device=self.output_device) + tiled_scale(samples, decode_fn, tile_x * 2, tile_y // 2, overlap, upscale_amount=self.upscale_ratio, output_device=self.output_device) + tiled_scale(samples, decode_fn, tile_x, tile_y, overlap, upscale_amount=self.upscale_ratio, output_device=self.output_device)) / 3.0)
+        output = self.process_output((tiled_scale(samples, decode_fn, tile_x // 2, tile_y * 2, overlap, upscale_amount=self.upscale_ratio, out_channels=self.output_channels, output_device=self.output_device) + tiled_scale(samples, decode_fn, tile_x * 2, tile_y // 2, overlap, upscale_amount=self.upscale_ratio, out_channels=self.output_channels, output_device=self.output_device) + tiled_scale(samples, decode_fn, tile_x, tile_y, overlap, upscale_amount=self.upscale_ratio, out_channels=self.output_channels, output_device=self.output_device)) / 3.0)
+        if self.output_channels > 3:
+            output = output[:, :3]
         return output
 
     def decode_tiled_3d(self, samples, tile_t=999, tile_x=32, tile_y=32, overlap=(1, 8, 8)):
@@ -216,6 +236,8 @@ class VAE:
             for x in range(0, samples_in.shape[0], batch_number):
                 samples = samples_in[x : x + batch_number].to(device=self.device, dtype=self.vae_dtype)
                 out = self.process_output(self.first_stage_model.decode(samples).to(device=self.output_device, dtype=torch.float32, copy=True))
+                if self.output_channels > 3:
+                    out = out[:, :3]
                 if pixel_samples is None:
                     pixel_samples = torch.empty((samples_in.shape[0],) + tuple(out.shape[1:]), device=self.output_device)
                 pixel_samples[x : x + batch_number] = out
