@@ -5,7 +5,7 @@
 #   agent_tools_models.py    模型管理工具（checkpoint / VAE / TE / 设置）
 #   agent_tools_image.py     本地生图与图像处理工具
 #   agent_tools_api.py       远程 API 图像生成/编辑工具
-#   agent_tools_video.py     视频生成工具（H3 / Dreamina）
+#   agent_tools_video.py     视频生成工具（MiniMax H3）
 #   agent_tools_workspace.py 工作区 / 文档 / 联网 / 插件调研工具
 #   agent_tools_archify.py   Archify 图表工具（generate_diagram / validate_diagram）
 #   agent_skills.py          通用 Skill 框架（list_skills / read_skill）
@@ -71,12 +71,12 @@ from scripts.agent_tools_image import (
 )
 from scripts.agent_tools_api import (
     api_image_edit_tool, _modelscope_poll_task, _ASPECT_RATIO_TO_PIXELS,
-    _resolve_image_size, _pixels_to_gemini_config, _infer_image_size_from_prompt,
+    _resolve_image_size, _infer_image_size_from_prompt,
     api_image_generate_tool, _select_image_api_key, _get_image_api_base_url,
-    _is_gemini_image_model, _call_gemini_generate, _format_api_http_error,
+    _format_api_http_error,
 )
 from scripts.agent_tools_video import (
-    _get_webui_base_url, h3_video_generate_tool, dreamina_video_generate_tool,
+    _get_webui_base_url, h3_video_generate_tool,
 )
 from scripts.agent_tools_workspace import (
     list_extensions_tool, research_extension_tool,
@@ -128,7 +128,6 @@ TOOL_FUNCTIONS = {
     "trellis2_image_to_3d": trellis2_image_to_3d_tool,
     "video_to_frames": video_to_frames_tool,
     "h3_video_generate": h3_video_generate_tool,
-    "dreamina_video_generate": dreamina_video_generate_tool,
     "stitch_images": stitch_images_tool,
     "create_model_comparison_html": create_model_comparison_html_tool,
     "list_preprocessors": list_preprocessors_tool,

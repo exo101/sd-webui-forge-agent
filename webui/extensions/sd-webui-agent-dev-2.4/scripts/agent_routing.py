@@ -6,10 +6,6 @@ from scripts.agent_config import load_config
 from scripts.agent_models import IMAGE_GENERATION_MODELS
 from scripts.agent_tools import _select_image_api_key
 
-API_IMAGE_EDIT_MODELS = {
-    "banana2", "bananapro", "gpt-image-2",
-}
-
 
 def _configured_image_model():
     return str(load_config().get("image_model") or "").strip()
@@ -26,10 +22,6 @@ def _is_configured_api_image_model(model_id):
     cfg = load_config(resolve_local=False)
     custom = cfg.get("custom_models", {}).get("image", {}) if isinstance(cfg.get("custom_models"), dict) else {}
     return any(model in (values or []) for values in custom.values() if isinstance(values, list))
-
-
-def _is_dreamina_video_model(model_id):
-    return str(model_id or "").strip().lower() in {"dreamina-seedance-2-0-hc", "dreamina-seedance-2-5-hc"}
 
 
 def _is_h3_video_model(model_id):
@@ -56,7 +48,7 @@ def _has_requested_local_model(messages):
 
 
 def _should_protect_api_image_model(requested_api_model):
-    return requested_api_model in API_IMAGE_EDIT_MODELS
+    return bool(requested_api_model) and _is_configured_api_image_model(requested_api_model)
 
 
 def _has_requested_layer_separation(user_instruction):
@@ -110,11 +102,8 @@ def _coerce_generation_tool_by_selected_model(tool_name, tool_args, user_instruc
         return ("api_image_generate", {"model": image_model, "prompt": prompt})
     if is_api and tool_name in ("edit_image", "change_background", "img2img"):
         return "api_image_edit", {"model": image_model, "instruction": args.get("instruction") or args.get("prompt") or user_instruction}
-    if tool_name in ("h3_video_generate", "dreamina_video_generate"):
+    if tool_name == "h3_video_generate":
         args.update({"prompt": args.get("prompt") or user_instruction, "duration": args.get("duration", 5), "aspect_ratio": args.get("aspect_ratio") or args.get("ratio") or "16:9"})
-        if _is_dreamina_video_model(video_model):
-            args["model"] = video_model
-            return "dreamina_video_generate", args
         if _is_h3_video_model(video_model):
             return "h3_video_generate", args
     return tool_name, args

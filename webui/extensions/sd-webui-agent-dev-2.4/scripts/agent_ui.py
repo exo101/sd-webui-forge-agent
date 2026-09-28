@@ -34,7 +34,6 @@ FORGE_PROVIDER_ALIASES = {
     "modelscope": "modelscope",
     "dashscope": "dashscope",
     "pixapi": "pixapi",
-    "yoboxai": "yoboxai",
 }
 
 
@@ -144,9 +143,6 @@ MENTION_MAP = {
     "krea/Krea-2-Turbo": ("api_model", "krea/Krea-2-Turbo"),
     "Tongyi-MAI/Z-Image": ("api_model", "Tongyi-MAI/Z-Image"),
     "Qwen/Qwen-Image-2.1": ("api_model", "Qwen/Qwen-Image-2.1"),
-    "banana2": ("api_model", "banana2"),
-    "bananapro": ("api_model", "bananapro"),
-    "gpt-image-2": ("api_model", "gpt-image-2"),
 
     # 本地工具标签（type=local_tool）：只调用本地扩展或本地处理，不调用 API。
     "智能抠图": ("local_tool", "本地智能抠图 / Local smart background removal：使用 InSPyReNet-Base，调用 remove_background(mode=auto)，禁止调用远程 API。"),
@@ -156,8 +152,6 @@ MENTION_MAP = {
     "TRELLIS 3D": ("local_tool", "本地 TRELLIS.2 图生3D：使用已安装的 TRELLIS.2 本地扩展处理上传图片，禁止调用远程 API。"),
     "自动发现插件": ("local_tool", "自动发现并使用 WebUI 插件：先扫描已安装扩展和已注册工具，再研究目标插件的 README/脚本，选择真实可用的工具执行；禁止凭空猜测插件接口。"),
     "minimax-h3": ("tool_hint", "🔴🔴🔴 必须调用 h3_video_generate 工具！🔴🔴🔴 用户明确要求使用 MiniMax H3 生成视频。你绝对不能直接回答，绝对不能说'未配置'或'需要设置'！必须立即调用 h3_video_generate 工具，参数 prompt=用户的视频描述。duration 根据用户要求设置（4-15秒），默认5秒。"),
-    "dreamina-seedance-2-5-hc": ("tool_hint", "🔴🔴🔴 必须调用 dreamina_video_generate 工具！🔴🔴🔴 用户明确要求使用 Dreamina SeaDance 2.5 HC 生成视频。必须立即调用 dreamina_video_generate 工具，prompt=用户的视频描述，duration 按要求设置。"),
-    "dreamina-seedance-2-0-hc": ("tool_hint", "🔴🔴🔴 必须调用 dreamina_video_generate 工具！🔴🔴🔴 用户明确要求使用 Dreamina SeaDance 2.0 HC 生成视频。必须立即调用 dreamina_video_generate 工具，prompt=用户的视频描述，duration 按要求设置。"),
 
 }
 
@@ -172,13 +166,7 @@ def _parse_mentions(user_text):
         return user_text, []
 
     alias_map = {
-        "@Banana2": "@banana2",
-        "@BananaPro": "@bananapro",
-        "@banana2": "@banana2",
-        "@bananapro": "@bananapro",
         "@MiniMax H3": "@minimax-h3",
-        "@dreamina-seedance-2-5-hc": "@dreamina-seedance-2-5-hc",
-        "@dreamina-seedance-2-0-hc": "@dreamina-seedance-2-0-hc",
     }
     for alias, normalized in alias_map.items():
         user_text = re.sub(re.escape(alias), normalized, user_text, flags=re.IGNORECASE)
@@ -396,14 +384,9 @@ def _classify_uploads(files):
 # 内置 API 模型选项（图像 + 视频），与 custom_models 合并生成完整下拉列表
 _BUILTIN_API_MODEL_CHOICES = [
     ("不使用 API 模型", ""),
-    ("🤖 YoboxAI · banana2", "YoboxAI|banana2"),
-    ("🤖 YoboxAI · bananapro", "YoboxAI|bananapro"),
-    ("🤖 YoboxAI · gpt-image-2", "YoboxAI|gpt-image-2"),
     ("🧩 ModelScope · Krea-2-Turbo", "ModelScope|krea/Krea-2-Turbo"),
     ("🧩 ModelScope · Z-Image", "ModelScope|Tongyi-MAI/Z-Image"),
     ("🧩 ModelScope · Qwen-Image-2.1", "ModelScope|Qwen/Qwen-Image-2.1"),
-    ("🎬 YoboxAI · dreamina-seedance-2-0", "video|dreamina-seedance-2-0-hc"),
-    ("🎬 YoboxAI · dreamina-seedance-2-5", "video|dreamina-seedance-2-5-hc"),
 ]
 
 _KIND_LABELS = {"llm": "Agent 大脑", "image": "图像", "video": "视频"}
@@ -976,7 +959,7 @@ def on_ui_tabs():
                         image_api_provider = gr.Dropdown(
                             label="生成 API 供应商（选择对应平台的 Key，勿混用）",
                             choices=provider_choices(cfg_init),
-                            value=cfg_init.get("image_api_provider", "YoboxAI"),
+                            value=cfg_init.get("image_api_provider", "ModelScope"),
                         )
                         with gr.Row():
                             image_api_key = gr.Textbox(
@@ -989,7 +972,7 @@ def on_ui_tabs():
                             clear_image_api_key_btn = gr.Button("清空生成 Key", size="sm", scale=1)
                         image_base_url = gr.Textbox(
                             label="生成 API Base URL",
-                            value=cfg_init.get("image_base_url") or cfg_init.get("video_base_url", "https://api.yoboxai.com/v1"),
+                            value=cfg_init.get("image_base_url") or cfg_init.get("video_base_url", "https://api-inference.modelscope.cn/v1"),
                             visible=False,
                         )
                         # 切换供应商时自动更新 Base URL

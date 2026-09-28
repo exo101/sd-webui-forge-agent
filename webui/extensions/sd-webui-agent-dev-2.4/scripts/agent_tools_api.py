@@ -9,7 +9,6 @@ import time
 import traceback
 import urllib.request
 import urllib.error
-import urllib.parse
 from io import BytesIO
 
 from PIL import Image
@@ -39,60 +38,14 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
         model_id = str(cfg.get("image_model") or "").strip()
         if not model_id:
             return None, {"status": "error", "error": "未指定 API 图像模型"}
-        # 根据模型选择正确的 base URL（Gemini 模型使用专用端点）
-        base_url = _get_image_api_base_url(cfg, model_id)
+        # 选择正确的 base URL
+        base_url = _get_image_api_base_url(cfg)
         api_key = _select_image_api_key(cfg)
         provider = str(cfg.get("image_api_provider") or "").strip().lower()
         if not base_url:
             return None, {"status": "error", "error": "未配置图像/视频生成 API Base URL"}
         if not api_key:
             return None, {"status": "error", "error": "未配置图像/视频生成 API Key，请在独立的生成 API 设置中填写，不是 Agent 大脑 API Key"}
-
-        # Gemini 图像编辑模型使用 Google-native generateContent 格式
-        if _is_gemini_image_model(model_id):
-            # 将所有输入图片转为 base64。Gemini 原生协议支持在同一条
-            # contents.parts 中放置多个 inlineData；不能只取第一张图，
-            # 否则多图参考时后续图片会完全丢失。
-            if not isinstance(image, (list, tuple)):
-                image = [image]
-            image_inputs = []
-            for item in image:
-                item_b64 = None
-                item_mime = "image/png"
-                if isinstance(item, Image.Image):
-                    buf = BytesIO()
-                    item.convert("RGB").save(buf, format="PNG")
-                    item_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
-                elif isinstance(item, str) and os.path.isfile(item):
-                    with open(item, "rb") as f:
-                        item_b64 = base64.b64encode(f.read()).decode("utf-8")
-                    if item.lower().endswith((".jpg", ".jpeg")):
-                        item_mime = "image/jpeg"
-                if item_b64:
-                    image_inputs.append((item_b64, item_mime))
-
-            if not image_inputs:
-                return None, {"status": "error", "error": "无法读取输入图片用于 Gemini 编辑"}
-
-            aspect_ratio, image_size = _pixels_to_gemini_config(size)
-            images_b64, err = _call_gemini_generate(
-                base_url, api_key, model_id, instruction, image_inputs,
-                aspect_ratio=aspect_ratio, image_size=image_size,
-            )
-            if err:
-                return None, err
-            images = []
-            for b64_data in images_b64:
-                try:
-                    img_data = base64.b64decode(b64_data)
-                    img = Image.open(BytesIO(img_data))
-                    images.append(img)
-                except Exception as e:
-                    print(f"[Agent] Gemini 编辑图片解码失败: {e}")
-            if images:
-                info = {"status": "success", "model_used": model_id, "count": len(images)}
-                return images, info
-            return None, {"status": "error", "error": "Gemini 编辑图片解码失败"}
 
         if not isinstance(image, (list, tuple)):
             image = [image]
@@ -159,92 +112,6 @@ def api_image_edit_tool(image, instruction, model=None, size="auto", response_fo
             if not images:
                 return None, {"status": "error", "error": "DashScope 未返回图像数据", "raw": result, "model_used": model_id}
             return images, {"status": "success", "model_used": model_id, "instruction": instruction, "method": "dashscope_multimodal_generation"}
-
-        # YoboxAI 的 Gemini/banana 接口使用 generateContent 协议，
-        # 图片必须放在 parts.inlineData，API Key 放在 query string。
-        if _is_gemini_image_model(model_id) and "yoboxai.com" in base_url.lower():
-            endpoint = (
-                f"{base_url.rstrip('/')}/../gemini/v1beta/models/"
-                f"{urllib.parse.quote(model_id, safe='')}:generateContent"
-            )
-            endpoint = endpoint.replace("/v1/../gemini/", "/gemini/")
-            endpoint = f"{endpoint}?{urllib.parse.urlencode({'key': api_key})}"
-            parts = [{"text": str(instruction).strip()}]
-            for image_b64 in image_b64_list[:5]:
-                parts.append({
-                    "inlineData": {
-                        "mimeType": "image/png",
-                        "data": image_b64,
-                    }
-                })
-            payload = {
-                "contents": [{
-                    "role": "user",
-                    "parts": parts,
-                }],
-                "generationConfig": {
-                    "responseModalities": ["IMAGE"],
-                },
-            }
-            inferred_size = _infer_image_size_from_prompt(instruction, size)
-            if inferred_size and str(inferred_size).lower() not in ("auto", "none", "null"):
-                resolved_size = _resolve_image_size(inferred_size)
-                aspect_ratio, image_size = _pixels_to_gemini_config(resolved_size)
-                payload["generationConfig"]["imageConfig"] = {
-                    "aspectRatio": aspect_ratio,
-                    "imageSize": image_size,
-                }
-                print(
-                    f"[Agent] Gemini 编辑图像参数: aspectRatio={aspect_ratio}, "
-                    f"imageSize={image_size}, sourceSize={resolved_size}"
-                )
-            else:
-                payload["generationConfig"]["imageConfig"] = {
-                    "aspectRatio": "1:1",
-                    "imageSize": "1K",
-                }
-
-            req = urllib.request.Request(
-                endpoint,
-                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-                method="POST",
-                headers={"Content-Type": "application/json"},
-            )
-            try:
-                with urllib.request.urlopen(req, timeout=180) as resp:
-                    result = json.loads(resp.read().decode("utf-8"))
-            except urllib.error.HTTPError as e:
-                body = e.read().decode("utf-8", errors="ignore")[:1200]
-                return None, {
-                    "status": "error",
-                    "error": f"YoboxAI Gemini 图像编辑失败: HTTP {e.code}",
-                    "detail": body,
-                    "model_used": model_id,
-                }
-
-            images = []
-            for candidate in result.get("candidates") or []:
-                content = candidate.get("content") or {}
-                for part in content.get("parts") or []:
-                    inline_data = part.get("inlineData") or part.get("inline_data") or {}
-                    output_b64 = inline_data.get("data")
-                    if output_b64:
-                        images.append(
-                            Image.open(BytesIO(base64.b64decode(output_b64))).convert("RGB")
-                        )
-            if not images:
-                return None, {
-                    "status": "error",
-                    "error": "YoboxAI Gemini 未返回图像数据",
-                    "raw": result,
-                    "model_used": model_id,
-                }
-            return images, {
-                "status": "success",
-                "model_used": model_id,
-                "instruction": instruction,
-                "method": "yoboxai_gemini_generate_content",
-            }
 
         # ModelScope 的兼容层仍使用其专用的 generations 异步协议。
         # OpenAI 兼容的 gpt-image / sanye 编辑必须走真正的 /images/edits，
@@ -474,21 +341,6 @@ def _resolve_image_size(size):
     return "1024x1024"
 
 
-def _pixels_to_gemini_config(size):
-    """将统一的像素尺寸转换为 Gemini imageConfig 参数。"""
-    config = {
-        "1024x1024": ("1:1", "1K"),
-        "1024x1792": ("9:16", "2K"),
-        "1792x1024": ("16:9", "2K"),
-        "768x1024": ("3:4", "1K"),
-        "1024x768": ("4:3", "1K"),
-        "832x1248": ("2:3", "1K"),
-        "1248x832": ("3:2", "1K"),
-        "1792x768": ("21:9", "2K"),
-    }
-    return config.get(str(size).lower(), ("1:1", "1K"))
-
-
 def _infer_image_size_from_prompt(prompt, size):
     """当模型漏传 size 时，从用户提示词中的比例描述兜底推断尺寸。
 
@@ -519,14 +371,14 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
         model: API 模型 ID（为空则用配置中的 image_model）
         size: 输出尺寸，如 1024x1024、16:9 等
         response_format: b64_json 或 url
-        negative_prompt: 负向提示词（YoboxAI gpt-image-2 支持）
-        quality: 质量档位，如 high/medium/low（YoboxAI gpt-image-2 支持）
+        negative_prompt: 负向提示词（可选）
+        quality: 质量档位，如 high/medium/low（可选）
     """
     try:
         if not prompt or not str(prompt).strip():
             return None, {"status": "error", "error": "请提供图像生成提示词"}
 
-        # 比例字符串 → 像素尺寸转换（gpt-image-2 等 OpenAI 兼容接口只接受像素尺寸）
+        # 比例字符串 → 像素尺寸转换（OpenAI 兼容接口只接受像素尺寸）
         cfg = load_config()
         size = _infer_image_size_from_prompt(prompt, size)
         prompt_text = str(prompt or "").lower()
@@ -541,8 +393,7 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
 
         # 当前 UI 选择是唯一模型来源，禁止 LLM 工具参数覆盖它。
         model_id = str(cfg.get("image_model") or "").strip()
-        # 根据模型选择正确的 base URL（Gemini 模型使用专用端点）
-        base_url = _get_image_api_base_url(cfg, model_id)
+        base_url = _get_image_api_base_url(cfg)
         # 根据供应商选择正确的 key：避免跨供应商混用导致 401
         api_key = _select_image_api_key(cfg)
         provider = str(cfg.get("image_api_provider") or "").strip().lower()
@@ -559,83 +410,13 @@ def api_image_generate_tool(prompt, model=None, size="1024x1024", response_forma
         if not api_key:
             return None, {"status": "error", "error": "未配置生成 API Key，请在生成 API 设置中填写"}
 
-        # Gemini 图像模型使用 Google-native generateContent 格式
-        if _is_gemini_image_model(model_id):
-            aspect_ratio, image_size = _pixels_to_gemini_config(size)
-            print(f"[Agent] Gemini 图像参数: aspectRatio={aspect_ratio}, imageSize={image_size}")
-            images_b64, err = _call_gemini_generate(
-                base_url,
-                api_key,
-                model_id,
-                prompt,
-                aspect_ratio=aspect_ratio,
-                image_size=image_size,
-            )
-            if err:
-                return None, err
-            # 将 base64 转为 PIL Image
-            images = []
-            for b64_data in images_b64:
-                try:
-                    img_data = base64.b64decode(b64_data)
-                    img = Image.open(BytesIO(img_data))
-                    images.append(img)
-                except Exception as e:
-                    print(f"[Agent] Gemini 图片解码失败: {e}")
-            if images:
-                info = {"status": "success", "model_used": model_id, "count": len(images)}
-                return images, info
-            return None, {"status": "error", "error": "Gemini 图片解码失败"}
-
-        if provider == "yoboxai" and _is_gemini_image_model(model_id):
-            gemini_model_id = model_id
-            endpoint = (
-                f"{base_url.rstrip('/')}/../gemini/v1beta/models/"
-                f"{urllib.parse.quote(gemini_model_id, safe='')}:generateContent"
-            )
-            endpoint = endpoint.replace("/v1/../gemini/", "/gemini/")
-            endpoint = f"{endpoint}?{urllib.parse.urlencode({'key': api_key})}"
-            payload = {
-                "contents": [{
-                    "role": "user",
-                    "parts": [{"text": str(prompt).strip()}],
-                }],
-                "generationConfig": {
-                    "responseModalities": ["IMAGE"],
-                },
-            }
-            req = urllib.request.Request(
-                endpoint,
-                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-                method="POST",
-                headers={"Content-Type": "application/json"},
-            )
-            try:
-                with urllib.request.urlopen(req, timeout=180) as resp:
-                    result = json.loads(resp.read().decode("utf-8"))
-            except urllib.error.HTTPError as e:
-                body = e.read().decode("utf-8", errors="ignore")[:1200]
-                return None, {"status": "error", "error": f"YoboxAI Gemini 图像生成失败: HTTP {e.code}", "detail": body, "model_used": model_id}
-
-            images = []
-            for candidate in result.get("candidates") or []:
-                content = candidate.get("content") or {}
-                for part in content.get("parts") or []:
-                    inline_data = part.get("inlineData") or part.get("inline_data") or {}
-                    output_b64 = inline_data.get("data")
-                    if output_b64:
-                        images.append(Image.open(BytesIO(base64.b64decode(output_b64))).convert("RGB"))
-            if not images:
-                return None, {"status": "error", "error": "YoboxAI Gemini 未返回图像数据", "raw": result, "model_used": model_id}
-            return images, {"status": "success", "model_used": model_id, "prompt": prompt, "method": "yoboxai_gemini_generate_content"}
-
         payload = {
             "model": model_id,
             "prompt": str(prompt).strip(),
             "n": 1,
             "size": size,
         }
-        # YoboxAI gpt-image-2 支持扩展参数
+        # 可选扩展参数
         if negative_prompt and str(negative_prompt).strip():
             payload["negative_prompt"] = str(negative_prompt).strip()
         if quality and str(quality).strip():
@@ -692,7 +473,7 @@ def _select_image_api_key(cfg):
     """根据图像供应商选择正确的 API Key，避免跨供应商 key 混用导致 401。
 
     逻辑：
-    - 如果图像供应商 == LLM 供应商（如都是 YoboxAI），使用 LLM 的 api_key
+    - 如果图像供应商 == LLM 供应商，使用 LLM 的 api_key
     - 否则使用 image_api_key
     - 如果 image_api_key 为空，回退到 api_key
     """
@@ -708,16 +489,8 @@ def _select_image_api_key(cfg):
     return image_key or llm_key
 
 
-def _get_image_api_base_url(cfg, model_id=""):
-    """根据模型 ID 选择正确的 API Base URL。
-
-    YoboxAI 的 Gemini/banana 图像模型需要专用端点 https://api.yoboxai.com/gemini，
-    不能用 OpenAI 兼容的 /v1 端点。
-    """
-    model_lower = str(model_id or "").lower()
-    if model_lower.startswith("gemini") or model_lower.startswith("banana"):
-        # YoboxAI Gemini 专用端点
-        return "https://api.yoboxai.com/gemini"
+def _get_image_api_base_url(cfg):
+    """根据配置选择正确的 API Base URL。"""
     base_url = str(cfg.get("image_base_url") or "").rstrip("/")
     # 用户可能直接粘贴文档中的完整接口地址；内部统一保留 OpenAI 兼容根地址，
     # 下面的请求再追加 /images/generations。
@@ -726,108 +499,6 @@ def _get_image_api_base_url(cfg, model_id=""):
             base_url = base_url[: -len(suffix)].rstrip("/")
             break
     return base_url
-
-
-def _is_gemini_image_model(model_id):
-    """判断是否为 Gemini 图像模型（需要 Google-native generateContent 格式）。
-
-    banana2/bananapro 是 YoboxAI 对 Gemini 图像模型的别名，也需要走 Gemini 端点。
-    """
-    model_lower = str(model_id or "").lower()
-    return model_lower.startswith("gemini") or model_lower.startswith("banana")
-
-
-def _call_gemini_generate(base_url, api_key, model_id, prompt_text, image_b64=None, image_mime="image/png",
-                          aspect_ratio="1:1", image_size="1K"):
-    """调用 Gemini generateContent API 生成/编辑图片。
-
-    返回 (images_list, error_dict)，成功时 images_list 为 base64 图片列表，error_dict 为 None。
-    支持 imageConfig: aspectRatio (1:1, 16:9, 9:16, 4:3, 3:4), imageSize (1K, 2K, 4K)。
-    """
-    parts = []
-    if image_b64:
-        # 兼容旧的单图参数，同时支持 [(base64, mime), ...] 多图参数。
-        if isinstance(image_b64, (list, tuple)):
-            image_items = image_b64
-        else:
-            image_items = [(image_b64, image_mime)]
-        for item in image_items:
-            if isinstance(item, (list, tuple)):
-                item_data = item[0] if item else None
-                item_mime = item[1] if len(item) > 1 else "image/png"
-            else:
-                item_data = item
-                item_mime = image_mime
-            if item_data:
-                parts.append({
-                    "inlineData": {
-                        "mimeType": item_mime,
-                        "data": item_data,
-                    }
-                })
-    parts.append({"text": str(prompt_text).strip()})
-
-    payload = {
-        "contents": [{
-            "role": "user",
-            "parts": parts,
-        }],
-        "generationConfig": {
-            "responseModalities": ["IMAGE"],
-            "imageConfig": {
-                "aspectRatio": aspect_ratio or "1:1",
-                "imageSize": image_size or "1K",
-            },
-        },
-    }
-
-    # 认证方式：?key= 查询参数（YoboxAI Gemini 端点要求）
-    endpoint = f"{base_url}/v1beta/models/{model_id}:generateContent?key={api_key}"
-    req = urllib.request.Request(
-        endpoint,
-        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        method="POST",
-        headers={
-            "Content-Type": "application/json",
-        },
-    )
-
-    try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            result = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        return None, _format_api_http_error(e, "Gemini 图像生成")
-    except Exception as e:
-        return None, {"status": "error", "error": f"Gemini API 调用异常: {e}"}
-
-    # 解析响应，提取 inlineData 图片
-    images = []
-    try:
-        candidates = result.get("candidates", [])
-        for candidate in candidates:
-            content = candidate.get("content", {})
-            parts_list = content.get("parts", [])
-            for part in parts_list:
-                inline = part.get("inlineData") or part.get("inline_data")
-                if inline and inline.get("data"):
-                    images.append(inline["data"])
-    except Exception as e:
-        return None, {"status": "error", "error": f"解析 Gemini 响应失败: {e}", "detail": str(result)[:500]}
-
-    if not images:
-        # 没有返回图片，可能只返回了文本
-        text_parts = []
-        try:
-            for candidate in result.get("candidates", []):
-                for part in candidate.get("content", {}).get("parts", []):
-                    if part.get("text"):
-                        text_parts.append(part["text"])
-        except Exception:
-            pass
-        text_info = " ".join(text_parts)[:200] if text_parts else "无内容"
-        return None, {"status": "error", "error": f"Gemini 未返回图片，仅返回文本: {text_info}"}
-
-    return images, None
 
 
 def _format_api_http_error(e, action="调用"):

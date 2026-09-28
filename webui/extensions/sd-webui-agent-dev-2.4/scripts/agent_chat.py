@@ -111,14 +111,6 @@ def _execute_tool(tool_name, tool_args, uploaded_image=None, uploaded_video=None
                 elif last_tool_images:
                     tool_args["first_frame"] = last_tool_images[-1]
 
-        if tool_name == "dreamina_video_generate":
-            if ("first_frame" not in tool_args or tool_args["first_frame"] is None) and \
-               ("reference_image" not in tool_args or tool_args["reference_image"] is None):
-                if uploaded_image is not None:
-                    tool_args["first_frame"] = uploaded_image
-                elif last_tool_images:
-                    tool_args["first_frame"] = last_tool_images[-1]
-
         # 多图工具：stitch_images
         if tool_name in ("stitch_images", "create_model_comparison_html"):
             if "images" not in tool_args or not tool_args["images"]:
@@ -929,7 +921,7 @@ def chat_stream(history, uploaded_image=None, uploaded_video=None, attachments=N
                 f"当前对话模型: {chat_model}，端点: {chat_base_url}，API Key: {_ck_mask}\n"
                 "这通常是因为：\n"
                 "1. API Key 为空或无效 — 请在「Agent 大脑设置」中重新填写 API Key 并点保存\n"
-                "2. API Key 与供应商不匹配 — 请确认供应商选择正确（如 ModelScope 的 key 不能用于 YoboxAI）\n"
+                "2. API Key 与供应商不匹配 — 请确认供应商选择正确（ModelScope 的 key 只能用于 ModelScope 供应商）\n"
                 "3. API Key 已过期或额度用尽\n"
                 "注意：这里的 Key 是 Agent 大脑（LLM 对话）用的，不是图像生成 Key。"
             )

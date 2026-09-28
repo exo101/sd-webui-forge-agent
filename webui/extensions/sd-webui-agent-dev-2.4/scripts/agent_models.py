@@ -6,7 +6,6 @@ LLM_MODELS_BY_PROVIDER = {
         "ZhipuAI/GLM-5.3-Flash", "deepseek-ai/DeepSeek-V4-Pro-0813",
         "deepseek-ai/DeepSeek-V4-Pro", "moonshotai/Kimi-K3",
     ],
-    "YoboxAI": ["gpt-5.4-mini", "gpt-5.6-luna", "gpt-5.5"],
 }
 
 IMAGE_GENERATION_MODELS_BY_PROVIDER = {
@@ -14,18 +13,15 @@ IMAGE_GENERATION_MODELS_BY_PROVIDER = {
         "krea/Krea-2-Turbo", "Tongyi-MAI/Z-Image",
         "Qwen/Qwen-Image-2.1",
     ],
-    "YoboxAI": ["banana2", "bananapro", "gpt-image-2"],
 }
 
 IMAGE_GENERATION_MODELS = [
-    "banana2", "bananapro", "gpt-image-2", "krea/Krea-2-Turbo",
+    "krea/Krea-2-Turbo",
     "Tongyi-MAI/Z-Image",
     "Qwen/Qwen-Image-2.1",
 ]
 
-VIDEO_GENERATION_MODELS = [
-    "dreamina-seedance-2-0-hc", "dreamina-seedance-2-5-hc",
-]
+VIDEO_GENERATION_MODELS = []
 
 
 def _image_models_for_provider(provider):
