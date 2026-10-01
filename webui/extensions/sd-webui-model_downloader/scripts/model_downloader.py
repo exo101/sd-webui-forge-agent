@@ -1014,6 +1014,12 @@ def create_ui():
         with gr.Tabs():
             # ── 标签页 1：一键下载模型组合 ──
             with gr.TabItem("一键下载模型组合"):
+                # ── 生图模型下载区（最上方）──
+                gr.Markdown("## 🖼️ 生图模型下载区")
+                gr.Markdown(
+                    "主流文生图模型组合，从魔搭社区一键下载主模型、文本编码器、VAE，"
+                    "自动放入 Forge 对应目录，下载后即可在模型列表中选择使用。"
+                )
                 # 为每个预设生成独立的下载区块，5 个块并排一行（列宽 240px）
                 with gr.Row(elem_classes=["preset-row"]):
                     for preset in MODEL_PRESETS:
