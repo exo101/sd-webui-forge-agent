@@ -49,6 +49,15 @@ webui/extensions/*/outputs/
 !webui/extensions/sd-webui-ps-plugin-api/**
 !webui/extensions/sd-webui-model_downloader/
 !webui/extensions/sd-webui-model_downloader/**
+!webui/extensions/TE-webui-DLSS5/
+!webui/extensions/TE-webui-DLSS5/**
+# DLSS5 大体积运行时（NVIDIA NGX DLL / DepthAnything 模型 / DirectML）不入库，需另行获取
+webui/extensions/TE-webui-DLSS5/**/*.dll
+webui/extensions/TE-webui-DLSS5/**/models/
+webui/extensions/TE-webui-DLSS5/**/__pycache__/
+# 保留核心桥接 DLL（体积小，必需）
+!webui/extensions/TE-webui-DLSS5/te_dlss5/te_dlss5_native.dll
+!webui/extensions/TE-webui-DLSS5/te_dlss5/te_nvof_cuda.dll
 webui/extensions/sd-webui-agent-dev-2.5/outputs/
 webui/extensions/sd-webui-agent-dev-2.5/tmp/
 webui/extensions/sd-webui-agent-dev-2.5/data/agent_memory.json
