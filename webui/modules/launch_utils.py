@@ -126,7 +126,12 @@ def run_pip(command, desc=None, live=default_command_live):
     if args.skip_install:
         return
 
-    index_url_line = f" --index-url {index_url}" if index_url != "" else ""
+    # 主源用镜像（INDEX_URL），官方 PyPI 作为备用源，
+    # 镜像未同步的包自动从 pypi.org 下载
+    if index_url != "":
+        index_url_line = f" --index-url {index_url} --extra-index-url https://pypi.org/simple/"
+    else:
+        index_url_line = ""
     return run(f'"{python}" -m pip {command} --prefer-binary{index_url_line}', desc=f"Installing {desc}", errdesc=f"Couldn't install {desc}", live=live)
 
 
