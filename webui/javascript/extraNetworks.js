@@ -436,7 +436,11 @@ function extraNetworksSearchButton(tabname, extra_networks_tabname, event) {
     let searchTextarea = gradioApp().querySelector(
         "#" + tabname + "_" + extra_networks_tabname + "_extra_search",
     );
-    let button = event.target;
+    let button = event.currentTarget || event.target;
+    // 兼容 Gradio 5.x：按钮可能嵌套子元素，向上找到带 search-all class 的真实按钮
+    while (button && !button.classList.contains("custom-button") && button.parentElement) {
+        button = button.parentElement;
+    }
     let text = button.classList.contains("search-all")
         ? ""
         : button.textContent.trim();
