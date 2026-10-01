@@ -581,11 +581,10 @@ def set_model_components_tool(model_name=None, te_name=None, vae_name=None):
             m_lower = m_path.lower().replace("\\", "/")
             is_vae = "/vae/" in m_lower
             is_te = "/text_encoder/" in m_lower
-            # 如果指定了新的 TE/VAE，移除同类型旧文件
-            # 如果匹配到 MODEL_GUIDE 且推荐为空，也清除同类型旧文件（使用模型自带组件）
-            if (te_name or (guide_matched and not te_name)) and is_te:
+            # 只要没指定新的 TE/VAE，就清除旧的同类型模块（SDXL 等自带组件的模型不需要额外 TE/VAE）
+            if not te_name and is_te:
                 continue
-            if (vae_name or (guide_matched and not vae_name)) and is_vae:
+            if not vae_name and is_vae:
                 continue
             new_modules.append(m_path)
 
@@ -636,8 +635,9 @@ def set_model_components_tool(model_name=None, te_name=None, vae_name=None):
             shared.opts.set("forge_additional_modules", new_modules)
 
         # 同步 sd_vae：如果模型不需要额外 VAE（如 SDXL），清除传统 VAE 设置
+        # 只要没有指定新 VAE（guide 匹配且推荐为空，或用户未传 vae_name），就清除 sd_vae
         sd_vae_cleared = False
-        if guide_matched and not vae_name:
+        if not vae_name:
             sd_vae = getattr(shared.opts, "sd_vae", None)
             if sd_vae and str(sd_vae).lower() not in ("none", "auto", "automatic", ""):
                 shared.opts.sd_vae = "None"
