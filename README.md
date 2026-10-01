@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.13.12-blue.svg)](https://www.python.org/)
 
-[📖 使用教程](https://www.bilibili.com/video/BV1Zxu86uE6k?spm_id_from=333.788.recommend_more_video.-1&trackid=web_related_0.router-related-2589621-dpmnd.1786250847122.213&vd_source=343e49b703fb5b4137cd6c1987846f37) | [🚀 快速开始](#快速开始)
+[📖 使用教程](https://www.bilibili.com/video/BV1L9hY6PEJG/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37) | [🚀 快速开始](#快速开始)
 
 </div>
 
@@ -452,7 +452,7 @@ models/VAE/
 
 ## 📚 学习资源
 
-- **视频教程**: [B站教程合集](https://www.bilibili.com/video/BV1KfXyBTEXb)
+- **视频教程**: [B站教程合集](https://www.bilibili.com/video/BV1L9hY6PEJG/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37)
 - **Wiki**: [Haoming02 Wiki](https://github.com/Haoming02/sd-webui-forge-classic/wiki)
 
 ---
@@ -464,6 +464,12 @@ models/VAE/
 <img src="launcher/qq群ai交流群.jpg" alt="QQ交流群" width="200"/>
 
 扫码加入 AI 交流群，获取最新整合包、使用技巧和问题解答。
+
+| 群号 | 说明 |
+|------|------|
+| **1040349057** | QQ 交流 2 群 |
+| **568457487** | QQ 交流 3 群 |
+| **1057489693** | QQ 交流 4 群 |
 
 ### B站频道
 
