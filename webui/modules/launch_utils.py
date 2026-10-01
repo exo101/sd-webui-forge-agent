@@ -439,11 +439,22 @@ assert cuda or xpu or mps
         except Exception:
             _need = True
         if _need:
-            try:
-                run_pip("install git+https://github.com/huggingface/diffusers.git --no-deps", "diffusers (git 0.41.0.dev0)")
-                startup_timer.record("install diffusers")
-            except RuntimeError:
-                print("Failed to install diffusers from git; H3/Qwen models may not work")
+            # 国内云服务器访问 GitHub 经常 TLS 超时，依次尝试多个镜像
+            _diffusers_urls = [
+                "git+https://gh-proxy.com/https://github.com/huggingface/diffusers.git",
+                "git+https://ghproxy.net/https://github.com/huggingface/diffusers.git",
+                "git+https://mirror.ghproxy.com/https://github.com/huggingface/diffusers.git",
+                "git+https://github.com/huggingface/diffusers.git",
+            ]
+            for _url in _diffusers_urls:
+                try:
+                    run_pip(f'install "{_url}" --no-deps', "diffusers (git 0.41.0.dev0)")
+                    startup_timer.record("install diffusers")
+                    break
+                except RuntimeError:
+                    continue
+            else:
+                print("Failed to install diffusers from all mirrors; H3/Qwen models may not work")
 
     if args.onnxruntime_gpu and not is_installed("onnxruntime-gpu"):
         # https://onnxruntime.ai/docs/install/#nightly-for-cuda-13x
