@@ -14,7 +14,8 @@ install_python313() {
     # 方案 1：conda 安装（优先）
     if command -v conda >/dev/null 2>&1; then
         echo ">>> 通过 conda 创建 webui313 环境（Python 3.13）..."
-        conda create -n webui313 python=3.13 -y
+        # 使用 classic 求解器（避免 libmamba 缺少 libarchive.so.19 的问题）
+        CONDA_SOLVER=classic conda create -n webui313 python=3.13 -y --solver=classic
         if [ $? -eq 0 ]; then
             CONDA_BASE="$(conda info --base)"
             if [ -x "$CONDA_BASE/envs/webui313/bin/python" ]; then
@@ -80,14 +81,14 @@ find_python313() {
 
     # 3. 查找 conda 环境中的 Python 3.13
     if command -v conda >/dev/null 2>&1; then
-        CONDA_BASE="$(conda info --base 2>/dev/null)"
+        CONDA_BASE="$(CONDA_SOLVER=classic conda info --base 2>/dev/null)"
         # 优先 webui313 环境
         if [ -x "$CONDA_BASE/envs/webui313/bin/python" ]; then
             echo "$CONDA_BASE/envs/webui313/bin/python"
             return
         fi
         # 其次查找任意 3.13 环境
-        for env in $(conda env list 2>/dev/null | awk '{print $1}'); do
+        for env in $(CONDA_SOLVER=classic conda env list 2>/dev/null | awk '{print $1}'); do
             py="$CONDA_BASE/envs/$env/bin/python"
             if [ -x "$py" ] && "$py" -c "import sys; sys.exit(0 if sys.version_info[:2]==(3,13) else 1)" 2>/dev/null; then
                 echo "$py"
