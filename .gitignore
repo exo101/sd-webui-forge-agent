@@ -41,17 +41,17 @@ webui/extensions/tmp/
 webui/extensions/*/see-through/workspace/
 webui/extensions/*/outputs/
 # Publish only the requested extensions
-!webui/extensions/sd-webui-agent-dev-2.4/
-!webui/extensions/sd-webui-agent-dev-2.4/**
+!webui/extensions/sd-webui-agent-dev-2.5/
+!webui/extensions/sd-webui-agent-dev-2.5/**
 !webui/extensions/forge-h3-studio/
 !webui/extensions/forge-h3-studio/**
 !webui/extensions/sd-webui-ps-plugin-api/
 !webui/extensions/sd-webui-ps-plugin-api/**
 !webui/extensions/sd-webui-model_downloader/
 !webui/extensions/sd-webui-model_downloader/**
-webui/extensions/sd-webui-agent-dev-2.4/outputs/
-webui/extensions/sd-webui-agent-dev-2.4/tmp/
-webui/extensions/sd-webui-agent-dev-2.4/data/agent_memory.json
+webui/extensions/sd-webui-agent-dev-2.5/outputs/
+webui/extensions/sd-webui-agent-dev-2.5/tmp/
+webui/extensions/sd-webui-agent-dev-2.5/data/agent_memory.json
 
 # Generated caches and local databases
 **/__pycache__/
