@@ -96,12 +96,12 @@ class TEDLSS5PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
             )
 
             # ===== 视频文件批量处理 =====
-            with gr.Accordion("🎬 视频文件处理（上传视频逐帧增强）", open=False):
+            with gr.Accordion("视频文件处理（上传视频逐帧增强）", open=False):
                 gr.Markdown(
                     "上传视频文件，逐帧应用 TE DLSS5 神经画质增强后合成新视频（保留音频）。"
                     "处理模式请在上方选择「视频 / 连续帧」以获得最佳时序效果。"
                 )
-                video_input = gr.Video(label="输入视频")
+                video_input = gr.Video(label="输入视频", height=280)
                 with gr.Row():
                     video_fps = gr.Number(
                         label="输出帧率（留空=沿用原视频）", value=0, precision=0, minimum=0, maximum=120
@@ -109,8 +109,8 @@ class TEDLSS5PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
                     video_crf = gr.Slider(
                         label="视频质量 CRF（越小越清晰）", minimum=0, maximum=51, step=1, value=18
                     )
-                video_process_btn = gr.Button("🚀 开始处理视频", variant="primary")
-                video_output = gr.Video(label="输出视频")
+                video_process_btn = gr.Button("开始处理视频", variant="primary")
+                video_output = gr.Video(label="输出视频", height=280)
                 video_status = gr.Textbox(label="处理状态", interactive=False)
 
                 video_process_btn.click(

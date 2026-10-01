@@ -207,12 +207,12 @@ class SeedVR2PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
                         decode_tile_overlap = gr.Slider(label="Decode overlap", minimum=0, maximum=512, step=16, value=128)
 
             # ===== 视频文件批量放大 =====
-            with gr.Accordion("🎬 视频文件放大（逐帧 SeedVR2）", open=False):
+            with gr.Accordion("视频文件放大（逐帧 SeedVR2）", open=False):
                 gr.Markdown(
                     "上传视频文件，逐帧应用 SeedVR2 高清放大后合成新视频（保留音频）。"
                     "模型加载一次后复用，适合短视频放大。长视频耗时较长。"
                 )
-                video_input = gr.Video(label="输入视频")
+                video_input = gr.Video(label="输入视频", height=280)
                 with gr.Row():
                     video_fps = gr.Number(
                         label="输出帧率（留空=沿用原视频）", value=0, precision=0, minimum=0, maximum=120
@@ -222,20 +222,20 @@ class SeedVR2PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
                     )
                 with gr.Row():
                     apply_dlss5 = gr.Checkbox(
-                        label="叠加 DLSS5 画质增强（放大后再做神经画质处理）",
+                        label="叠加 DLSS5 画质增强",
                         value=False,
-                        info="需要 TE DLSS5 插件已安装。顺序：SeedVR2 放大 → DLSS5 增强。",
+                        info="放大后再做神经画质处理。需安装 TE DLSS5 插件。",
                     )
                     dlss5_style = gr.Dropdown(
-                        label="DLSS5 画面风格",
+                        label="DLSS5 风格",
                         choices=["default", "natural", "cinematic"],
                         value="default",
                     )
                     dlss5_intensity = gr.Slider(
                         label="DLSS5 强度", minimum=-1, maximum=2, step=0.05, value=1
                     )
-                video_process_btn = gr.Button("🚀 开始放大视频", variant="primary")
-                video_output = gr.Video(label="输出视频")
+                video_process_btn = gr.Button("开始放大视频", variant="primary")
+                video_output = gr.Video(label="输出视频", height=280)
                 video_status = gr.Textbox(label="处理状态", interactive=False)
 
                 video_process_btn.click(

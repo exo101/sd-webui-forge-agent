@@ -32,7 +32,7 @@ class ScriptPostprocessingUpscale(scripts_postprocessing.ScriptPostprocessing):
     def ui(self):
         selected_tab = gr.Number(value=0, visible=False)
 
-        with InputAccordion(True, label="Upscale", elem_id="extras_upscale") as upscale_enabled:
+        with InputAccordion(False, label="Upscale", elem_id="extras_upscale") as upscale_enabled:
             with FormRow():
                 with gr.Tabs(elem_id="extras_resize_mode"):
                     with gr.Tab("Scale by", elem_id="extras_scale_by_tab") as tab_scale_by:
