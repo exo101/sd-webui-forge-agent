@@ -429,6 +429,28 @@ assert cuda or xpu or mps
         run_pip(f'install -r "{requirements_file}"', "requirements")
         startup_timer.record("install requirements")
 
+    # av (PyAV) 17.1.0 支持 Python 3.13 且自带 FFmpeg binary wheel，
+    # 但国内镜像源常未同步，因此单独从官方 PyPI 安装
+    if not args.skip_install:
+        try:
+            import av
+            _av_ok = True
+        except Exception:
+            _av_ok = False
+        if not _av_ok:
+            for _av_idx in [
+                "https://pypi.org/simple/",
+                "https://pypi.tuna.tsinghua.edu.cn/simple",
+            ]:
+                try:
+                    run_pip(f'install av==17.1.0 -i {_av_idx}', "av (PyAV 17.1.0)")
+                    startup_timer.record("install av")
+                    break
+                except RuntimeError:
+                    continue
+            else:
+                print("Failed to install av (PyAV); video processing may not work")
+
     # diffusers 0.41.0.dev0 不在 PyPI，需从 git 安装；用 --no-deps 避免覆盖
     # huggingface-hub==0.36.2（diffusers 0.41 要求 huggingface-hub>=1.32）
     if not args.skip_install:
