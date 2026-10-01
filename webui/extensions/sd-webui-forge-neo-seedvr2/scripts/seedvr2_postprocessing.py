@@ -49,6 +49,20 @@ def _run_ffmpeg(args):
     return proc.returncode, proc.stdout, proc.stderr
 
 
+def _try_import_dlss5():
+    """尝试导入 TE DLSS5 原生后端模块，失败返回 None。"""
+    dlss5_root = Path(__file__).resolve().parents[2] / "TE-webui-DLSS5"
+    if not dlss5_root.is_dir():
+        return None
+    try:
+        if str(dlss5_root) not in sys.path:
+            sys.path.insert(0, str(dlss5_root))
+        from te_dlss5 import native_backend, frame_guidance  # type: ignore
+        return native_backend, frame_guidance
+    except Exception:
+        return None
+
+
 class SeedVR2PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
     name = "SeedVR2"
     # Run before Forge's built-in Upscale (order=1000). In exclusive mode we
@@ -96,7 +110,7 @@ class SeedVR2PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
             only_final_output = gr.Checkbox(
                 label="仅输出最终 SeedVR2 图像",
                 value=True,
-                info="推荐保持开启。开启后 SeedVR2 会作为独占后处理器，跳过 Forge Upscale 等后续处理，避免重复放大或多余尺寸。",
+                info="推荐保持开启。开启后 SeedVR2 作为独占后处理器。若要叠加后续 DLSS5 画质增强，请关闭此项。",
             )
 
             gr.Markdown(
@@ -206,6 +220,20 @@ class SeedVR2PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
                     video_crf = gr.Slider(
                         label="视频质量 CRF（越小越清晰）", minimum=0, maximum=51, step=1, value=18
                     )
+                with gr.Row():
+                    apply_dlss5 = gr.Checkbox(
+                        label="叠加 DLSS5 画质增强（放大后再做神经画质处理）",
+                        value=False,
+                        info="需要 TE DLSS5 插件已安装。顺序：SeedVR2 放大 → DLSS5 增强。",
+                    )
+                    dlss5_style = gr.Dropdown(
+                        label="DLSS5 画面风格",
+                        choices=["default", "natural", "cinematic"],
+                        value="default",
+                    )
+                    dlss5_intensity = gr.Slider(
+                        label="DLSS5 强度", minimum=-1, maximum=2, step=0.05, value=1
+                    )
                 video_process_btn = gr.Button("🚀 开始放大视频", variant="primary")
                 video_output = gr.Video(label="输出视频")
                 video_status = gr.Textbox(label="处理状态", interactive=False)
@@ -220,7 +248,7 @@ class SeedVR2PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
                         blocks_to_swap, swap_io_components, unload_forge_model_first,
                         target_free_vram_gb, encode_tiled, encode_tile_size, encode_tile_overlap,
                         decode_tiled, decode_tile_size, decode_tile_overlap, debug,
-                        video_fps, video_crf,
+                        video_fps, video_crf, apply_dlss5, dlss5_style, dlss5_intensity,
                     ],
                     outputs=[video_output, video_status],
                 )
@@ -356,8 +384,8 @@ class SeedVR2PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
                             blocks_to_swap, swap_io_components, unload_forge_model_first,
                             target_free_vram_gb, encode_tiled, encode_tile_size, encode_tile_overlap,
                             decode_tiled, decode_tile_size, decode_tile_overlap, debug,
-                            out_fps, crf):
-        """上传视频文件：拆帧 → 逐帧 SeedVR2 放大 → 合成视频（保留音频）。"""
+                            out_fps, crf, apply_dlss5, dlss5_style, dlss5_intensity):
+        """上传视频文件：拆帧 → 逐帧 SeedVR2 放大（可选叠加 DLSS5）→ 合成视频（保留音频）。"""
         if not video_path:
             yield None, "❌ 请先上传视频文件"
             return
@@ -366,6 +394,18 @@ class SeedVR2PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
         if not ffmpeg:
             yield None, "❌ 未找到 ffmpeg，请将 ffmpeg.exe 加入 PATH 或放到 C:\\ffmpeg\\bin\\"
             return
+
+        # 检查 DLSS5 可用性
+        dlss5_modules = None
+        if apply_dlss5:
+            dlss5_modules = _try_import_dlss5()
+            if dlss5_modules is None:
+                yield None, "❌ 未找到 TE DLSS5 插件，无法叠加。请先安装 TE-webui-DLSS5。"
+                return
+            native_backend_dlss5, _ = dlss5_modules
+            if not native_backend_dlss5.resolve_backend():
+                yield None, "❌ TE DLSS5 原生后端未找到（te_dlss5_native.dll）"
+                return
 
         src = Path(video_path)
         if not src.is_file():
@@ -451,7 +491,8 @@ class SeedVR2PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
             if cfg.unload_forge_model_first:
                 print("[SeedVR2 Forge] " + unload_forge_models(cfg.target_free_vram_gb))
 
-            yield None, f"⚙️  初始化 SeedVR2 引擎（共 {total} 帧，{cfg.dit_model}）..."
+            stack = "SeedVR2" + (" + DLSS5" if apply_dlss5 else "")
+            yield None, f"⚙️  初始化 {stack} 引擎（共 {total} 帧，{cfg.dit_model}）..."
             engine = SeedVR2ForgeEngine(cfg)
 
             try:
@@ -462,11 +503,19 @@ class SeedVR2PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
                     layout = split_image(resized, tile_size=cfg.tile_size, tile_padding=cfg.tile_padding)
                     processed_tiles = engine.process_tiles([tile.image for tile in layout.tiles])
                     merged = merge_tiles(layout, processed_tiles)
+
+                    # 叠加 DLSS5 画质增强（同分辨率，video 模式保持时序）
+                    if apply_dlss5:
+                        merged = self._apply_dlss5_frame(
+                            dlss5_modules, merged, dlss5_style, dlss5_intensity
+                        )
+
                     merged.save(frames_out / fp.name)
                     if idx % 3 == 0 or idx == total:
-                        yield None, f"🔧 放大中：{idx}/{total} 帧"
+                        yield None, f"🔧 处理中（{stack}）：{idx}/{total} 帧"
             finally:
                 engine.cleanup()
+                self._close_dlss5()
 
             yield None, "🎞️  正在合成视频（保留音频）..."
             out_video = work_dir / f"seedvr2_{src.stem}.mp4"
@@ -499,7 +548,7 @@ class SeedVR2PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
                 yield None, "❌ 合成视频失败：未生成输出文件"
                 return
 
-            yield str(out_video), f"✅ 放大完成：{total} 帧，输出 {out_video.name}"
+            yield str(out_video), f"✅ 处理完成（{stack}）：{total} 帧，输出 {out_video.name}"
 
         finally:
             try:
@@ -507,3 +556,55 @@ class SeedVR2PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
                 shutil.rmtree(frames_out, ignore_errors=True)
             except Exception:
                 pass
+
+    # DLSS5 叠加处理（video 模式保持时序上下文）
+    _dlss5_enhancer = None
+    _dlss5_guidance = None
+    _dlss5_size = None
+    _dlss5_config = None
+
+    def _apply_dlss5_frame(self, dlss5_modules, image, style, intensity):
+        """对单帧应用 DLSS5 画质增强（video 模式，跨帧保持时序上下文）。"""
+        import numpy as np
+        native_backend_dlss5, frame_guidance_dlss5 = dlss5_modules
+
+        source = image.convert("RGBA")
+        frame = np.ascontiguousarray(np.asarray(source, dtype=np.uint8))
+        height, width = frame.shape[:2]
+        config = {
+            "style": str(style),
+            "intensity": max(-1.0, min(2.0, float(intensity))),
+            "localToneStrength": 1.0,
+            "localStructureStrength": 1.0,
+            "guidance": "zero",
+            "runtimeDir": str(native_backend_dlss5.resolve_runtime_dir()),
+        }
+
+        # 尺寸或配置变化时重建后端
+        if self._dlss5_size != (width, height) or self._dlss5_config != config:
+            self._close_dlss5()
+            backend = native_backend_dlss5.resolve_backend()
+            self._dlss5_enhancer = native_backend_dlss5.NativeEnhancer(backend, width, height, config)
+            self._dlss5_guidance = None  # zero 引导
+            self._dlss5_size = (width, height)
+            self._dlss5_config = config
+
+        result = self._dlss5_enhancer.process(frame.tobytes(order="C"))
+        output = np.frombuffer(result, dtype=np.uint8).reshape((height, width, 4))
+        return Image.fromarray(output, mode="RGBA").convert(image.mode if image.mode in ("RGB", "RGBA") else "RGB")
+
+    def _close_dlss5(self):
+        if self._dlss5_guidance is not None:
+            try:
+                self._dlss5_guidance.close()
+            except Exception:
+                pass
+            self._dlss5_guidance = None
+        if self._dlss5_enhancer is not None:
+            try:
+                self._dlss5_enhancer.close()
+            except Exception:
+                pass
+            self._dlss5_enhancer = None
+        self._dlss5_size = None
+        self._dlss5_config = None
