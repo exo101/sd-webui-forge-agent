@@ -58,6 +58,10 @@ webui/extensions/TE-webui-DLSS5/**/__pycache__/
 # 保留核心桥接 DLL（体积小，必需）
 !webui/extensions/TE-webui-DLSS5/te_dlss5/te_dlss5_native.dll
 !webui/extensions/TE-webui-DLSS5/te_dlss5/te_nvof_cuda.dll
+!webui/extensions/sd-webui-forge-neo-seedvr2/
+!webui/extensions/sd-webui-forge-neo-seedvr2/**
+webui/extensions/sd-webui-forge-neo-seedvr2/**/__pycache__/
+webui/extensions/sd-webui-forge-neo-seedvr2/**/*.pyc
 webui/extensions/sd-webui-agent-dev-2.5/outputs/
 webui/extensions/sd-webui-agent-dev-2.5/tmp/
 webui/extensions/sd-webui-agent-dev-2.5/data/agent_memory.json
