@@ -33,7 +33,7 @@ class ResourceSummaryTab(QWidget):
             {
                 "name": "GitHub",
                 "url": "https://github.com/exo101",
-                "description": "Stable Diffusion WebUI Forge Neo 的中文改良版本项目主页"
+                "description": "sd-webui-forge-agent 项目主页"
             },
             {
                 "name": "魔搭社区",

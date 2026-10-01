@@ -38,7 +38,7 @@ class PluginGuideTab(QWidget):
         
         # 说明文字
         intro = QLabel(
-            "本页面详细介绍 WebUI Forge Neo v3 集成的所有外置插件功能、所需模型及使用方法。\n"
+            "本页面详细介绍 sd-webui-forge-agent 集成的所有外置插件功能、所需模型及使用方法。\n"
             "帮助您快速上手各类增强功能。"
         )
         intro.setWordWrap(True)
@@ -427,7 +427,7 @@ class PluginGuideTab(QWidget):
         layout.setSpacing(10)
         
         layout.addWidget(self._create_section_title("📚 Model Guide - 模型使用说明"))
-        layout.addWidget(self._create_description("为 SD-WebUI Forge Neo 整合包提供详细的模型使用说明，帮助用户快速了解各种模型的组件结构、目录位置和使用方法。"))
+        layout.addWidget(self._create_description("为 sd-webui-forge-agent 整合包提供详细的模型使用说明，帮助用户快速了解各种模型的组件结构、目录位置和使用方法。"))
         
         layout.addWidget(self._create_subsection_title("主要内容"))
         layout.addWidget(self._create_description("""• <b>模型架构说明</b>：详细介绍支持的各类模型架构<br>
@@ -521,7 +521,7 @@ models/LatentSync/  # LatentSync 唇形同步模型
         layout.setSpacing(10)
         
         layout.addWidget(self._create_section_title("💬 Prompt All-in-One - 提示词一体化"))
-        layout.addWidget(self._create_description("强大的提示词管理工具，支持翻译、历史记录、收藏等功能，针对 Forge Neo 最新版本优化。"))
+        layout.addWidget(self._create_description("强大的提示词管理工具，支持翻译、历史记录、收藏等功能，针对 sd-webui-forge-agent 最新版本优化。"))
         
         layout.addWidget(self._create_subsection_title("核心功能"))
         layout.addWidget(self._create_description("""• <b>实时翻译</b>：中英文提示词双向翻译<br>

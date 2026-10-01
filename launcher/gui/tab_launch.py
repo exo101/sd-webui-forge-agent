@@ -103,7 +103,6 @@ class LaunchTab(QWidget):
     sig_stop_all     = pyqtSignal()
     sig_llama_launch = pyqtSignal()
     sig_llama_stop   = pyqtSignal()
-    sig_llama_open   = pyqtSignal()
     sig_comfy_launch = pyqtSignal()
     sig_comfy_stop   = pyqtSignal()
     sig_comfy_open   = pyqtSignal()
@@ -445,8 +444,7 @@ class LaunchTab(QWidget):
         announcements = [
             ("❌", "不支持AMD显卡与苹果系统）", "#ff6b6b"),
             ("✅", "CUDA 13.0 + PyTorch 2.10 最新环境", COLORS['green']),
-            ("⚠️", "英伟达驱动不得低于596.49）", "#ffd93d"),
-            ("⚠️", "启动 WebUI 时请关闭代理软件，端口可能会被占用，建议启动后再开启", "#ffd93d"),
+            ("⚠️", "英伟达驱动最低版本要求(596.49)", "#ffd93d"),
             ("💡", "旧版 SD WebUI 模型通用，直接迁移 models 目录即可", COLORS['accent']),
             ("⚠️", "不可把放模型与文件到重复目录或特殊符号命名目录下", "#ff6b6b")
         ]
@@ -567,8 +565,7 @@ class LaunchTab(QWidget):
         lines = [
             ("❌", "不支持 A卡（AMD显卡）", "#ff6b6b"),
             ("✅", "CUDA 13.0 + PyTorch 2.10 最新环境", COLORS['green']),
-            ("⚠️", "使用前务必更新英伟达驱动至最新版（596.49）", "#ffd93d"),
-            ("⚠️", "启动时请关闭代理软件，避免端口冲突", "#ffd93d"),
+            ("⚠️", "英伟达驱动最低版本要求(596.49)", "#ffd93d"),
             ("💡", "旧版 SD WebUI 模型通用，直接迁移 models 目录", COLORS['accent']),
         ]
 
@@ -738,7 +735,7 @@ class LaunchTab(QWidget):
 
         # 资源网格
         resources = [
-            {"name": "GitHub",     "url": "https://github.com/exo101",                                "description": "Stable Diffusion WebUI Forge Neo 中文版项目主页"},
+            {"name": "GitHub",     "url": "https://github.com/exo101",                                "description": "sd-webui-forge-agent 项目主页"},
             {"name": "魔搭社区",   "url": "https://www.modelscope.cn/home",                            "description": "ModelScope 开源模型社区"},
             {"name": "Ollama",     "url": "https://ollama.com/download/windows",                       "description": "本地运行大语言模型的工具"},
             {"name": "Hugging Face", "url": "https://huggingface.co/",                                 "description": "机器学习模型和数据集的开源平台"},
@@ -867,25 +864,9 @@ class LaunchTab(QWidget):
         row2.addWidget(self.btn_stop_all, 1)
         grid_layout.addLayout(row2)
 
-        # 第三行：打开 llama 端口
+        # 第三行：ComfyUI 按钮
         row3 = QHBoxLayout()
         row3.setSpacing(6)
-
-        self.btn_llama_open = QPushButton("🌐 llama 端口")
-        self.btn_llama_open.setMinimumHeight(32)
-        self.btn_llama_open.setStyleSheet(f"""
-            QPushButton{{background:{COLORS['bg_card']};color:{COLORS['text_secondary']};
-                border:1px solid {COLORS['border']};border-radius:6px;font-size:11px;}}
-            QPushButton:hover{{background:{COLORS['bg_hover']};}}
-        """)
-        self.btn_llama_open.clicked.connect(self.sig_llama_open.emit)
-        row3.addWidget(self.btn_llama_open, 1)
-
-        grid_layout.addLayout(row3)
-
-        # 第四行：ComfyUI 按钮
-        row4 = QHBoxLayout()
-        row4.setSpacing(6)
 
         self.btn_comfy_launch = QPushButton("🚀 ComfyUI")
         self.btn_comfy_launch.setMinimumHeight(32)
@@ -895,7 +876,7 @@ class LaunchTab(QWidget):
             QPushButton:hover{{background:{COLORS['bg_hover']};}}
         """)
         self.btn_comfy_launch.clicked.connect(self.sig_comfy_launch.emit)
-        row4.addWidget(self.btn_comfy_launch, 1)
+        row3.addWidget(self.btn_comfy_launch, 1)
 
         self.btn_comfy_stop = QPushButton("⏹ 停止 ComfyUI")
         self.btn_comfy_stop.setMinimumHeight(32)
@@ -905,7 +886,7 @@ class LaunchTab(QWidget):
             QPushButton:hover{{background:#5a2020;}}
         """)
         self.btn_comfy_stop.clicked.connect(self.sig_comfy_stop.emit)
-        row4.addWidget(self.btn_comfy_stop, 1)
+        row3.addWidget(self.btn_comfy_stop, 1)
 
         self.btn_comfy_open = QPushButton("🌐 ComfyUI 页面")
         self.btn_comfy_open.setMinimumHeight(32)
@@ -915,9 +896,9 @@ class LaunchTab(QWidget):
             QPushButton:hover{{background:{COLORS['bg_hover']};}}
         """)
         self.btn_comfy_open.clicked.connect(self.sig_comfy_open.emit)
-        row4.addWidget(self.btn_comfy_open, 1)
+        row3.addWidget(self.btn_comfy_open, 1)
 
-        grid_layout.addLayout(row4)
+        grid_layout.addLayout(row3)
 
         return frame
 

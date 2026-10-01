@@ -295,7 +295,7 @@ class MainWindow(QMainWindow):
         title.setStyleSheet(f"color:{COLORS['text_primary']};font-size:16px;font-weight:bold;margin-left:6px;")
         layout.addWidget(title)
 
-        sub = QLabel("Neo v3")
+        sub = QLabel("Agent")
         sub.setStyleSheet(f"color:{COLORS['accent_light']};font-size:11px;margin-left:4px;margin-top:4px;")
         layout.addWidget(sub)
         layout.addStretch()
@@ -361,7 +361,7 @@ class MainWindow(QMainWindow):
 
         layout.addStretch()
 
-        info = QLabel("Forge Neo v3")
+        info = QLabel("sd-webui-forge-agent")
         info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         info.setStyleSheet(f"color:{COLORS['text_dim']};font-size:10px;")
         layout.addWidget(info)
@@ -484,8 +484,6 @@ class MainWindow(QMainWindow):
                 self.tab_launch.sig_llama_launch.connect(self._on_llama_launch)
             if hasattr(self.tab_launch, 'sig_llama_stop'):
                 self.tab_launch.sig_llama_stop.connect(self._on_llama_stop)
-            if hasattr(self.tab_launch, 'sig_llama_open'):
-                self.tab_launch.sig_llama_open.connect(self._on_llama_open_browser)
             if hasattr(self.tab_launch, 'sig_comfy_launch'):
                 self.tab_launch.sig_comfy_launch.connect(self._on_comfy_launch)
             if hasattr(self.tab_launch, 'sig_comfy_stop'):

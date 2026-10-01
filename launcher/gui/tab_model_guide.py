@@ -38,7 +38,7 @@ class ModelGuideTab(QWidget):
         
         # 说明文字
         intro = QLabel(
-            "本页面详细介绍 WebUI Forge Neo v2 支持的各种模型架构、组件结构和配置方法。\n"
+            "本页面详细介绍 sd-webui-forge-agent 支持的各种模型架构、组件结构和配置方法。\n"
             "帮助您了解如何正确放置和使用各类模型文件。"
         )
         intro.setWordWrap(True)
@@ -60,6 +60,14 @@ class ModelGuideTab(QWidget):
         # Ollama / llama.cpp 模型下载说明
         ollama_llamacpp_section = self._create_ollama_llamacpp_section()
         content_layout.addWidget(ollama_llamacpp_section)
+
+        # MiniMax-H3 视频生成
+        minimax_h3_section = self._create_minimax_h3_section()
+        content_layout.addWidget(minimax_h3_section)
+
+        # Breeze-TTS-2 声音合成
+        breeze_tts_section = self._create_breeze_tts_section()
+        content_layout.addWidget(breeze_tts_section)
 
         # ACE-Step 音乐生成
         ace_step_section = self._create_ace_step_section()
@@ -274,13 +282,25 @@ huggingface-cli download Qwen/Qwen3-VL-4B-GGUF --local-dir models/llamacpp --inc
         
         overview_text = """
         <div style="line-height:1.8;color:#D1D5DB;">
-        <p>WebUI Forge Neo v2 支持以下主流模型架构：</p>
+        <p>sd-webui-forge-agent 支持以下主流模型架构：</p>
         <table style="width:100%;border-collapse:collapse;margin:12px 0;">
             <tr style="background:#1F2937;">
                 <th style="padding:10px;text-align:left;border:1px solid #374151;color:#60A5FA;">模型名称</th>
                 <th style="padding:10px;text-align:left;border:1px solid #374151;color:#60A5FA;">类型</th>
                 <th style="padding:10px;text-align:left;border:1px solid #374151;color:#60A5FA;">推荐显存</th>
                 <th style="padding:10px;text-align:left;border:1px solid #374151;color:#60A5FA;">说明</th>
+            </tr>
+            <tr>
+                <td style="padding:8px;border:1px solid #374151;"><b>MiniMax-H3</b></td>
+                <td style="padding:8px;border:1px solid #374151;">视频生成</td>
+                <td style="padding:8px;border:1px solid #374151;">12GB+</td>
+                <td style="padding:8px;border:1px solid #374151;">音视频联合生成，支持文生视频/参考生视频，含声音合成与音乐生成</td>
+            </tr>
+            <tr style="background:#111827;">
+                <td style="padding:8px;border:1px solid #374151;"><b>Breeze-TTS-2</b></td>
+                <td style="padding:8px;border:1px solid #374151;">声音合成</td>
+                <td style="padding:8px;border:1px solid #374151;">8GB+</td>
+                <td style="padding:8px;border:1px solid #374151;">开源双语 TTS，支持声音克隆、声音设计、声音引导</td>
             </tr>
             <tr>
                 <td style="padding:8px;border:1px solid #374151;"><b>ACE-Step</b></td>
@@ -295,10 +315,10 @@ huggingface-cli download Qwen/Qwen3-VL-4B-GGUF --local-dir models/llamacpp --inc
                 <td style="padding:8px;border:1px solid #374151;">3D Gaussian Splatting 模型，支持图像转3D</td>
             </tr>
             <tr style="background:#111827;">
-                <td style="padding:8px;border:1px solid #374151;"><b>Qwen-Image</b></td>
+                <td style="padding:8px;border:1px solid #374151;"><b>Qwen-Image-2.1</b></td>
                 <td style="padding:8px;border:1px solid #374151;">图像生成</td>
                 <td style="padding:8px;border:1px solid #374151;">12GB+</td>
-                <td style="padding:8px;border:1px solid #374151;">通义千问图像模型，支持文生图和编辑</td>
+                <td style="padding:8px;border:1px solid #374151;">通义千问图像模型 2.1，支持文生图和编辑</td>
             </tr>
             <tr>
                 <td style="padding:8px;border:1px solid #374151;"><b>Qwen Vision Chat</b></td>
@@ -313,10 +333,10 @@ huggingface-cli download Qwen/Qwen3-VL-4B-GGUF --local-dir models/llamacpp --inc
                 <td style="padding:8px;border:1px solid #374151;">动漫图像多层 PSD 分解工具</td>
             </tr>
             <tr>
-                <td style="padding:8px;border:1px solid #374151;"><b>Multimodal Media</b></td>
-                <td style="padding:8px;border:1px solid #374151;">多模态处理</td>
-                <td style="padding:8px;border:1px solid #374151;">8GB+</td>
-                <td style="padding:8px;border:1px solid #374151;">TTS、数字人、视频生成等多功能插件</td>
+                <td style="padding:8px;border:1px solid #374151;"><b>H3 Studio 工作台</b></td>
+                <td style="padding:8px;border:1px solid #374151;">全栈视听</td>
+                <td style="padding:8px;border:1px solid #374151;">12GB+</td>
+                <td style="padding:8px;border:1px solid #374151;">整合视频生成、声音合成、音乐生成的统一工作台</td>
             </tr>
             <tr>
                 <td style="padding:8px;border:1px solid #374151;"><b>Ernie-Image</b></td>
@@ -515,23 +535,23 @@ models/VAE/
         return container
     
     def _create_qwen_image_section(self) -> QWidget:
-        """创建 Qwen-Image 部分"""
+        """创建 Qwen-Image-2.1 部分"""
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
         
-        layout.addWidget(self._create_section_title("🤖 Qwen-Image 模型"))
+        layout.addWidget(self._create_section_title("🤖 Qwen-Image-2.1 模型"))
         
         layout.addWidget(self._create_subsection_title("模型组件结构"))
         layout.addWidget(self._create_code_block("""models/Stable-diffusion/
-└── qwen_image_edit_2511_int8_convrot.safetensors  # 主模型
+└── qwen_image_2.1_int8_convrot.safetensors  # 主模型（int8 量化版）
 
-models/text_encoder/              # 文本编码器
-└── qwen_2.5_vl_7b_fp8_scaled.safetensors   # 通义千问编码器
+models/text_encoder/                     # 文本编码器
+└── qwen3vl_8b_int8_convrot.safetensors  # Qwen3VL 8B 编码器
 
 models/VAE/
-└── qwen_image_vae.safetensors       # Qwen-Image 专用 VAE"""))
+└── qwen_image_2.1_vae_bf16.safetensors  # Qwen-Image-2.1 专用 VAE"""))
         
         layout.addWidget(self._create_subsection_title("模型类型对比"))
         layout.addWidget(self._create_description("""<table style="width:100%;border-collapse:collapse;margin:10px 0;">
@@ -647,6 +667,71 @@ models/ControlNet/preprocessor/  # 预处理器目录
         
         return container
     
+    def _create_minimax_h3_section(self) -> QWidget:
+        """创建 MiniMax-H3 视频生成模型部分"""
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+        
+        layout.addWidget(self._create_section_title("🎬 MiniMax-H3 视频生成模型"))
+        
+        layout.addWidget(self._create_description("MiniMax-H3 是 MiniMax 开源的音视频联合生成模型，支持文生视频（FL2VA）、参考生视频（REF2VA）、首尾帧生视频三种模式，同时生成视频和音频。"))
+        
+        layout.addWidget(self._create_subsection_title("模型组件结构"))
+        layout.addWidget(self._create_code_block("""models/diffusion_models/
+├── minimax_h3_fl2va_pruned_int8_convrot.safetensors   # FL2VA 文生视频 DiT（INT8）
+└── minimax_h3_ref2va_pruned_int8_convrot.safetensors  # REF2VA 参考生视频 DiT（INT8）
+
+models/text_encoder/
+└── qwen3vl_32b_minimax_h3_int8_convrot.safetensors   # Qwen3VL 32B 文本编码器
+
+models/vae/
+├── minimax_h3_video_vae_fp16.safetensors              # 视频 VAE
+└── minimax_h3_audio_vae_fp32.safetensors              # 音频 VAE"""))
+
+        layout.addWidget(self._create_subsection_title("量化格式"))
+        layout.addWidget(self._create_description("""• <b>INT8</b>：Comfy-Org int8_convrot 量化，精度更好，适合显存充足（16GB+）
+• <b>NF4</b>：DiffSynth-Studio 4bit 量化，显存最省（12GB+），速度略慢"""))
+
+        layout.addWidget(self._create_subsection_title("显存/内存策略"))
+        layout.addWidget(self._create_description("H3 Studio 提供四档自适应策略，自动检测 VRAM 与 RAM 选择最优配置："))
+        layout.addWidget(self._create_code_block("""高性能 (performance) ：VRAM≥20G 且 RAM≥24G，不开梯度检查点
+省内存 (save_memory) ：VRAM≥20G 且 RAM<24G，权重卸载到磁盘
+省显存 (save_vram)   ：VRAM<20G 且 RAM≥24G，开启梯度检查点
+极致省 (extreme)     ：VRAM<20G 且 RAM<24G，磁盘卸载+梯度检查点"""))
+
+        layout.addWidget(self._create_note("""• 下载器提供「MiniMax-H3-INT8」「MiniMax-H3-NF4」一键组合<br>
+• 参考模式需选择 REF2VA DiT，文生视频选择 FL2VA DiT<br>
+• 支持加载 H3 Turbo / 风格 / 角色 LoRA""", "tip"))
+        
+        return container
+
+    def _create_breeze_tts_section(self) -> QWidget:
+        """创建 Breeze-TTS-2 声音合成模型部分"""
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+        
+        layout.addWidget(self._create_section_title("🗣️ Breeze-TTS-2 声音合成模型"))
+        
+        layout.addWidget(self._create_description("Breeze-TTS-2 是 Bytedance 开源的双语（中文/英文）TTS 模型，支持三种模式：声音克隆、声音设计、声音引导。"))
+        
+        layout.addWidget(self._create_subsection_title("三种模式"))
+        layout.addWidget(self._create_description("""• <b>声音克隆</b>：上传参考音频，克隆其音色生成语音
+• <b>声音设计</b>：用文字描述想要的声音特征（如"低沉的男声"）
+• <b>声音引导</b>：结合参考音频和文字描述，生成特定风格的语音"""))
+
+        layout.addWidget(self._create_subsection_title("模型下载"))
+        layout.addWidget(self._create_description("开源社区模型下载器提供「Breeze-TTS-2」一键组合，自动放置到对应目录。"))
+
+        layout.addWidget(self._create_note("""⚠️ <b>transformers 版本要求：</b><br>
+Breeze-TTS-2 需要 transformers 4.57.3（旧版），与 MiniMax-H3 / Qwen-Image-2.1 所需的 5.17.0 冲突。<br>
+声音合成需部署在<b>独立的 Python 虚拟环境</b>中，通过子进程调用。""", "warning"))
+        
+        return container
+
     def _create_ace_step_section(self) -> QWidget:
         """创建 ACE-Step 音乐生成模型部分"""
         container = QWidget()
