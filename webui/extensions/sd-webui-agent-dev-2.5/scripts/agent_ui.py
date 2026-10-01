@@ -873,6 +873,7 @@ def on_ui_tabs():
                         scale=4, show_label=False,
                         elem_id="agent_chat_input",
                     )
+                    mic_btn = gr.Button("🎤 语音", variant="secondary", scale=1, elem_id="agent_mic_btn")
                     send_btn = gr.Button("📤 发送", variant="primary", scale=1, elem_id="agent_send_btn")
                     pause_btn = gr.Button("⏹️ 暂停思考", variant="stop", scale=1, elem_id="agent_pause_btn")
                     clear_btn = gr.Button("🗑️ 清空", scale=1)
@@ -1628,6 +1629,64 @@ def on_ui_tabs():
         pause_btn.click(fn=request_stop, outputs=[status])
 
         clear_btn.click(fn=lambda: [], outputs=[chatbot])
+
+        # ── 语音输入：浏览器 Web Speech API（无需后端）──
+        mic_btn.click(
+            fn=None,
+            js="""
+            () => {
+                const btn = document.getElementById('agent_mic_btn');
+                const input = document.querySelector('#agent_chat_input textarea') || document.querySelector('#agent_chat_input input');
+                if (!input) { alert('未找到输入框'); return; }
+
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SR) { alert('当前浏览器不支持语音识别，请使用 Chrome/Edge'); return; }
+
+                if (btn._recognition && btn._recording) {
+                    btn._recognition.stop();
+                    return;
+                }
+
+                const rec = new SR();
+                rec.lang = 'zh-CN';
+                rec.continuous = true;
+                rec.interimResults = true;
+
+                let finalText = '';
+                rec.onresult = (e) => {
+                    let interim = '';
+                    for (let i = e.resultIndex; i < e.results.length; i++) {
+                        const t = e.results[i][0].transcript;
+                        if (e.results[i].isFinal) finalText += t;
+                        else interim += t;
+                    }
+                    input.value = finalText + interim;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                };
+                rec.onstart = () => {
+                    btn._recording = true;
+                    btn.style.background = '#ff4444';
+                    btn.style.color = '#fff';
+                    btn.textContent = '🔴 录音中...';
+                };
+                rec.onend = () => {
+                    btn._recording = false;
+                    btn.style.background = '';
+                    btn.style.color = '';
+                    btn.textContent = '🎤 语音';
+                };
+                rec.onerror = (e) => {
+                    btn._recording = false;
+                    btn.style.background = '';
+                    btn.style.color = '';
+                    btn.textContent = '🎤 语音';
+                    if (e.error !== 'no-speech') alert('语音识别错误: ' + e.error);
+                };
+                btn._recognition = rec;
+                rec.start();
+            }
+            """
+        )
 
         # 图像预览容器 CSS：放大显示尺寸（原 240px/224px 过小，"放大也很小"的根源）。
         # 点击放大的 lightbox 由 agent_interface.load(js=...) 注入的客户端 JS 实现
