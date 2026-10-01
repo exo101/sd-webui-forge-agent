@@ -101,9 +101,16 @@ def make_checkpoint_manager_ui():
 
     def refresh_model_list():
         ckpt_list, vae_list = refresh_models()
-        return [gr.update(choices=ckpt_list), gr.update(choices=vae_list)]
+        # 清除主模型、VAE、文本编码器的配置残留
+        shared.opts.set("sd_model_checkpoint", None)
+        shared.opts.set("forge_additional_modules", [])
+        shared.opts.save(shared.config_filename)
+        return [
+            gr.update(choices=ckpt_list, value=None),
+            gr.update(choices=vae_list, value=None),
+        ]
 
-    refresh_button = ui_common.ToolButton(value=ui_common.refresh_symbol, elem_id="forge_refresh_checkpoint", tooltip="Refresh")
+    refresh_button = ui_common.ToolButton(value="🗑️", elem_id="forge_refresh_checkpoint", tooltip="清理模型配置（清除主模型/VAE/文本编码器残留）")
     ui_refresh_checkpoint = refresh_button
     refresh_button.click(fn=refresh_model_list, outputs=[ui_checkpoint, ui_vae], queue=False)
     Context.root_block.load(fn=refresh_model_list, outputs=[ui_checkpoint, ui_vae], queue=False)
