@@ -419,6 +419,22 @@ class LaunchTab(QWidget):
                         padding-top: 4px;
                     """)
                     left_col.addWidget(lbl_hint)
+
+                    # QQ 群号列表
+                    qq_groups = [
+                        ("2群", "1040349057"),
+                        ("3群", "568457487"),
+                        ("4群", "1057489693"),
+                    ]
+                    for gname, gnum in qq_groups:
+                        lbl_g = QLabel(f"{gname}：{gnum}")
+                        lbl_g.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                        lbl_g.setStyleSheet(f"""
+                            color: {COLORS['text_secondary']};
+                            font-size: 10px;
+                            padding: 1px 0;
+                        """)
+                        left_col.addWidget(lbl_g)
         except Exception as e:
             print(f"[DEBUG] Exception loading image: {e}")
         
@@ -433,6 +449,22 @@ class LaunchTab(QWidget):
                 border-radius: 8px;
             """)
             left_col.addWidget(lbl_qq)
+
+            # 图片未加载时也显示群号
+            qq_groups = [
+                ("2群", "1040349057"),
+                ("3群", "568457487"),
+                ("4群", "1057489693"),
+            ]
+            for gname, gnum in qq_groups:
+                lbl_g = QLabel(f"{gname}：{gnum}")
+                lbl_g.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                lbl_g.setStyleSheet(f"""
+                    color: {COLORS['text_secondary']};
+                    font-size: 10px;
+                    padding: 1px 0;
+                """)
+                left_col.addWidget(lbl_g)
         
         top_row.addLayout(left_col)
 
