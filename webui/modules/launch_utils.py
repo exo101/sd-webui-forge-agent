@@ -425,7 +425,7 @@ assert cuda or xpu or mps
     if not os.path.isfile(requirements_file):
         requirements_file = os.path.join(script_path, requirements_file)
 
-    if not requirements_met(requirements_file):
+    if not args.skip_install and not requirements_met(requirements_file):
         run_pip(f'install -r "{requirements_file}"', "requirements")
         startup_timer.record("install requirements")
 
@@ -444,7 +444,7 @@ assert cuda or xpu or mps
         git_pull_recursive(extensions_dir)
         startup_timer.record("update extensions")
 
-    if not requirements_met(requirements_file):
+    if not args.skip_install and not requirements_met(requirements_file):
         run_pip(f'install -r "{requirements_file}"', "requirements")
         startup_timer.record("enforce requirements")
 
