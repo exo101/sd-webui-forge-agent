@@ -31,7 +31,6 @@ def _mount_multimedia_tabs():
     # 1. ACE-Step 音乐生成
     try:
         ace = _load_module_from_file("h3_forge_ace_step_ui", "ace_step_ui.py")
-        print(f"[H3 Studio] ACE-Step UI loaded: {ace.__name__} from {ace.__file__}", flush=True)
         with gr.TabItem("🎵 音乐生成"):
             ace.create_ace_step_ui(asset_bridge_id="h3studio-asset-bridge-ace")
     except Exception as e:
