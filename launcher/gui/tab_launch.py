@@ -769,7 +769,7 @@ class LaunchTab(QWidget):
         resources = [
             {"name": "GitHub",     "url": "https://github.com/exo101",                                "description": "sd-webui-forge-agent 项目主页"},
             {"name": "魔搭社区",   "url": "https://www.modelscope.cn/home",                            "description": "ModelScope 开源模型社区"},
-            {"name": "Ollama",     "url": "https://ollama.com/download/windows",                       "description": "本地运行大语言模型的工具"},
+            {"name": "B站教程",   "url": "https://space.bilibili.com/403361177?spm_id_from=333.1007.0.0",   "description": "哔哩哔哩（鸡肉爱土豆）教程主页"},
             {"name": "Hugging Face", "url": "https://huggingface.co/",                                 "description": "机器学习模型和数据集的开源平台"},
             {"name": "哩布哩布",   "url": "https://www.liblib.art/inspiration",                        "description": "中国领先的AI创作平台"},
             {"name": "C站",        "url": "https://civitai.com/",                                      "description": "AI艺术模型分享平台"},

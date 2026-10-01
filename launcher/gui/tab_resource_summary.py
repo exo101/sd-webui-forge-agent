@@ -41,9 +41,9 @@ class ResourceSummaryTab(QWidget):
                 "description": "ModelScope 开源模型社区，汇集业界最新最热的模型、数据集"
             },
             {
-                "name": "Ollama",
-                "url": "https://ollama.com/download/windows",
-                "description": "本地运行大语言模型的工具，支持Windows平台"
+                "name": "B站教程",
+                "url": "https://space.bilibili.com/403361177?spm_id_from=333.1007.0.0",
+                "description": "哔哩哔哩（鸡肉爱土豆）教程主页"
             },
             {
                 "name": "Hugging Face",
