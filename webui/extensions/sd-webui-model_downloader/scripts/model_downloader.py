@@ -189,7 +189,7 @@ MODEL_PRESETS = [
         "id": "qwen-image-2.1",
         "name": "Qwen-Image-2.1",
         "description": "Qwen-Image-2.1 int8 convrot 完整模型组合",
-        "role": "通义千问图像生成模型",
+        "role": "上下文编辑模型",
         "vram": "12 GB",
         "cover": "qwen-image-2.1.png",
         "files": [
