@@ -255,8 +255,17 @@ class QwenImage21(ForgeDiffusionEngine):
         if self.use_diffsynth:
             return [torch.zeros(1, 1, 4096, dtype=torch.bfloat16)]
 
-        device = memory_management.text_encoder_device()
+        # ComfyUI keeps the Qwen3-VL vision inputs on the execution GPU.  Do
+        # not inherit Forge's generic CPU text-encoder fallback for Qwen21;
+        # that fallback turns the 8B visual/text pass into a multi-minute CPU
+        # computation.
+        device = memory_management.get_torch_device()
 
+        print(
+            f"[Qwen21] multimodal conditioning: latents={len(latents)} images={len(images)} "
+            f"prompt={str(prompt[0] if isinstance(prompt, list) and prompt else prompt)[:120]!r}",
+            flush=True,
+        )
         images_vl = []
         for image in images:
             vl_image = self.encode_vision(image)
@@ -264,23 +273,27 @@ class QwenImage21(ForgeDiffusionEngine):
             images_vl.append(vl_image)
 
         dynamic_args.ref_latents = latents.copy()
+        # Make the image order explicit for multi-image editing.  ComfyUI's
+        # native edit nodes prefix each visual input with a Picture label;
+        # without an equivalent textual anchor, Qwen can receive two images
+        # correctly but treat them as unassigned references.
+        if len(images_vl) > 1:
+            picture_labels = " ".join(f"Picture {index + 1}:" for index in range(len(images_vl)))
+            prompt = [f"{picture_labels}\n{prompt[0] if isinstance(prompt, list) and prompt else prompt}"]
         out = self.text_processing_engine_qwen(prompt, images=images_vl)
         dynamic_args.qwen21_image_slots = [*self.text_processing_engine_qwen.last_image_slots]
         return out
 
     @torch.inference_mode()
     def encode_vision(self, image: torch.Tensor) -> torch.Tensor:
-        samples = image.movedim(-1, 1)
-
-        total = int(384 * 384)
-        scale_by = math.sqrt(total / (samples.shape[3] * samples.shape[2]))
-        width = round(samples.shape[3] * scale_by)
-        height = round(samples.shape[2] * scale_by)
-
-        s = torch.nn.functional.interpolate(samples, size=(height, width), mode="area")
-        _vision = s.movedim(1, -1)
-
-        return _vision
+        # ComfyUI's native TextEncodeQwenImage21 uses the same resized image
+        # for the vision encoder and the VAE reference latent.  The previous
+        # Forge path resized the vision input independently to 384x384 while
+        # the latent kept another aspect/size, which breaks multi-image slot
+        # alignment and can make all references appear ineffective.
+        # ImageStitch has already normalized the image to a bounded, aligned
+        # resolution, so preserve that tensor here.
+        return image
 
     @torch.inference_mode()
     def get_prompt_lengths_on_ui(self, prompt):

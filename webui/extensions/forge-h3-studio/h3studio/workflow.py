@@ -13,6 +13,7 @@ MODE_NAMES = {
     "i2v": "首帧图生视频",
     "fl2v": "首尾帧视频",
     "ref": "多模态参考",
+    "swap": "视频人物替换",
 }
 
 
@@ -176,11 +177,32 @@ def normalize_request(raw: dict[str, Any]) -> dict[str, Any]:
     elif mode == "i2v":
         data.pop("last_frame", None)
         data.pop("last_frame_crop", None)
-    elif mode == "ref":
+    elif mode in {"ref", "swap"}:
         data.pop("first_frame", None)
         data.pop("last_frame", None)
         data.pop("first_frame_crop", None)
         data.pop("last_frame_crop", None)
+
+    if mode == "swap":
+        source_video = str(data.get("source_video") or "").strip()
+        if not source_video:
+            raise WorkflowValidationError("人物替换模式需要源视频")
+        data["source_video"] = _filename(source_video, "源视频")
+        characters = data.get("character_images") or []
+        if not isinstance(characters, list):
+            raise WorkflowValidationError("人物参考图格式无效")
+        character_files = [str(item).strip() for item in characters if str(item).strip()]
+        if not character_files:
+            raise WorkflowValidationError("人物替换模式至少需要一张人物参考图")
+        if len(character_files) > 9:
+            raise WorkflowValidationError("人物参考图最多 9 张")
+        data["character_images"] = [_filename(item, "人物参考图") for item in character_files]
+        keep_source_audio = bool(data.get("keep_source_audio", True))
+        data["keep_source_audio"] = keep_source_audio
+        # 源视频作为“可编辑参考”（不加 Guide 硬锁），人物图作为身份参考，
+        # 与多模态参考共用 MiniMaxH3ReferenceToVideo 原生节点。
+        data["references"] = [{"kind": "video", "file": data["source_video"], "include_audio": keep_source_audio}]
+        data["references"].extend({"kind": "image", "file": image, "include_audio": True} for image in data["character_images"])
 
     refs = data.get("references") or []
     if not isinstance(refs, list):
@@ -200,9 +222,15 @@ def normalize_request(raw: dict[str, Any]) -> dict[str, Any]:
             "file": _filename(item.get("file"), "参考素材"),
             "include_audio": bool(item.get("include_audio", True)),
         })
-    if mode == "ref" and not normalized_refs:
+    if mode in {"ref", "swap"} and not normalized_refs:
         raise WorkflowValidationError("多参考模式至少需要一个参考素材")
-    data["references"] = normalized_refs if mode == "ref" else []
+    data["references"] = normalized_refs if mode in {"ref", "swap"} else []
+    if mode == "swap":
+        data["swap"] = {
+            "source_video": data["source_video"],
+            "character_images": data["character_images"],
+            "keep_source_audio": data["keep_source_audio"],
+        }
     data["ref_image_size"] = "max" if data.get("ref_image_size") == "max" else "match"
 
     loras = data.get("loras") or []
@@ -329,7 +357,7 @@ def build_h3_workflow(request: dict[str, Any]) -> tuple[dict[str, Any], dict[str
         "H3 视频/音频 Sigma Shift",
     )
 
-    if data["mode"] == "ref":
+    if data["mode"] in {"ref", "swap"}:
         cond_inputs: dict[str, Any] = {
             "clip": clip_link,
             "vae": [video_vae, 0],
@@ -357,7 +385,11 @@ def build_h3_workflow(request: dict[str, Any]) -> tuple[dict[str, Any], dict[str
             else:
                 load = graph.add("LoadAudio", {"audio": ref["file"]}, f"参考音频 {slot + 1}")
                 cond_inputs[f"ref_audios.ref_audio_{slot}"] = [load, 0]
-        conditioning = graph.add("MiniMaxH3ReferenceToVideo", cond_inputs, "MiniMax H3 多模态参考")
+        conditioning = graph.add(
+            "MiniMaxH3ReferenceToVideo",
+            cond_inputs,
+            "MiniMax H3 人物替换" if data["mode"] == "swap" else "MiniMax H3 多模态参考",
+        )
     else:
         cond_inputs = {
             "clip": clip_link,
@@ -478,7 +510,7 @@ def build_h3_workflow(request: dict[str, Any]) -> tuple[dict[str, Any], dict[str
         summary["warnings"].append("H3 按 24 FPS 生成；其他导出 FPS 会改变播放速度")
     if data["width"] * data["height"] > 1344 * 768:
         summary["warnings"].append("当前像素面积高于 1344×768，显存占用和生成时间会明显增加")
-    if data["mode"] == "ref":
+    if data["mode"] in {"ref", "swap"}:
         expected_tags: list[str] = []
         image_count = sum(ref["kind"] == "image" for ref in data["references"])
         video_refs = [ref for ref in data["references"] if ref["kind"] == "video"]

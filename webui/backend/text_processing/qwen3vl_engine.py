@@ -163,8 +163,23 @@ class Qwen3VLTextProcessingEngine:
         # in the stripped context, then drop the spans (qwen21 only; other models keep the legacy slice)
         slots = []
         if dynamic_args.qwen21:
+            # `template_end` is an index in the original token list, while
+            # process_embeds() has already expanded every vision placeholder
+            # into thousands of embeddings.  ComfyUI adjusts the second
+            # <|im_start|> by the expansion of all preceding image blocks.
+            # Without this correction single-image edits can appear to work,
+            # but multi-image conditioning is cut at the wrong position.
+            expanded_template_end = template_end
+            image_positions = [
+                index for index, token in enumerate(tokens)
+                if not isinstance(token, int) and isinstance(token, dict) and token.get("type") == "image"
+            ]
+            for image_index, image_position in enumerate(image_positions):
+                if image_position < template_end and image_index < len(info):
+                    expanded_template_end += int(info[image_index].get("size", 1)) - 1
+
             keep = torch.ones(out.shape[2], dtype=torch.bool)
-            keep[:template_end] = False
+            keep[:expanded_template_end] = False
             for e in info:
                 if e.get("type") != "image":
                     continue
@@ -186,7 +201,11 @@ class Qwen3VLTextProcessingEngine:
         return out, slots
 
     def process_embeds(self, batch_tokens):
-        device = memory_management.text_encoder_device()
+        # Qwen Image 2.1's 8B joint text/vision encoder must execute on the
+        # CUDA device.  The generic text_encoder_device() may intentionally
+        # return CPU under Forge low-VRAM policy, which makes the whole
+        # Qwen3-VL forward take minutes even though the model is loaded.
+        device = memory_management.get_torch_device() if dynamic_args.qwen21 else memory_management.text_encoder_device()
 
         embeds_out = []
         attention_masks = []
@@ -217,7 +236,12 @@ class Qwen3VLTextProcessingEngine:
             embeds_info = []
 
             for o in other_embeds:
-                emb, extra = self.text_encoder.preprocess_embed(o[1], device=device)
+                # ComfyUI keeps image/vision preprocessing under the same
+                # quantized-matmul scope as the language model.  Running the
+                # Qwen3-VL vision tower outside this scope makes every visual
+                # Linear fall back to materialized BF16/FP32 weights.
+                with _quantized_matmul_context(self.text_encoder):
+                    emb, extra = self.text_encoder.preprocess_embed(o[1], device=device)
                 if emb is None:
                     index += -1
                     continue

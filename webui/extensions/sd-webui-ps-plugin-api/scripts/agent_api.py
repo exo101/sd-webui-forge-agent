@@ -346,7 +346,10 @@ def _call_llm(messages, cfg, tools, tool_choice="auto"):
         return _call_llm_requests(messages, cfg, tools, tool_choice)
 
     client = OpenAI(
-        api_key=cfg.get("api_key", "local"),
+        # LM Studio/local OpenAI-compatible servers usually do not require a
+        # key, but the OpenAI SDK rejects an empty string. Use a harmless
+        # placeholder unless a real key was configured.
+        api_key=cfg.get("api_key") or "local",
         base_url=cfg.get("base_url", "http://localhost:8080/v1"),
         max_retries=3,
     )
@@ -368,7 +371,7 @@ def _call_llm(messages, cfg, tools, tool_choice="auto"):
 
 def _call_llm_requests(messages, cfg, tools, tool_choice="auto"):
     """requests 回退方案"""
-    url = cfg.get("base_url", "http://localhost:8080/v1").rstrip("/") + "/chat/completions"
+    url = (cfg.get("base_url") or "http://localhost:8080/v1").rstrip("/") + "/chat/completions"
     payload = {
         "model": cfg.get("model", "Qwen3.5-4B-Q6_K.gguf"),
         "messages": messages,
@@ -442,8 +445,8 @@ def _call_llm_stream(messages, cfg, tools, tool_choice="auto", on_token=None, on
         return _call_llm_stream_requests(messages, cfg, tools, tool_choice, on_token, on_reasoning)
 
     client = OpenAI(
-        api_key=cfg.get("api_key", "local"),
-        base_url=cfg.get("base_url", "http://localhost:8080/v1"),
+        api_key=cfg.get("api_key") or "local",
+        base_url=cfg.get("base_url") or "http://localhost:8080/v1",
         max_retries=1,
     )
     kwargs = {
@@ -473,7 +476,7 @@ def _call_llm_stream(messages, cfg, tools, tool_choice="auto", on_token=None, on
 
 def _call_llm_stream_requests(messages, cfg, tools, tool_choice="auto", on_token=None, on_reasoning=None):
     """requests 流式回退方案（解析 OpenAI SSE 格式）"""
-    url = cfg.get("base_url", "http://localhost:8080/v1").rstrip("/") + "/chat/completions"
+    url = (cfg.get("base_url") or "http://localhost:8080/v1").rstrip("/") + "/chat/completions"
     payload = {
         "model": cfg.get("model", "Qwen3.5-4B-Q6_K.gguf"),
         "messages": messages,

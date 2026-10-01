@@ -25,6 +25,7 @@ from .errors import H3StudioError
 from .jobs import job_store
 from . import local_backend
 from .workflow import build_h3_workflow
+from .asset_import import drain_external_assets, import_local_asset
 
 API_ROOT = "/h3studio/api"
 ASSET_EXTENSIONS = {
@@ -133,6 +134,18 @@ def _validate_settings(payload: dict[str, Any]) -> dict[str, Any]:
         cleaned["minimax_api_base"] = (
             str(payload["minimax_api_base"] or "").strip() or "https://api.minimaxi.com"
         )
+    if "local_engine" in payload:
+        if payload["local_engine"] not in {"diffsynth"}:
+            raise H3StudioError("本地引擎无效，仅支持 diffsynth")
+        cleaned["local_engine"] = payload["local_engine"]
+    if "dit_quant" in payload:
+        if payload["dit_quant"] not in {"auto", "nf4", "int8"}:
+            raise H3StudioError("模型量化格式无效")
+        cleaned["dit_quant"] = payload["dit_quant"]
+    if "vram_strategy" in payload:
+        if payload["vram_strategy"] not in {"auto", "performance", "save_memory", "save_vram", "extreme"}:
+            raise H3StudioError("显存策略无效")
+        cleaned["vram_strategy"] = payload["vram_strategy"]
     mode = cleaned.get("backend_mode", load_config().get("backend_mode"))
     port = cleaned.get("port", load_config().get("port", 8189))
     if mode == "managed":
@@ -155,6 +168,10 @@ def register_api(_: Any, app: FastAPI) -> None:
             "lora_presets": load_lora_presets(),
             "jobs": [_public_job(job) for job in job_store.list(30)],
         }
+
+    @app.get(f"{API_ROOT}/external-assets")
+    def external_assets():
+        return {"items": drain_external_assets()}
 
     @app.get(f"{API_ROOT}/settings")
     def get_settings():
@@ -262,6 +279,13 @@ def register_api(_: Any, app: FastAPI) -> None:
                 file.file.close()
             except Exception:
                 pass
+
+    @app.post(f"{API_ROOT}/assets/import-path")
+    def import_asset_path(payload: dict[str, Any] = Body(...)):
+        try:
+            return import_local_asset(str(payload.get("path") or ""))
+        except Exception as exc:
+            _fail(exc)
 
     @app.get(f"{API_ROOT}/media")
     def media(
@@ -373,6 +397,13 @@ def register_api(_: Any, app: FastAPI) -> None:
     def cancel_job(job_id: str):
         try:
             return _public_job(job_store.cancel(job_id))
+        except Exception as exc:
+            _fail(exc)
+
+    @app.delete(f"{API_ROOT}/jobs/{{job_id}}")
+    def delete_job(job_id: str):
+        try:
+            return job_store.delete(job_id)
         except Exception as exc:
             _fail(exc)
 

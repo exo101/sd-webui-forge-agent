@@ -199,7 +199,7 @@ class VAE:
     def decode_tiled_(self, samples, tile_x=64, tile_y=64, overlap=16):
         decode_fn = lambda a: self.first_stage_model.decode(a.to(self.vae_dtype).to(self.device)).float()
         output = self.process_output((tiled_scale(samples, decode_fn, tile_x // 2, tile_y * 2, overlap, upscale_amount=self.upscale_ratio, out_channels=self.output_channels, output_device=self.output_device) + tiled_scale(samples, decode_fn, tile_x * 2, tile_y // 2, overlap, upscale_amount=self.upscale_ratio, out_channels=self.output_channels, output_device=self.output_device) + tiled_scale(samples, decode_fn, tile_x, tile_y, overlap, upscale_amount=self.upscale_ratio, out_channels=self.output_channels, output_device=self.output_device)) / 3.0)
-        if self.output_channels > 3:
+        if self.output_channels > 3 and not self.is_qwen21:
             output = output[:, :3]
         return output
 
@@ -236,7 +236,7 @@ class VAE:
             for x in range(0, samples_in.shape[0], batch_number):
                 samples = samples_in[x : x + batch_number].to(device=self.device, dtype=self.vae_dtype)
                 out = self.process_output(self.first_stage_model.decode(samples).to(device=self.output_device, dtype=torch.float32, copy=True))
-                if self.output_channels > 3:
+                if self.output_channels > 3 and not self.is_qwen21:
                     out = out[:, :3]
                 if pixel_samples is None:
                     pixel_samples = torch.empty((samples_in.shape[0],) + tuple(out.shape[1:]), device=self.output_device)

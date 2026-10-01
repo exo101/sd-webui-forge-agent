@@ -309,72 +309,17 @@ def get_lora(lora_id: str):
             return l
     return None
 
-# ════════════════════════════════════════════════════════════════════
-# 高清放大上采样模型（Real-ESRGAN）预设
-# Forge 的 ESRGAN 上采样器目录由 --esrgan-models-path 指定，默认 models/ESRGAN。
-# 文件下载放入该目录后会被自动扫描，出现在上采样器下拉列表，无需额外配置。
-# target_dir 是相对于 models_path 的子目录名（ESRGAN）。
-# ════════════════════════════════════════════════════════════════════
-MODEL_UPSCALERS = [
-    {
-        "id": "4x-ultrasharp",
-        "name": "4x-UltraSharp",
-        "role": "通用高清放大",
-        "repo_id": "XiangZL0/4x-UltraSharp",
-        "file_path": "4x-UltraSharp.pth",
-        "target_dir": "ESRGAN",
-        "size": "63.87 MB",
-    },
-    {
-        "id": "realesrgan-x4plus-anime-6b",
-        "name": "realesrgan-x4plus-anime-6b",
-        "role": "二次元动漫放大",
-        "repo_id": "amd/realesrgan-x4plus-anime-6b",
-        "file_path": "RealESRGAN_x4plus_anime_6B.pth",
-        "target_dir": "ESRGAN",
-        "size": "17.11 MB",
-    },
-]
-
-def get_upscaler(upscaler_id: str):
-    """按 ID 查找上采样模型预设，找不到时返回 None。"""
-    for u in MODEL_UPSCALERS:
-        if u["id"] == upscaler_id:
-            return u
-    return None
-
-# ── SeedVR2 高清放大模型（sd-webui-forge-neo-seedvr2 插件依赖）──
-# 下载放入 models/SEEDVR2，只取 3B fp8 主模型 + VAE 两个文件。
-SEEDVR2_BUNDLE = {
-    "id": "seedvr2",
-    "name": "SeedVR2",
-    "role": "AI 图像/视频高清放大",
-    "repo_id": "numz/SeedVR2_comfyUI",
-    "target_dir": "SEEDVR2",
-    "files": [
-        {
-            "file_path": "seedvr2_ema_3b_fp8_e4m3fn.safetensors",
-            "display_name": "主模型",
-            "size": "3.16 GB",
-        },
-        {
-            "file_path": "ema_vae_fp16.safetensors",
-            "display_name": "VAE",
-            "size": "478.09 MB",
-        },
-    ],
-}
-
 # ── 插件模型组合（一键下载，自动放入正确位置）──
 # H3 DiT/文本编码器直接放入 models/diffusion_models 与 models/text_encoder
 # （forge-h3-studio 本地 WebUI 模式首选查找目录 webui/models 下的子目录，
 # text_encoder 为 webui 标准文本编码器目录，无额外嵌套，不依赖 ComfyUI），
 # H3 NF4 的 VAE 放入 models/DiffSynth-Studio/MiniMax-H3-NF4
 # （与 forge-h3-studio 本地模式的 VAE 缓存路径一致），
-# 图层拆分模型整仓放入 models/diffusers/models--24yearsold--*（sd-webui-see-through-sam 首选查找路径）。
+# 图层拆分模型整仓放入 models/diffusers/seethroughv0.0.*_nf4（与 sd-webui-see-through-sam 统一）。
 # target_dir 支持绝对路径或相对于 models_path 的子目录。
 H3_DIT_DIR = os.path.join(models_path, "diffusion_models")
 H3_TE_DIR = os.path.join(models_path, "text_encoder")
+H3_VAE_DIR = os.path.join(models_path, "vae")
 H3_NF4_VAE_DIR = os.path.join(models_path, "DiffSynth-Studio", "MiniMax-H3-NF4")
 
 PLUGIN_BUNDLES = [
@@ -384,9 +329,10 @@ PLUGIN_BUNDLES = [
         "name": "MiniMax-H3-INT8",
         "cover": "MiniMax-H3.png",
         "role": "视频生成模型组合（forge-h3-studio 插件）",
-        "description": "INT8 量化组合：pruned 双 DiT + 文本编码器。",
+        "description": "INT8 量化组合：pruned 双 DiT + 文本编码器 + 原版视频/音频 VAE。",
         "source": "Comfy-Org/MiniMax-H3",
-        "total_size": "约 69.1 GB",
+        "total_size": "约 72.5 GB",
+        "vram": "16G",
         "files": [
             {
                 "file_path": "diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors",
@@ -406,6 +352,22 @@ PLUGIN_BUNDLES = [
                 "display_name": "文本编码器（Qwen3VL 32B INT8）",
                 "size": "25.28 GB",
             },
+            {
+                "file_path": "FL2VA/video_vae/source/model.safetensors",
+                "source": "MiniMax/MiniMax-H3-FL2VA",
+                "target_dir": H3_VAE_DIR,
+                "target_name": "minimax_h3_video_vae_fp16.safetensors",
+                "display_name": "视频 VAE（fp16，INT8 组合配套）",
+                "size": "约 0.3 GB",
+            },
+            {
+                "file_path": "FL2VA/audio_vae/model.safetensors",
+                "source": "MiniMax/MiniMax-H3-FL2VA",
+                "target_dir": H3_VAE_DIR,
+                "target_name": "minimax_h3_audio_vae_fp32.safetensors",
+                "display_name": "音频 VAE（fp32，INT8 组合配套）",
+                "size": "约 0.2 GB",
+            },
         ],
     },
     # ── 2. MiniMax-H3 NF4 组合（DiffSynth bitsandbytes NF4）──
@@ -417,6 +379,7 @@ PLUGIN_BUNDLES = [
         "description": "NF4 量化组合：完整 DiT 四件套 + 文本编码器 + NF4 视频/音频 VAE。",
         "source": "DiffSynth-Studio/MiniMax-H3-NF4",
         "total_size": "约 72.5 GB",
+        "vram": "12G",
         "files": [
             {
                 "file_path": "minimax-h3-fl2va-nf4.safetensors",
@@ -470,37 +433,119 @@ PLUGIN_BUNDLES = [
         "role": "图层拆分模型组合（sd-webui-see-through-sam 插件）",
         "description": "LayerDiff 3D 图层拆分 + Marigold 深度估计（NF4），下载完成即可直接使用。",
         "total_size": "约 5.7 GB",
+        "vram": "8G",
         "repos": [
             {
                 "repo_id": "ljsabc/seethroughv0.0.2_layerdiff3d_nf4",
-                "target_dir": os.path.join(models_path, "diffusers", "models--24yearsold--seethroughv0.0.2_layerdiff3d_nf4"),
+                # 与 sd-webui-see-through-sam 的本地模型发现路径保持一致。
+                "target_dir": os.path.join(models_path, "diffusers", "seethroughv0.0.2_layerdiff3d_nf4"),
                 "display_name": "LayerDiff 3D 图层拆分模型",
                 "size": "3.76 GB",
             },
             {
                 "repo_id": "ljsabc/seethroughv0.0.1_marigold_nf4",
-                "target_dir": os.path.join(models_path, "diffusers", "models--24yearsold--seethroughv0.0.1_marigold_nf4"),
+                "target_dir": os.path.join(models_path, "diffusers", "seethroughv0.0.1_marigold_nf4"),
                 "display_name": "Marigold 深度估计模型",
                 "size": "1.93 GB",
             },
         ],
     },
-    # ── 4. Breeze-TTS-2 语音合成模型（sd-webui-multimodal-media 插件）──
+    # ── 4. Breeze-TTS-2 语音合成模型（forge-h3-studio 工作台）──
     # 整仓下载（双分片权重 + 音频分词器 + tokenizer 配置），
     # 放入 models/Breeze-TTS-2 后，多媒体处理插件的「Breeze-TTS-2 语音合成」标签页可直接使用。
     {
         "id": "breeze-tts-2",
         "name": "Breeze-TTS-2",
         "cover": "Breeze-TTS-2.png",
-        "role": "语音合成模型（sd-webui-multimodal-media 插件）",
+        "role": "语音合成模型（forge-h3-studio 工作台）",
         "description": "开源双语 TTS：声音克隆 / 声音设计 / 声音引导。整仓下载，含音频分词器，下载完成即可直接使用。",
         "total_size": "约 7.7 GB",
+        "vram": "12G",
         "repos": [
             {
                 "repo_id": "BreezeBlue/Breeze-TTS-2",
                 "target_dir": os.path.join(models_path, "Breeze-TTS-2"),
                 "display_name": "Breeze-TTS-2 完整模型（双分片权重 + 音频分词器）",
                 "size": "约 7.7 GB",
+            },
+        ],
+    },
+    # ── 5. TRELLIS.2 图生3D 模型组合（sd-webui-trellis2 插件）──
+    # 主模型 + 背景移除（RMBG-2.0）+ 图像编码器（TRELLIS-image-large）+ DINOv3 特征提取器，
+    # 全部放入 models/trellis2/ 对应子目录后，TRELLIS.2 图生成3D 标签页可直接使用。
+    {
+        "id": "trellis2-img23d",
+        "name": "TRELLIS.2 图生3D",
+        "cover": "trellis2.png",
+        "role": "图生3D 模型组合（sd-webui-trellis2 插件）",
+        "description": "TRELLIS.2 单图生成 3D 模型（含 PBR 纹理）。含主模型、背景移除、图像编码器与 DINOv3 特征提取器，下载完成即可直接使用。",
+        "total_size": "约 19.7 GB",
+        "vram": "16G",
+        "repos": [
+            {
+                "repo_id": "microsoft/TRELLIS.2-4B",
+                "target_dir": os.path.join(models_path, "trellis2", "TRELLIS.2-4B"),
+                "display_name": "TRELLIS.2-4B 主模型",
+                "size": "约 15.1 GB",
+            },
+            {
+                "repo_id": "briaai/RMBG-2.0",
+                "target_dir": os.path.join(models_path, "trellis2", "BiRefNet", "RMBG-2.0"),
+                "display_name": "RMBG-2.0 背景移除模型",
+                "size": "约 0.4 GB",
+            },
+            {
+                "repo_id": "microsoft/TRELLIS-image-large",
+                "target_dir": os.path.join(models_path, "trellis2", "TRELLIS-image-large"),
+                "display_name": "TRELLIS-image-large 图像编码器",
+                "size": "约 3.1 GB",
+            },
+            {
+                "repo_id": "facebook/dinov3-vitl16-pretrain-lvd1689m",
+                "target_dir": os.path.join(models_path, "trellis2", "facebook", "dinov3-vitl16-pretrain-lvd1689m"),
+                "display_name": "DINOv3 图像特征提取器",
+                "size": "约 1.1 GB",
+            },
+        ],
+    },
+    # ── 6. 高清放大模型组合（Real-ESRGAN + SeedVR2）──
+    # 单文件下载到 models/ESRGAN（Forge 自动扫描上采样器）或 models/SEEDVR2。
+    # 多个模型来自不同仓库，每个文件单独指定 source。
+    {
+        "id": "upscalers",
+        "name": "高清放大模型组合",
+        "cover": "fangda.png",
+        "role": "高清放大模型",
+        "description": "Real-ESRGAN（通用/动漫 4 倍放大）+ SeedVR2（AI 图像/视频高清放大）。下载后 ESRGAN 模型自动出现在上采样器列表，SeedVR2 放入 models/SEEDVR2。",
+        "total_size": "约 3.71 GB",
+        "files": [
+            {
+                "file_path": "4x-UltraSharp.pth",
+                "source": "XiangZL0/4x-UltraSharp",
+                "target_dir": "ESRGAN",
+                "display_name": "4x-UltraSharp（通用写实 4 倍）",
+                "size": "63.87 MB",
+            },
+            {
+                "file_path": "RealESRGAN_x4plus_anime_6B.pth",
+                "source": "amd/realesrgan-x4plus-anime-6b",
+                "target_dir": "ESRGAN",
+                "display_name": "Real-ESRGAN anime 6B（动漫 4 倍）",
+                "size": "17.11 MB",
+            },
+            {
+                "file_path": "seedvr2_ema_3b_fp8_e4m3fn.safetensors",
+                "source": "numz/SeedVR2_comfyUI",
+                "target_dir": "SEEDVR2",
+                "display_name": "SeedVR2 主模型（3B fp8）",
+                "size": "3.16 GB",
+            },
+            {
+                "file_path": "ema_vae_fp16.safetensors",
+                "source": "numz/SeedVR2_comfyUI",
+                "target_dir": "SEEDVR2",
+                "display_name": "SeedVR2 VAE",
+                "size": "478.09 MB",
             },
         ],
     },
@@ -660,76 +705,6 @@ class ModelDownloader:
             self.downloading = False
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def download_upscaler(self, upscaler_id: str, progress_callback=None) -> str:
-        """从魔搭社区（ModelScope）下载指定上采样模型，放入 Forge 的 models/ESRGAN 目录。
-
-        单文件下载。下载完成后文件会被 Forge 自动扫描，出现在上采样器下拉列表，可直接使用。
-        """
-        if self.downloading:
-            return "已有下载任务正在进行，请等待当前任务完成"
-        if not model_file_download:
-            return "ModelScope SDK 不可用，请先运行: pip install modelscope"
-
-        upscaler = get_upscaler(upscaler_id)
-        if not upscaler:
-            return f"找不到上采样模型 ID: {upscaler_id}"
-
-        repo_id = upscaler["repo_id"]
-        file_path = upscaler["file_path"]
-        target_dir = upscaler["target_dir"]
-        name = upscaler["name"]
-        filename = os.path.basename(file_path)
-
-        self.downloading = True
-        temp_dir = tempfile.mkdtemp(prefix=f"upscaler-{upscaler_id}-", dir=CACHE_DIR)
-        try:
-            if progress_callback:
-                progress_callback(0, 1, f"正在下载 {name} ...")
-            print(f"[ModelDownloader] 下载上采样模型 {name}: {repo_id}/{file_path}")
-
-            result = model_file_download(
-                model_id=repo_id,
-                file_path=file_path,
-                cache_dir=temp_dir,
-            )
-
-            source_file = result if isinstance(result, str) and os.path.isfile(result) else None
-            if not source_file:
-                candidates = []
-                for root, _, names in os.walk(temp_dir):
-                    if filename in names:
-                        candidates.append(os.path.join(root, filename))
-                if not candidates:
-                    raise FileNotFoundError(f"下载后找不到文件: {filename}")
-                source_file = candidates[0]
-
-            # 尊重用户自定义的 --esrgan-models-path，缺省回退到 models/ESRGAN
-            destination_dir = getattr(cmd_opts, "esrgan_models_path", None) or os.path.join(models_path, target_dir)
-            os.makedirs(destination_dir, exist_ok=True)
-            destination = os.path.join(destination_dir, filename)
-            shutil.copy2(source_file, destination)
-            print(f"[ModelDownloader] 已保存: {destination}")
-
-            if progress_callback:
-                progress_callback(1, 1, "下载完成")
-
-            self.download_history.append({
-                "model_name": name,
-                "source": "modelscope",
-                "save_path": destination_dir,
-                "filename": filename,
-                "time": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "type": "上采样模型",
-            })
-            self._save_history()
-            return f"✅ 上采样模型 {name} 下载完成：\n  • {destination}\n重启 WebUI 后会自动出现在上采样器列表，可直接使用。"
-        except Exception as e:
-            print(f"[ModelDownloader] 上采样模型 {name} 下载错误: {e}")
-            return f"❌ 上采样模型 {name} 下载失败: {e}"
-        finally:
-            self.downloading = False
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
     def download_lora(self, lora_id: str, progress_callback=None) -> str:
         """从魔搭社区（ModelScope）下载指定 LoRA 模型，放入 Forge 的 models/Lora 目录。
 
@@ -799,73 +774,6 @@ class ModelDownloader:
             self.downloading = False
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def download_seedvr2(self, progress_callback=None) -> str:
-        """从魔搭社区下载 SeedVR2 所需的两个模型文件，放入 models/SEEDVR2 目录。"""
-        if self.downloading:
-            return "已有下载任务正在进行，请等待当前任务完成"
-        if not model_file_download:
-            return "ModelScope SDK 不可用，请先运行: pip install modelscope"
-
-        name = SEEDVR2_BUNDLE["name"]
-        repo_id = SEEDVR2_BUNDLE["repo_id"]
-        files = SEEDVR2_BUNDLE["files"]
-        destination_dir = os.path.join(models_path, SEEDVR2_BUNDLE["target_dir"])
-
-        self.downloading = True
-        temp_dir = tempfile.mkdtemp(prefix="seedvr2-", dir=CACHE_DIR)
-        saved = []
-        try:
-            os.makedirs(destination_dir, exist_ok=True)
-            total = len(files)
-            for idx, fspec in enumerate(files):
-                filename = os.path.basename(fspec["file_path"])
-                if progress_callback:
-                    progress_callback(idx, total, f"正在下载 {filename} ...")
-                print(f"[ModelDownloader] 下载 SeedVR2 文件 {filename}: {repo_id}/{fspec['file_path']}")
-
-                result = model_file_download(
-                    model_id=repo_id,
-                    file_path=fspec["file_path"],
-                    cache_dir=temp_dir,
-                )
-
-                source_file = result if isinstance(result, str) and os.path.isfile(result) else None
-                if not source_file:
-                    candidates = []
-                    for root, _, names in os.walk(temp_dir):
-                        if filename in names:
-                            candidates.append(os.path.join(root, filename))
-                    if not candidates:
-                        raise FileNotFoundError(f"下载后找不到文件: {filename}")
-                    source_file = candidates[0]
-
-                destination = os.path.join(destination_dir, filename)
-                shutil.copy2(source_file, destination)
-                saved.append(destination)
-                print(f"[ModelDownloader] 已保存: {destination}")
-
-            if progress_callback:
-                progress_callback(total, total, "下载完成")
-
-            for d in saved:
-                self.download_history.append({
-                    "model_name": name,
-                    "source": "modelscope",
-                    "save_path": destination_dir,
-                    "filename": os.path.basename(d),
-                    "time": time.strftime("%Y-%m-%d %H:%M:%S"),
-                    "type": "上采样模型",
-                })
-            self._save_history()
-            lines = "\n".join(f"  • {d}" for d in saved)
-            return f"✅ SeedVR2 模型下载完成：\n{lines}\n在 seedvr2 插件设置中选择对应模型即可使用。"
-        except Exception as e:
-            print(f"[ModelDownloader] SeedVR2 下载错误: {e}")
-            return f"❌ SeedVR2 下载失败: {e}"
-        finally:
-            self.downloading = False
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
     def _resolve_target_dir(self, target_dir: str) -> str:
         """target_dir 支持绝对路径或相对于 models_path 的子目录。"""
         return target_dir if os.path.isabs(target_dir) else os.path.join(models_path, target_dir)
@@ -917,15 +825,15 @@ class ModelDownloader:
                     saved.append(destination)
                     print(f"[ModelDownloader] 已放入: {destination}")
             else:
-                # 逐文件下载
-                repo_source = bundle["source"]
+                # 逐文件下载（每个文件可单独指定 source 仓库；未指定时回退到 bundle.source）
                 files = bundle["files"]
                 total = len(files)
                 for i, fspec in enumerate(files):
                     file_path = fspec["file_path"]
+                    repo_source = fspec.get("source") or bundle.get("source")
                     destination_dir = self._resolve_target_dir(fspec["target_dir"])
                     display_name = fspec["display_name"]
-                    filename = os.path.basename(file_path)
+                    filename = fspec.get("target_name") or os.path.basename(file_path)
                     if progress_callback:
                         progress_callback(i, total, f"正在下载 {display_name} ({i+1}/{total}) ...")
                     print(f"[ModelDownloader] 下载 {display_name}: {repo_source}/{file_path}")
@@ -1200,11 +1108,12 @@ def create_ui():
 
                             lora_btn.click(make_lora_fn(lid), outputs=lora_status)
 
-                # ── 插件模型组合下载区（H3 视频生成 / 图层拆分）──
+                # ── 插件模型组合下载区（H3 视频生成 / 图层拆分 / 图生3D / TTS）──
                 gr.Markdown("---")
                 gr.Markdown("## 🎬 插件模型组合下载区")
                 gr.Markdown(
-                    "视频生成（forge-h3-studio 插件）与图层拆分（sd-webui-see-through-sam 插件）的模型组合。"
+                    "视频生成（forge-h3-studio）、图层拆分（sd-webui-see-through-sam）、"
+                    "图生3D（sd-webui-trellis2）与语音合成（forge-h3-studio）的模型组合。"
                     "从魔搭社区下载后**自动放入各插件期望的目录**，无需手动移动文件。"
                 )
                 with gr.Row(elem_classes=["preset-row"]):
@@ -1218,8 +1127,11 @@ def create_ui():
                                 )
                         else:
                             for fspec in b["files"]:
+                                fsrc = fspec.get("source") or b.get("source", "")
                                 listing_lines.append(
-                                    f"- {fspec['display_name']}：{os.path.basename(fspec['file_path'])}（{fspec['size']}）→ `{_display_target(fspec['target_dir'])}`"
+                                    f"- {fspec['display_name']}：{os.path.basename(fspec['file_path'])}（{fspec['size']}）"
+                                    + (f" 来自 `{fsrc}`" if fsrc else "")
+                                    + f" → `{_display_target(fspec['target_dir'])}`"
                                 )
                         with gr.Column(elem_classes=["preset-col"]):
                             bundle_cover = os.path.join(IMAGE_DIR, b.get("cover", ""))
@@ -1237,6 +1149,7 @@ def create_ui():
                             gr.Markdown(
                                 f"**{b['name']}** — {b['description']}\n"
                                 f"- 合计大小：**{b['total_size']}**"
+                                + (f"\n- 显存要求：**{b['vram']} 显存**" if b.get("vram") else "")
                             )
                             with gr.Accordion("文件清单与落盘位置", open=False):
                                 gr.Markdown(
@@ -1263,75 +1176,6 @@ def create_ui():
                             return _download
 
                         b_btn.click(make_bundle_fn(bid), outputs=b_status)
-
-            # ── 标签页：高清放大算法 ──
-            with gr.TabItem("高清放大算法"):
-                gr.Markdown(
-                    "高清放大上采样模型（Real-ESRGAN）。从魔搭社区下载，自动放入 Forge 的 ESRGAN 上采样器目录"
-                    "（默认 `models/ESRGAN`）；下载后重启 WebUI，即可在上采样器下拉列表中直接使用，无需额外配置。"
-                )
-                with gr.Row(elem_classes=["preset-row"]):
-                    for up in MODEL_UPSCALERS:
-                        uid = up["id"]
-                        with gr.Column(elem_classes=["preset-col"]):
-                            gr.Markdown(
-                                f"**{up['name']}**\n"
-                                f"- 类型：{up['role']}\n"
-                                f"- 文件：{os.path.basename(up['file_path'])}\n"
-                                f"- 大小：{up['size']}\n"
-                                f"- 来源仓库：{up['repo_id']}"
-                            )
-                            up_btn = gr.Button(
-                                f"⚡ 一键下载 {up['name']}",
-                                variant="primary",
-                                size="lg",
-                            )
-                            up_status = gr.Textbox(
-                                label="下载状态",
-                                interactive=False,
-                                lines=3,
-                            )
-
-                            def make_up_fn(current_uid):
-                                def _download():
-                                    prog = gr.Progress()
-                                    def progress_callback(i, total, desc):
-                                        prog(i / total if total > 0 else 0, desc=desc)
-                                    return model_downloader.download_upscaler(current_uid, progress_callback=progress_callback)
-                                return _download
-
-                            up_btn.click(make_up_fn(uid), outputs=up_status)
-
-                # ── SeedVR2（sd-webui-forge-neo-seedvr2 插件）──
-                with gr.Column(elem_classes=["preset-col"]):
-                    gr.Markdown("---")
-                    gr.Markdown(
-                        f"**{SEEDVR2_BUNDLE['name']}** — {SEEDVR2_BUNDLE['role']}\n"
-                        + "\n".join(
-                            f"- {f['display_name']}：{os.path.basename(f['file_path'])}（{f['size']}）"
-                            for f in SEEDVR2_BUNDLE["files"]
-                        )
-                        + f"\n- 来源仓库：{SEEDVR2_BUNDLE['repo_id']}\n"
-                        f"- 保存目录：models\\{SEEDVR2_BUNDLE['target_dir']}"
-                    )
-                    seed_btn = gr.Button(
-                        "⚡ 一键下载 SeedVR2（共 2 个文件，约 3.63 GB）",
-                        variant="primary",
-                        size="lg",
-                    )
-                    seed_status = gr.Textbox(
-                        label="下载状态",
-                        interactive=False,
-                        lines=3,
-                    )
-
-                    def download_seedvr2_fn():
-                        prog = gr.Progress()
-                        def progress_callback(i, total, desc):
-                            prog(i / total if total > 0 else 0, desc=desc)
-                        return model_downloader.download_seedvr2(progress_callback=progress_callback)
-
-                    seed_btn.click(download_seedvr2_fn, outputs=seed_status)
 
             # ── 标签页 2：自定义模型下载 ──
             with gr.TabItem("自定义模型下载"):

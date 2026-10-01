@@ -1,6 +1,6 @@
 """MiniMax H3 本地 WebUI 后端：在 Forge 进程内直接用 DiffSynth pipeline 运行 H3。
 
-不依赖 ComfyUI。模型来源策略（对齐官方 low_vram 16GB all-disk 示例）：
+不依赖 ComfyUI。模型来源策略：
 - DiT / 文本编码器：直接复用本地量化权重（diffsynth 按文件 hash 自动识别型号，
   包括 Comfy-Org int8_convrot 与 DiffSynth-Studio NF4 系列，放入模型目录即可自动启用）
 - 视频 VAE / 音频 VAE / processor：优先复用 webui/models/vae 下的 Comfy-Org 命名文件
@@ -8,7 +8,8 @@
   自动下载，缓存在 webui/models/ 下
   VAE 变体可通过 local_vae_variant 选择：original（INT8 组合配套的标准 fp16/fp32
   VAE，MiniMax/MiniMax-H3）或 nf4（DiffSynth-Studio/MiniMax-H3-NF4 的 4bit 量化版）
-- 所有权重 disk offload，适配 16GB 显存
+- 显存/内存策略：通过 vram_strategy 配置自动检测硬件选择最优策略
+  （performance / save_memory / save_vram / extreme），详见 resolve_vram_strategy
 """
 from __future__ import annotations
 
@@ -56,6 +57,120 @@ VAE_VARIANTS = {
 }
 REFERENCE_FPS = 24
 OUTPUT_AUDIO_SAMPLE_RATE = 32000
+
+
+# ── 硬件检测与显存策略 ───────────────────────────────────────────────────────
+
+def _detect_total_vram_gb() -> float:
+    """检测当前 GPU 总显存（GB），失败返回 0。"""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return torch.cuda.mem_get_info("cuda")[1] / (1024 ** 3)
+    except Exception:
+        pass
+    return 0.0
+
+
+def _detect_total_ram_gb() -> float:
+    """检测系统总内存（GB），失败返回 0。"""
+    try:
+        import psutil
+        return psutil.virtual_memory().total / (1024 ** 3)
+    except Exception:
+        pass
+    # Windows 回退：ctypes 调用 GlobalMemoryStatusEx
+    try:
+        import ctypes
+        class MEMORYSTATUSEX(ctypes.Structure):
+            _fields_ = [
+                ("dwLength", ctypes.c_ulong),
+                ("dwMemoryLoad", ctypes.c_ulong),
+                ("ullTotalPhys", ctypes.c_ulonglong),
+                ("ullAvailPhys", ctypes.c_ulonglong),
+                ("ullTotalPageFile", ctypes.c_ulonglong),
+                ("ullAvailPageFile", ctypes.c_ulonglong),
+                ("ullTotalVirtual", ctypes.c_ulonglong),
+                ("ullAvailVirtual", ctypes.c_ulonglong),
+                ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+            ]
+        stat = MEMORYSTATUSEX()
+        stat.dwLength = ctypes.sizeof(stat)
+        ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
+        return stat.ullTotalPhys / (1024 ** 3)
+    except Exception:
+        pass
+    return 0.0
+
+
+# 策略预设：(offload_device, use_gc, use_gc_offload, tiled, label)
+_STRATEGY_PRESETS: dict[str, tuple[str, bool, bool, bool, str]] = {
+    "performance": ("cpu", False, False, True, "高性能模式"),
+    "save_memory": ("disk", False, False, True, "省内存模式"),
+    "save_vram": ("cpu", True, True, True, "省显存模式"),
+    "extreme": ("disk", True, True, True, "极致省资源模式"),
+}
+
+
+def resolve_vram_strategy(config: dict[str, Any]) -> dict[str, Any]:
+    """根据配置策略（或自动检测）返回 vram 管理参数。
+
+    返回字段：
+        offload_device / onload_device: "cpu" 或 "disk"
+        use_gradient_checkpointing / use_gradient_checkpointing_offload: bool
+        tiled: bool
+        label: 策略名称（用于日志）
+        vram_gb / ram_gb: 检测到的硬件值
+    """
+    strategy = str(config.get("vram_strategy") or "auto").strip().lower()
+    vram_gb = _detect_total_vram_gb()
+    ram_gb = _detect_total_ram_gb()
+
+    if strategy not in _STRATEGY_PRESETS:
+        # auto：根据硬件自动选择
+        # 阈值说明：
+        #   - 显存充足（≥20GB）：DiT NF4 ~7GB + 激活值，不开 gc 也能跑
+        #   - 内存充足（≥24GB）：H3 全模型 NF4 约 12-15GB，cpu offload 不爆内存
+        vram_sufficient = vram_gb >= 20.0
+        ram_sufficient = ram_gb >= 24.0
+
+        if vram_sufficient and ram_sufficient:
+            strategy = "performance"
+        elif vram_sufficient and not ram_sufficient:
+            strategy = "save_memory"
+        elif not vram_sufficient and ram_sufficient:
+            strategy = "save_vram"
+        else:
+            strategy = "extreme"
+
+    offload_device, use_gc, use_gc_offload, tiled, label = _STRATEGY_PRESETS[strategy]
+    return {
+        "offload_device": offload_device,
+        "onload_device": offload_device,
+        "use_gradient_checkpointing": use_gc,
+        "use_gradient_checkpointing_offload": use_gc_offload,
+        "tiled": tiled,
+        "label": label,
+        "strategy": strategy,
+        "vram_gb": round(vram_gb, 1),
+        "ram_gb": round(ram_gb, 1),
+    }
+
+
+def build_vram_config(strategy: dict[str, Any]) -> dict[str, Any]:
+    """根据策略生成 diffsynth ModelConfig 所需的 vram 配置。"""
+    import torch
+    device = strategy["offload_device"]
+    return {
+        "offload_dtype": "disk" if device == "disk" else torch.bfloat16,
+        "offload_device": device,
+        "onload_dtype": "disk" if device == "disk" else torch.bfloat16,
+        "onload_device": device,
+        "preparing_dtype": torch.bfloat16,
+        "preparing_device": "cuda",
+        "computation_dtype": torch.bfloat16,
+        "computation_device": "cuda",
+    }
 
 
 class LocalJobCancelled(Exception):
@@ -136,6 +251,27 @@ def _list_h3_files(directory: Path, model_name: str) -> list[str]:
     return found
 
 
+def find_lora_path(config: dict[str, Any], lora_name: str) -> Path | None:
+    """根据 LoRA 文件名在所有候选 loras 目录中查找，返回完整路径。"""
+    models_dirs = iter_models_dirs(config)
+    # WebUI 惯例用 Lora（单数），ComfyUI 惯例用 loras（复数），都支持
+    lora_dirs = [
+        MODEL_CACHE_DIR / "Lora",
+        MODEL_CACHE_DIR / "loras",
+        MODEL_CACHE_DIR / "Lora" / "minimax_h3",
+        MODEL_CACHE_DIR / "loras" / "minimax_h3",
+    ]
+    lora_dirs += [d / "Lora" for d in models_dirs]
+    lora_dirs += [d / "loras" for d in models_dirs]
+    lora_dirs += [d / "Lora" / "minimax_h3" for d in models_dirs]
+    lora_dirs += [d / "loras" / "minimax_h3" for d in models_dirs]
+    for directory in lora_dirs:
+        candidate = directory / lora_name
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def resolve_processor_dir(config: dict[str, Any]) -> Path | None:
     """返回已存在的 H3 processor 目录；不存在时返回 None（由调用方触发下载）。"""
     configured = str(config.get("local_processor_path") or "").strip()
@@ -146,10 +282,35 @@ def resolve_processor_dir(config: dict[str, Any]) -> Path | None:
     return downloaded if downloaded.is_dir() else None
 
 
-def vae_variant(config: dict[str, Any]) -> str:
-    """当前选择的 VAE 变体：original（标准 fp16/fp32，INT8 组合配套）或 nf4（4bit 量化）。"""
+def vae_variant(config: dict[str, Any], dit_path: Path | None = None) -> str:
+    """VAE 变体选择：优先自动检测 DiT 量化格式，否则回退配置。
+
+    - 若提供 dit_path：根据 DiT 文件名/state_dict 自动判断 nf4 或 original
+    - 否则：读取 config["local_vae_variant"]（默认 original）
+    """
+    if dit_path is not None:
+        return detect_vae_variant_from_dit(dit_path)
     variant = str(config.get("local_vae_variant") or "original").strip() or "original"
     return variant if variant in VAE_VARIANTS else "original"
+
+
+def detect_vae_variant_from_dit(dit_path: Path) -> str:
+    """根据 DiT 模型文件自动检测应使用的 VAE 变体。"""
+    name = dit_path.name.lower()
+    if "nf4" in name:
+        return "nf4"
+    # 读取 state_dict dtype 二次确认
+    try:
+        from backend.utils import weight_dtype
+        from safetensors.torch import load_file
+        sd = load_file(str(dit_path), device="cpu")
+        dtype = weight_dtype(sd)
+        del sd
+        if dtype == "nf4":
+            return "nf4"
+    except Exception:
+        pass
+    return "original"
 
 
 def vae_cache_path(variant: str, which: str) -> Path:
@@ -193,6 +354,36 @@ def _import_dotted(dotted: str) -> Any:
     return getattr(importlib.import_module(module_name), attr)
 
 
+def _split_weight_norm(state_dict: dict, model_state_keys: set[str]) -> dict:
+    """把 state_dict 中的 *.weight 拆成 *.weight_g / *.weight_v。
+
+    diffsynth 的音频 VAE 使用 WeightNormedConv1d/ConvTranspose1d，模型参数
+    为 weight_g + weight_v，但部分第三方 checkpoint 只保存合并后的 weight。
+    这里按 PyTorch weight_norm 公式还原：
+        weight_g = norm(weight, dim=(1,2), keepdim=True)
+        weight_v = weight
+    """
+    import torch
+
+    result = dict(state_dict)
+    weight_keys = [k for k in result if k.endswith(".weight")]
+    for k in weight_keys:
+        prefix = k[: -len(".weight")]
+        g_key = f"{prefix}.weight_g"
+        v_key = f"{prefix}.weight_v"
+        # 只在模型确实期望 weight_g/weight_v 时才拆分
+        if g_key not in model_state_keys or v_key not in model_state_keys:
+            continue
+        w = result.pop(k)
+        if w.dim() >= 3:
+            g = torch.norm(w.float(), dim=tuple(range(1, w.dim())), keepdim=True).to(w.dtype)
+        else:
+            g = torch.norm(w.float(), dim=1, keepdim=True).to(w.dtype)
+        result[g_key] = g
+        result[v_key] = w
+    return result
+
+
 def _verify_local_vae(path: Path, spec: dict) -> bool:
     """严格校验本地 VAE 文件能否被 diffsynth 模型类加载（结果按路径缓存）。"""
     key = str(path)
@@ -203,28 +394,57 @@ def _verify_local_vae(path: Path, spec: dict) -> bool:
         from safetensors.torch import load_file
 
         model = _import_dotted(spec["model_class"])()
+        model_keys = set(model.state_dict().keys())
         converter = _import_dotted(spec["state_dict_converter"])
         converted = converter(load_file(str(path), device="cpu"))
         missing, unexpected = model.load_state_dict(converted, strict=False, assign=True)
         ok = not missing and set(unexpected) <= _VAE_TOLERATED_EXTRA_KEYS
+        if not ok and missing:
+            # fallback：尝试把合并的 weight 拆成 weight_g/weight_v
+            converted2 = _split_weight_norm(converted, model_keys)
+            missing2, unexpected2 = model.load_state_dict(converted2, strict=False, assign=True)
+            ok = not missing2 and set(unexpected2) <= _VAE_TOLERATED_EXTRA_KEYS
     except Exception:
         ok = False
     _VAE_VERIFY_CACHE[key] = ok
     return ok
 
 
-def find_local_vae(config: dict[str, Any], which: str) -> Path | None:
+def find_local_vae(config: dict[str, Any], which: str, variant: str | None = None) -> Path | None:
     """在 webui/models/vae 与候选模型目录的 vae 子目录中查找可用的本地 VAE。
 
-    仅在实际使用 fp16/fp32 VAE 的变体（original）下生效：NF4 变体是显式选择的量化方案，
-    不被 fp16/fp32 的本地文件覆盖。
+    - original 变体：搜索 minimax_h3_video_vae*.safetensors / minimax_h3_audio_vae*.safetensors
+    - nf4 变体：搜索 *nf4*.safetensors 中匹配 video/audio 的文件
+    variant 为 None 时从 config 读取。
     """
-    if vae_variant(config) != "original":
-        return None
-    spec = LOCAL_VAE_SPECS[which]
+    v = variant or vae_variant(config)
     dirs: list[Path] = [MODEL_CACHE_DIR / "vae"]
     dirs += [d / "vae" for d in iter_models_dirs(config)]
+    # 也扫描 DiT 同级目录（如 webui/models/MiniMax），用户常把 VAE 放在那里
+    dirs += [MODEL_CACHE_DIR / "MiniMax"]
+    dirs += list(iter_models_dirs(config))
     seen: set[str] = set()
+
+    if v == "nf4":
+        # NF4 VAE：按文件名匹配，无需 diffsynth converter 校验
+        keyword = "video" if which == "video" else "audio"
+        for directory in dirs:
+            try:
+                if not directory.is_dir():
+                    continue
+                key = str(directory.resolve())
+                if key in seen:
+                    continue
+                seen.add(key)
+            except OSError:
+                continue
+            for path in sorted(directory.glob("*.safetensors")):
+                name = path.name.lower()
+                if "nf4" in name and keyword in name and "vae" in name:
+                    return path
+        return None
+
+    spec = LOCAL_VAE_SPECS[which]
     for directory in dirs:
         try:
             if not directory.is_dir():
@@ -241,6 +461,46 @@ def find_local_vae(config: dict[str, Any], which: str) -> Path | None:
     return None
 
 
+_PATCHED_VAE_CONVERTERS: set[str] = set()
+
+
+def _patch_vae_converter(spec: dict) -> None:
+    """Monkey-patch 原始 VAE converter，使其支持 weight norm 拆分。
+
+    diffsynth 通过 dotted path 字符串导入 converter，所以不能直接传函数对象。
+    这里把原始 converter 替换成包装版本（保留原始 dotted path），diffsynth 后续
+    导入时拿到的就是支持 weight norm 拆分的版本。
+    """
+    dotted = spec["state_dict_converter"]
+    if dotted in _PATCHED_VAE_CONVERTERS:
+        return
+    import importlib
+
+    module_path, _, func_name = dotted.rpartition(".")
+    module = importlib.import_module(module_path)
+    original_converter = getattr(module, func_name)
+    model_class = _import_dotted(spec["model_class"])
+    model_keys: set[str] | None = None
+
+    def patched_converter(state_dict):
+        nonlocal model_keys
+        converted = original_converter(state_dict)
+        # 移除模型不期望的额外统计键（latents_mean/latents_std）
+        for extra_key in ("latents_mean", "latents_std"):
+            converted.pop(extra_key, None)
+        if model_keys is None:
+            model_keys = set(model_class().state_dict().keys())
+        has_weight = any(k.endswith(".weight") for k in converted)
+        has_weight_g = any(k.endswith(".weight_g") for k in converted)
+        if has_weight and not has_weight_g:
+            converted = _split_weight_norm(converted, model_keys)
+        return converted
+
+    setattr(module, func_name, patched_converter)
+    _PATCHED_VAE_CONVERTERS.add(dotted)
+    print(f"[H3 Studio] 已增强 VAE converter：{dotted}", flush=True)
+
+
 def _register_local_vae_hash(path: Path, spec: dict) -> None:
     """把本地 VAE 文件 hash 注册进 diffsynth 模型白名单（进程内生效）。"""
     from diffsynth.core.loader.file import hash_model_file
@@ -252,6 +512,8 @@ def _register_local_vae_hash(path: Path, spec: dict) -> None:
     if any(item.get("model_hash") == hash_value for item in model_loader.MODEL_CONFIGS):
         _REGISTERED_VAE_HASHES.add(hash_value)
         return
+    # 先增强 converter（支持 weight norm 拆分），再用原始 dotted path 注册
+    _patch_vae_converter(spec)
     entry = {
         "model_hash": hash_value,
         "model_name": spec["model_name"],
@@ -264,7 +526,7 @@ def _register_local_vae_hash(path: Path, spec: dict) -> None:
 
 
 def local_catalog(config: dict[str, Any]) -> dict[str, Any]:
-    """本地模式模型目录：DiT/文本编码器来自本地权重，VAE 为自动下载占位。"""
+    """本地模式模型目录：DiT/文本编码器/VAE 均显示实际文件名。"""
     models_dirs = iter_models_dirs(config)
     errors: list[str] = []
     dit_files: list[str] = []
@@ -285,26 +547,76 @@ def local_catalog(config: dict[str, Any]) -> dict[str, Any]:
         if not te_files:
             errors.append("text_encoder / text_encoders 中未找到可识别的 MiniMax H3 文本编码器")
     ready = bool(dit_files and te_files)
-    variant_label = VAE_VARIANTS[vae_variant(config)]["label"]
-    video_local = find_local_vae(config, "video")
-    audio_local = find_local_vae(config, "audio")
-    video_note = "本地已检测" if video_local is not None else "自动下载"
-    audio_note = "本地已检测" if audio_local is not None else "自动下载"
+
+    # DiT 排序：pruned 模型优先（显存占用更小，适合 16GB 显卡）
+    dit_files.sort(key=lambda name: (0 if "pruned" in name.lower() else 1, name))
+
+    # VAE：自动检测所有可用的本地 VAE 文件（original + nf4）
+    vae_files: list[str] = []
+    vae_dirs = [MODEL_CACHE_DIR / "vae"]
+    vae_dirs += [d / "vae" for d in models_dirs]
+    # 也扫描 DiT 同级目录（如 webui/models/MiniMax），用户常把 VAE 放在那里
+    vae_dirs += [MODEL_CACHE_DIR / "MiniMax"]
+    vae_dirs += list(models_dirs)
+    # 也包含 nf4 缓存目录
+    for variant_spec in VAE_VARIANTS.values():
+        cache_dir = MODEL_CACHE_DIR / variant_spec["repo"].replace("/", os.sep)
+        if cache_dir.is_dir():
+            vae_dirs.append(cache_dir)
+    seen_vae: set[str] = set()
+    for directory in vae_dirs:
+        try:
+            if not directory.is_dir():
+                continue
+            for path in sorted(directory.glob("*.safetensors")):
+                name = path.name.lower()
+                if "vae" in name and ("video" in name or "audio" in name):
+                    if path.name not in seen_vae:
+                        seen_vae.add(path.name)
+                        vae_files.append(path.name)
+        except OSError:
+            continue
+
+    # LoRA：扫描 Lora/loras 目录（WebUI 用 Lora 单数，ComfyUI 用 loras 复数）
+    lora_files: list[str] = []
+    lora_dirs = [
+        MODEL_CACHE_DIR / "Lora",
+        MODEL_CACHE_DIR / "loras",
+        MODEL_CACHE_DIR / "Lora" / "minimax_h3",
+        MODEL_CACHE_DIR / "loras" / "minimax_h3",
+    ]
+    lora_dirs += [d / "Lora" for d in models_dirs]
+    lora_dirs += [d / "loras" for d in models_dirs]
+    lora_dirs += [d / "Lora" / "minimax_h3" for d in models_dirs]
+    lora_dirs += [d / "loras" / "minimax_h3" for d in models_dirs]
+    seen_lora: set[str] = set()
+    for directory in lora_dirs:
+        try:
+            if not directory.is_dir():
+                continue
+            for path in sorted(directory.glob("*.safetensors")):
+                # 只收录 H3 相关 LoRA（文件名含 h3 或 minimax），避免混入其他模型的 LoRA
+                name_lower = path.name.lower()
+                if "h3" not in name_lower and "minimax" not in name_lower:
+                    continue
+                if path.name not in seen_lora:
+                    seen_lora.add(path.name)
+                    lora_files.append(path.name)
+        except OSError:
+            continue
+
     return {
         "models": dit_files,
         "text_encoders": te_files,
-        "vaes": [
-            f"MiniMax-H3 视频 VAE（{variant_label}，{video_note}）",
-            f"MiniMax-H3 音频 VAE（{variant_label}，{audio_note}）",
-        ],
-        "loras": [],
+        "vaes": vae_files,
+        "loras": lora_files,
         "samplers": ["euler"],
         "schedulers": ["simple"],
         "nodes": [],
         "h3_ready": ready,
         "missing_nodes": errors,
-        "supports_lora_model_only": False,
-        "supports_lora_model_clip": False,
+        "supports_lora_model_only": True,
+        "supports_lora_model_clip": True,
         "local": True,
         "models_dir": ", ".join(str(d) for d in models_dirs),
     }
@@ -312,49 +624,37 @@ def local_catalog(config: dict[str, Any]) -> dict[str, Any]:
 
 def local_status(config: dict[str, Any]) -> dict[str, Any]:
     """供 backend_manager.status() 使用的本地模式状态。"""
+    engine = str(config.get("local_engine") or "diffsynth").strip().lower()
+    engine_label = "Forge 原生" if engine == "forge" else "DiffSynth"
+    provider_text = f"本地 WebUI（{engine_label}）"
     try:
         catalog = local_catalog(config)
         ready = bool(catalog.get("h3_ready"))
         health: dict[str, Any] = {
             "ok": ready,
-            "base_url": "in-process (DiffSynth)",
-            "provider": "DiffSynth-Studio 本地模式",
+            "base_url": "in-process",
+            "provider": provider_text,
         }
-        variant = vae_variant(config)
-        video_cached = vae_cache_path(variant, "video").is_file()
-        audio_cached = vae_cache_path(variant, "audio").is_file()
-        video_local = find_local_vae(config, "video")
-        audio_local = find_local_vae(config, "audio")
-
-        def vae_status(which: str, cached: bool, local_path: Path | None) -> str:
-            label = "视频 VAE" if which == "video" else "音频 VAE"
-            if local_path is not None:
-                return f"{label}：已检测本地文件（{local_path.name}，{VAE_VARIANTS[variant]['label']}）"
-            if cached:
-                return f"{label}（{VAE_VARIANTS[variant]['label']}）已缓存"
-            return f"{label}（{VAE_VARIANTS[variant]['label']}）未下载，首次生成时自动下载"
-
-        health["video_vae"] = vae_status("video", video_cached, video_local)
-        health["audio_vae"] = vae_status("audio", audio_cached, audio_local)
-        if video_local is None and audio_local is None and not (video_cached and audio_cached):
-            health["vae"] = f"VAE（{VAE_VARIANTS[variant]['label']}）未下载，首次生成时自动下载"
+        vae_files = catalog.get("vaes", [])
+        if vae_files:
+            health["vae"] = "VAE：" + "、".join(vae_files)
         else:
-            health["vae"] = f"VAE（{VAE_VARIANTS[variant]['label']}）就绪"
+            health["vae"] = "VAE 未下载，首次生成时自动下载"
         if catalog.get("missing_nodes"):
             health["error"] = "；".join(catalog["missing_nodes"])
     except Exception as exc:
         ready = False
         health = {
             "ok": False,
-            "base_url": "in-process (DiffSynth)",
-            "provider": "DiffSynth-Studio 本地模式",
+            "base_url": "in-process",
+            "provider": provider_text,
             "error": str(exc),
         }
     return {
         "state": "ready" if ready else "stopped",
         "ready": ready,
         "mode": "local",
-        "url": "in-process (DiffSynth)",
+        "url": f"in-process（{engine_label}）",
         "process_running": False,
         "pid": None,
         "exit_code": None,
@@ -515,38 +815,68 @@ class _PipelineManager:
             str(dit_path),
             str(te_path),
             str(processor_dir),
-            vae_variant(config),
-            str(find_local_vae(config, "video") or ""),
-            str(find_local_vae(config, "audio") or ""),
+            vae_variant(config, dit_path=dit_path),
+            str(find_local_vae(config, "video", variant=vae_variant(config, dit_path=dit_path)) or ""),
+            str(find_local_vae(config, "audio", variant=vae_variant(config, dit_path=dit_path)) or ""),
         )
         with self._lock:
             if self._pipe is not None and self._fingerprint == fingerprint:
                 return self._pipe
         import torch
         from diffsynth.pipelines.minimax_h3_audio_video import MiniMaxH3Pipeline, ModelConfig
+        from diffsynth.core.quant import QuantizeConfig
 
-        vram = {
-            "offload_dtype": "disk",
-            "offload_device": "disk",
-            "onload_dtype": "disk",
-            "onload_device": "disk",
-            "preparing_dtype": torch.bfloat16,
-            "preparing_device": "cuda",
-            "computation_dtype": torch.bfloat16,
-            "computation_device": "cuda",
-        }
-        vae_spec = VAE_VARIANTS[vae_variant(config)]
+        def _is_nf4(path: Path) -> bool:
+            return "nf4" in path.name.lower()
+
+        def _is_int8(path: Path) -> bool:
+            return "int8" in path.name.lower()
+
+        # DiT 量化配置：NF4 用 bitsandbytes_nf4，INT8 用 comfy_kitchen_int8_w8a8
+        if _is_nf4(dit_path):
+            dit_quantize = QuantizeConfig(method="bitsandbytes_nf4", load_prequantized=True)
+            print(f"[H3 Studio] 检测到 NF4 DiT 模型，启用 bitsandbytes_nf4 量化推理：{dit_path.name}", flush=True)
+        elif _is_int8(dit_path):
+            dit_quantize = QuantizeConfig(method="comfy_kitchen_int8_w8a8", load_prequantized=True)
+            print(f"[H3 Studio] 检测到 INT8 DiT 模型，启用 comfy_kitchen_int8_w8a8 量化推理：{dit_path.name}", flush=True)
+        else:
+            dit_quantize = None
+
+        # 文本编码器量化配置
+        if _is_nf4(te_path):
+            te_quantize = QuantizeConfig(method="bitsandbytes_nf4", load_prequantized=True)
+            print(f"[H3 Studio] 检测到 NF4 文本编码器，启用 bitsandbytes_nf4 量化推理：{te_path.name}", flush=True)
+        elif _is_int8(te_path):
+            te_quantize = QuantizeConfig(method="comfy_kitchen_int8_w8a8", load_prequantized=True)
+            print(f"[H3 Studio] 检测到 INT8 文本编码器，启用 comfy_kitchen_int8_w8a8 量化推理：{te_path.name}", flush=True)
+        else:
+            te_quantize = None
+
+        # 根据策略选择 vram 管理配置
+        strategy = resolve_vram_strategy(config)
+        vram = build_vram_config(strategy)
+        print(
+            f"[H3 Studio] 显存策略: {strategy['label']} "
+            f"(检测到 VRAM={strategy['vram_gb']}GB, RAM={strategy['ram_gb']}GB, "
+            f"offload={strategy['offload_device']}, gc={strategy['use_gradient_checkpointing']})",
+            flush=True,
+        )
+        vae_variant_name = vae_variant(config, dit_path=dit_path)
+        vae_spec = VAE_VARIANTS[vae_variant_name]
 
         def vae_model_config(which: str) -> "ModelConfig":
-            local_path = find_local_vae(config, which)
+            local_path = find_local_vae(config, which, variant=vae_variant_name)
             if local_path is not None:
                 _register_local_vae_hash(local_path, LOCAL_VAE_SPECS[which])
-                return ModelConfig(path=str(local_path), **vram)
+                vae_quantize = QuantizeConfig(method="bitsandbytes_nf4", load_prequantized=True) if _is_nf4(local_path) else None
+                return ModelConfig(path=str(local_path), quantize=vae_quantize, **vram)
             pattern = vae_spec["video_pattern"] if which == "video" else vae_spec["audio_pattern"]
+            vae_quantize = QuantizeConfig(method="bitsandbytes_nf4", load_prequantized=True) if "nf4" in pattern.lower() else None
             return ModelConfig(
                 model_id=vae_spec["repo"],
                 origin_file_pattern=pattern,
                 local_model_path=str(MODEL_CACHE_DIR),
+                quantize=vae_quantize,
                 **vram,
             )
 
@@ -556,8 +886,8 @@ class _PipelineManager:
                 torch_dtype=torch.bfloat16,
                 device="cuda",
                 model_configs=[
-                    ModelConfig(path=str(dit_path), **vram),
-                    ModelConfig(path=str(te_path), **vram),
+                    ModelConfig(path=str(dit_path), quantize=dit_quantize, **vram),
+                    ModelConfig(path=str(te_path), quantize=te_quantize, **vram),
                     vae_model_config("video"),
                     vae_model_config("audio"),
                 ],
@@ -603,6 +933,164 @@ _manager = _PipelineManager()
 
 def request_cancel(job_id: str) -> bool:
     return _manager.request_cancel(job_id)
+
+
+# ── Forge 原生引擎 ──────────────────────────────────────────────────────────
+
+def _resolve_model_paths(data: dict[str, Any], config: dict[str, Any]) -> dict[str, Path]:
+    """解析 Forge 原生引擎所需的模型路径。"""
+    models_dirs = iter_models_dirs(config)
+
+    def find(name: str, subdirs: tuple[str, ...]) -> Path:
+        for models_dir in models_dirs:
+            for sub in subdirs:
+                path = models_dir / sub / name
+                if path.is_file():
+                    return path
+        raise H3StudioError(f"模型文件不存在：{name}")
+
+    dit_path = find(str(data.get("model") or ""), ("diffusion_models",))
+    te_path = find(str(data.get("text_encoder") or ""), TE_SUBDIRS)
+
+    # VAE 路径：根据 DiT 量化格式自动选择
+    variant = vae_variant(config, dit_path=dit_path)
+    vae_spec = VAE_VARIANTS[variant]
+
+    video_vae_local = find_local_vae(config, "video", variant=variant)
+    audio_vae_local = find_local_vae(config, "audio", variant=variant)
+
+    if video_vae_local is not None:
+        video_vae_path = video_vae_local
+    else:
+        video_vae_path = vae_cache_path(variant, "video")
+
+    if audio_vae_local is not None:
+        audio_vae_path = audio_vae_local
+    else:
+        audio_vae_path = vae_cache_path(variant, "audio")
+
+    return {
+        "dit": dit_path,
+        "te": te_path,
+        "video_vae": video_vae_path,
+        "audio_vae": audio_vae_path,
+    }
+
+
+def run_generation_forge(
+    job_id: str,
+    data: dict[str, Any],
+    config: dict[str, Any],
+    progress_cb: Callable[[dict[str, Any]], None],
+) -> list[dict[str, Any]]:
+    """使用 Forge 原生引擎执行 H3 生成。"""
+    from .h3_forge_native import get_generator
+    from PIL import Image
+
+    _manager.register_cancel(job_id)
+    try:
+        progress_cb({"phase": "prepare"})
+        paths = _resolve_model_paths(data, config)
+
+        gen = get_generator()
+        gen.load_models(
+            dit_path=str(paths["dit"]),
+            te_path=str(paths["te"]),
+            video_vae_path=str(paths["video_vae"]),
+            audio_vae_path=str(paths["audio_vae"]),
+        )
+        _raise_if_cancelled(job_id)
+
+        # 构建参数
+        mode = data.get("mode")
+        first_frame = None
+        last_frame = None
+        references = None
+
+        if data.get("loras"):
+            print("[H3 Studio] 警告：Forge 原生引擎暂不支持 LoRA，已忽略 LoRA 设置。如需使用 LoRA 请切换到 DiffSynth 引擎。", flush=True)
+
+        if mode == "i2v":
+            first_frame = _load_pil_image(data["first_frame"])
+        elif mode == "fl2v":
+            first_frame = _load_pil_image(data["first_frame"])
+            last_frame = _load_pil_image(data["last_frame"])
+        elif mode in {"ref", "swap"}:
+            references = _build_references_forge(data)
+
+        def cancel_check():
+            return _manager.is_cancelled(job_id)
+
+        video, audio = gen.generate(
+            prompt=data["prompt"],
+            width=int(data["width"]),
+            height=int(data["height"]),
+            num_frames=int(data["frames"]),
+            num_steps=int(data["steps"]),
+            seed=int(data["seed"]),
+            video_shift=float(data.get("shift_video") or 12),
+            audio_shift=float(data.get("shift_audio") or 3),
+            first_frame=first_frame,
+            last_frame=last_frame,
+            references=references,
+            progress_cb=progress_cb,
+            cancel_check=cancel_check,
+        )
+        _raise_if_cancelled(job_id)
+
+        progress_cb({"phase": "write"})
+        filename = _write_output_forge(video, audio, data)
+        return [{"filename": filename, "subfolder": "", "type": "output"}]
+    finally:
+        _manager.clear_cancel(job_id)
+
+
+def _load_pil_image(file_ref) -> "Image.Image":
+    """加载 PIL 图像。"""
+    from PIL import Image
+
+    path = find_asset(file_ref)
+    if path is None:
+        raise H3StudioError(f"找不到图像文件：{file_ref}")
+    return Image.open(path).convert("RGB")
+
+
+def _build_references_forge(data: dict[str, Any]) -> list[dict]:
+    """构建 Forge 引擎的参考素材列表。"""
+    from PIL import Image
+
+    references = []
+    for ref in data.get("references", []):
+        kind = ref.get("kind")
+        path = find_asset(ref.get("file"))
+        if path is None:
+            continue
+        if kind == "image":
+            references.append({"type": "image", "image": Image.open(path).convert("RGB")})
+        elif kind == "audio":
+            waveform, sr = _decode_audio(path)
+            references.append({"type": "audio", "audio": waveform, "sample_rate": sr})
+        elif kind == "video":
+            frames = _decode_video_frames(path, 32)
+            if frames:
+                references.append({"type": "image", "image": frames[0]})
+    return references
+
+
+def _write_output_forge(video, audio, data: dict[str, Any]) -> str:
+    """写入 Forge 引擎的输出视频。"""
+    from .h3_forge_native import write_video_audio
+    import time
+
+    LOCAL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output = data.get("output") or {}
+    fps = int(round(float(output.get("fps") or 24)))
+    filename = (
+        f"Forge_H3_native_{data.get('mode')}_seed_{int(data.get('seed') or 0)}_"
+        f"{time.strftime('%Y%m%d_%H%M%S')}.mp4"
+    )
+    write_video_audio(video, audio, str(LOCAL_OUTPUT_DIR / filename), fps=fps)
+    return filename
 
 
 def _make_progress_wrapper(job_id: str, progress_cb: Callable[[dict[str, Any]], None]) -> Callable[[Any], Any]:
@@ -740,9 +1228,10 @@ def _build_references(data: dict[str, Any]) -> list[dict[str, Any]]:
     return references
 
 
-def _build_call_args(job_id: str, data: dict[str, Any], progress_cb: Callable[[dict[str, Any]], None]) -> dict[str, Any]:
+def _build_call_args(job_id: str, data: dict[str, Any], config: dict[str, Any], progress_cb: Callable[[dict[str, Any]], None]) -> dict[str, Any]:
     width = int(data["width"])
     height = int(data["height"])
+    strategy = resolve_vram_strategy(config)
     args: dict[str, Any] = {
         "prompt": data["prompt"],
         "height": height,
@@ -753,6 +1242,9 @@ def _build_call_args(job_id: str, data: dict[str, Any], progress_cb: Callable[[d
         "cfg_scale": 1.0,
         "flow_shift": float(data.get("shift_video") or 12),
         "audio_flow_shift": float(data.get("shift_audio") or 3),
+        "tiled": strategy["tiled"],
+        "use_gradient_checkpointing": strategy["use_gradient_checkpointing"],
+        "use_gradient_checkpointing_offload": strategy["use_gradient_checkpointing_offload"],
         "progress_bar_cmd": _make_progress_wrapper(job_id, progress_cb),
     }
     mode = data.get("mode")
@@ -765,10 +1257,22 @@ def _build_call_args(job_id: str, data: dict[str, Any], progress_cb: Callable[[d
             _load_frame(data["last_frame"], data.get("last_frame_crop"), width, height),
         ]
         args["keyframe_indices"] = [0, -1]
-    elif mode == "ref":
+    elif mode in {"ref", "swap"}:
         args["references"] = _build_references(data)
         short_edge = 2048 if data.get("ref_image_size") == "max" else min(width, height)
         args["ref_image_short_edge"] = max(32, int(short_edge))
+        # 调试日志：确认 references 内容
+        ref_types = [r.get("type") for r in args["references"]]
+        print(f"[H3 Studio] 参考模式 references: {ref_types}", flush=True)
+        for i, r in enumerate(args["references"]):
+            if r.get("type") == "audio":
+                wf = r.get("audio")
+                sr = r.get("sample_rate")
+                dur = wf.shape[-1] / sr if hasattr(wf, "shape") and sr else "?"
+                print(f"[H3 Studio] 音频参考 #{i}: shape={list(wf.shape) if hasattr(wf, 'shape') else '?'}, sample_rate={sr}, duration={dur:.2f}s", flush=True)
+            elif r.get("type") == "image":
+                img = r.get("image")
+                print(f"[H3 Studio] 图片参考 #{i}: size={img.size if hasattr(img, 'size') else '?'}", flush=True)
     return args
 
 
@@ -799,14 +1303,43 @@ def run_generation(
     progress_cb: Callable[[dict[str, Any]], None],
 ) -> list[dict[str, Any]]:
     """在进程内执行一次 H3 生成，返回 ComfyUI 风格输出条目列表。"""
+    engine = str(config.get("local_engine") or "diffsynth").strip().lower()
+    engine_name = "Forge 原生引擎" if engine == "forge" else "DiffSynth Pipeline"
+    print(f"[H3 Studio] 使用本地引擎: {engine_name}", flush=True)
+    if engine == "forge":
+        return run_generation_forge(job_id, data, config, progress_cb)
+
     _manager.register_cancel(job_id)
     try:
         progress_cb({"phase": "prepare"})
         pipe = _manager.get_pipeline(data, config)
         _raise_if_cancelled(job_id)
         with _manager._generation_lock:
-            args = _build_call_args(job_id, data, progress_cb)
-            video, audio = pipe(**args)
+            args = _build_call_args(job_id, data, config, progress_cb)
+            # 加载 LoRA（仅 DiT；H3 LoRA 作用于 DiT，文本编码器暂不支持）
+            loaded_loras: list[str] = []
+            for lora in data.get("loras") or []:
+                name = lora.get("name")
+                if not name:
+                    continue
+                lora_path = find_lora_path(config, name)
+                if lora_path is None:
+                    print(f"[H3 Studio] 警告：未找到 LoRA 文件 {name}，已跳过", flush=True)
+                    continue
+                alpha = float(lora.get("model_strength", 1.0))
+                try:
+                    pipe.load_lora(pipe.dit, str(lora_path), alpha=alpha)
+                    loaded_loras.append(name)
+                    print(f"[H3 Studio] 已加载 LoRA: {name} (alpha={alpha})", flush=True)
+                except Exception as exc:
+                    print(f"[H3 Studio] 警告：LoRA {name} 加载失败：{exc}", flush=True)
+            try:
+                video, audio = pipe(**args)
+            finally:
+                # 生成完成后清除 LoRA，避免影响后续任务
+                if loaded_loras:
+                    pipe.clear_lora()
+                    print(f"[H3 Studio] 已清除 {len(loaded_loras)} 个 LoRA", flush=True)
         _raise_if_cancelled(job_id)
         progress_cb({"phase": "write"})
         filename = _write_output(video, audio, data)

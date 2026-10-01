@@ -239,6 +239,12 @@ def read_metadata_from_safetensors(filename):
 class FakeInitialModel:
     """a dummy class for compatibility when no model is loaded yet"""
 
+    def __init__(self):
+        # Processing can reach the prompt-cache bookkeeping before the real
+        # Forge model replaces this placeholder.  Keep the same metadata
+        # contract as a loaded model so startup-time generation does not fail.
+        self.extra_generation_params = {}
+
     @property
     def first_stage_model(self):
         return None

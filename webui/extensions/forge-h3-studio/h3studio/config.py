@@ -28,7 +28,20 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "minimax_api_base": "https://api.minimaxi.com",
     "local_models_dir": "",
     "local_processor_path": "",
+    # VAE 变体：自动检测（根据 DiT 量化格式选择 nf4/original），此项仅作回退默认值
     "local_vae_variant": "original",
+    # 本地推理引擎：仅使用 diffsynth
+    "local_engine": "diffsynth",
+    # 模型量化格式：auto（自动选择 nf4，若无则 int8）/ nf4 / int8
+    # 选择后前端模型列表自动筛选对应格式，无需手动逐个选择
+    "dit_quant": "auto",
+    # 显存/内存管理策略：
+    #   auto         - 自动检测硬件并选择最优策略（默认）
+    #   performance  - 高性能：cpu offload + 不开 gc，要求显存≥20G 且内存≥24G
+    #   save_memory  - 省内存：disk offload + 不开 gc，显存充足但内存紧张
+    #   save_vram    - 省显存：cpu offload + 开 gc+offload，内存充足但显存紧张
+    #   extreme      - 极致省：disk offload + 开 gc+offload，显存内存都紧张
+    "vram_strategy": "auto",
 }
 
 _lock = threading.RLock()

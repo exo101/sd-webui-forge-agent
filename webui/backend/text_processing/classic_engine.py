@@ -76,7 +76,11 @@ class ClassicTextProcessingEngine:
         self.id_end = self.tokenizer.eos_token_id
         self.id_pad = self.tokenizer.pad_token_id
 
-        model_embeddings = text_encoder.transformer.text_model.embeddings
+        # 兼容新旧 transformers：旧版 CLIPTextModel 有 text_model 中间层，新版（5.x）直接暴露 embeddings/encoder/final_layer_norm
+        transformer = text_encoder.transformer
+        self._text_model = transformer.text_model if hasattr(transformer, "text_model") else transformer
+
+        model_embeddings = self._text_model.embeddings
         model_embeddings.token_embedding = CLIPEmbeddingForTextualInversion(model_embeddings.token_embedding, self.embeddings, textual_inversion_key=embedding_key)
 
         vocab = self.tokenizer.get_vocab()
@@ -99,9 +103,14 @@ class ClassicTextProcessingEngine:
     def encode_with_transformers(self, tokens):
         target_device = memory_management.text_encoder_device()
 
-        self.text_encoder.transformer.text_model.embeddings.position_ids = self.text_encoder.transformer.text_model.embeddings.position_ids.to(device=target_device)
-        self.text_encoder.transformer.text_model.embeddings.position_embedding = self.text_encoder.transformer.text_model.embeddings.position_embedding.to(dtype=torch.float32)
-        self.text_encoder.transformer.text_model.embeddings.token_embedding = self.text_encoder.transformer.text_model.embeddings.token_embedding.to(dtype=torch.float32)
+        self._text_model.embeddings.position_ids = self._text_model.embeddings.position_ids.to(device=target_device)
+
+        # 旧版 transformers 的 CLIPTextModel 有 text_model 中间层，其 forward 会自动处理 dtype；
+        # 新版（5.x）直接暴露 embeddings/encoder，若把 embeddings 单独转为 float32 会导致
+        # encoder 的 layer_norm 出现 mixed dtype 错误。因此仅在旧版结构下做 float32 转换。
+        if hasattr(self.text_encoder.transformer, "text_model"):
+            self._text_model.embeddings.position_embedding = self._text_model.embeddings.position_embedding.to(dtype=torch.float32)
+            self._text_model.embeddings.token_embedding = self._text_model.embeddings.token_embedding.to(dtype=torch.float32)
 
         tokens = tokens.to(target_device)
 
@@ -111,13 +120,15 @@ class ClassicTextProcessingEngine:
         z = outputs.hidden_states[layer_id]
 
         if self.final_layer_norm:
-            z = self.text_encoder.transformer.text_model.final_layer_norm(z)
+            z = self._text_model.final_layer_norm(z)
 
         if self.return_pooled:
             pooled_output = outputs.pooler_output
 
             if self.text_projection and self.embedding_key != "clip_l":
-                pooled_output = self.text_encoder.transformer.text_projection(pooled_output)
+                text_proj = getattr(self.text_encoder.transformer, "text_projection", None)
+                if text_proj is not None:
+                    pooled_output = text_proj(pooled_output)
 
             z.pooled = pooled_output
         return z

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 import re
 import shutil
 import threading
@@ -13,9 +15,11 @@ from typing import Any
 from . import local_backend
 from .cloud_client import CLOUD_UPLOAD_DIR, CloudClient
 from .comfy_client import ComfyClient
-from .config import load_config
+from .config import DATA_DIR, load_config
 from .errors import H3StudioError
 from .workflow import build_h3_workflow
+
+JOB_HISTORY_PATH = DATA_DIR / "job_history.json"
 
 
 @dataclass
@@ -61,6 +65,57 @@ class JobStore:
         self._lock = threading.RLock()
         self._jobs: dict[str, StudioJob] = {}
         self._streams: dict[str, Any] = {}
+        self._load_history()
+
+    def _load_history(self) -> None:
+        """从磁盘加载历史任务（仅终态任务，运行中的任务重启后标记为失败）。"""
+        if not JOB_HISTORY_PATH.is_file():
+            return
+        try:
+            data = json.loads(JOB_HISTORY_PATH.read_text(encoding="utf-8"))
+            if not isinstance(data, list):
+                return
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                job_id = item.get("id")
+                if not job_id or job_id in self._jobs:
+                    continue
+                # 重启后运行中的任务无法恢复，标记为失败
+                state = item.get("state", "failed")
+                if state in {"queued", "running"}:
+                    state = "failed"
+                    item["error"] = (item.get("error") or "") + "（WebUI 重启，任务中断）"
+                item["state"] = state
+                try:
+                    job = StudioJob(**item)
+                    self._jobs[job_id] = job
+                except Exception:
+                    continue
+            print(f"[H3 Studio] 已加载 {len(self._jobs)} 条历史任务", flush=True)
+        except Exception as exc:
+            print(f"[H3 Studio] 加载任务历史失败：{exc}", flush=True)
+
+    def _save(self) -> None:
+        """持久化所有终态任务到磁盘。"""
+        try:
+            with self._lock:
+                terminal = {
+                    "completed", "failed", "cancelled",
+                }
+                items = [
+                    asdict(job) for job in self._jobs.values()
+                    if job.state in terminal
+                ]
+            # 不保存 preview_bytes
+            for item in items:
+                item.pop("preview_bytes", None)
+            JOB_HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
+            temp = JOB_HISTORY_PATH.with_suffix(".tmp")
+            temp.write_text(json.dumps(items, ensure_ascii=False), encoding="utf-8")
+            os.replace(temp, JOB_HISTORY_PATH)
+        except Exception as exc:
+            print(f"[H3 Studio] 保存任务历史失败：{exc}", flush=True)
 
     def _close_stream(self, job_id: str) -> None:
         with self._lock:
@@ -72,12 +127,12 @@ class JobStore:
                 pass
 
     def _trim(self) -> None:
-        if len(self._jobs) <= 200:
-            return
-        ordered = sorted(self._jobs.values(), key=lambda item: item.created_at)
-        for item in ordered[: len(self._jobs) - 200]:
-            if item.state not in {"queued", "running"}:
-                self._jobs.pop(item.id, None)
+        if len(self._jobs) > 200:
+            ordered = sorted(self._jobs.values(), key=lambda item: item.created_at)
+            for item in ordered[: len(self._jobs) - 200]:
+                if item.state not in {"queued", "running"}:
+                    self._jobs.pop(item.id, None)
+        self._save()
 
     @staticmethod
     def _collect_outputs(value: Any, result: list[dict[str, Any]]) -> None:
@@ -489,12 +544,14 @@ class JobStore:
                     job.updated_at = time.time()
 
     def _submit_local(self, request: dict[str, Any]) -> dict[str, Any]:
-        """Local WebUI mode: run MiniMax H3 in-process via DiffSynth (no ComfyUI)."""
+        """Local WebUI mode: run MiniMax H3 in-process (Forge native or DiffSynth, no ComfyUI)."""
+        from .config import load_config
+        config = load_config()
+        engine = str(config.get("local_engine") or "diffsynth").strip().lower()
+        engine_label = "Forge 原生" if engine == "forge" else "DiffSynth"
         workflow, summary = build_h3_workflow(request)
         summary["node_count"] = 1
-        summary["node_titles"] = {"1": "MiniMax H3 本地生成（DiffSynth）"}
-        if request.get("loras"):
-            summary.setdefault("warnings", []).append("本地 WebUI 模式暂不支持 LoRA，已忽略当前 LoRA 设置")
+        summary["node_titles"] = {"1": f"MiniMax H3 本地生成（{engine_label}）"}
         requested_client_id = str(request.get("client_id") or "")
         client_id = requested_client_id if re.fullmatch(r"[A-Za-z0-9_-]{16,128}", requested_client_id) else uuid.uuid4().hex
         now = time.time()
@@ -635,7 +692,21 @@ class JobStore:
             job.completed_at = job.updated_at
             result = deepcopy(job.public())
         self._close_stream(job_id)
+        self._save()
         return result
+
+    def delete(self, job_id: str) -> dict[str, Any]:
+        """删除单个任务（仅允许删除终态任务）。"""
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                raise H3StudioError("任务不存在")
+            if job.state in {"queued", "running"}:
+                raise H3StudioError("运行中的任务无法删除，请先中断")
+            self._jobs.pop(job_id, None)
+        self._close_stream(job_id)
+        self._save()
+        return {"deleted": job_id}
 
     def clear(self, scope: str) -> dict[str, Any]:
         if scope not in {"completed", "queue"}:
@@ -654,6 +725,7 @@ class JobStore:
         if scope == "completed":
             for job_id in ids:
                 self._close_stream(job_id)
+            self._save()
             return {"cleared": len(ids), "scope": scope}
         client = ComfyClient()
         local_queued = [item for item in queued if item.prompt_id.startswith("local-")]
@@ -685,6 +757,7 @@ class JobStore:
                     cleared += 1
         for job_id in closed_ids:
             self._close_stream(job_id)
+        self._save()
         return {"cleared": cleared, "scope": scope}
 
 

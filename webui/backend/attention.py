@@ -321,15 +321,19 @@ def attention_flash(q, k, v, heads, mask=None, attn_precision=None, skip_reshape
         if mask.ndim == 3:
             mask = mask.unsqueeze(1)
 
-    # flash_attn 只支持 fp16/bf16，fp32 时直接走 SDPA fallback，避免每次都抛异常刷日志
-    if q.dtype not in (torch.float16, torch.bfloat16):
+    # flash_attn 只支持 fp16/bf16，且当前调用方式不支持 Qwen3-VL 的
+    # causal/additive mask。直接走 SDPA，避免每层先抛异常再 fallback。
+    # Qwen3-VL GQA is intentionally handled by PyTorch SDPA.  Some installed
+    # flash-attn builds accept equal head counts after expansion but still
+    # reject the resulting layout, causing an exception for every transformer
+    # block. SDPA provides the fused CUDA kernel without that failure loop.
+    if enable_gqa or q.dtype not in (torch.float16, torch.bfloat16) or mask is not None:
         out = operations.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0, is_causal=False)
         if not skip_output_reshape:
             out = out.transpose(1, 2).reshape(b, -1, heads * dim_head)
         return out
 
     try:
-        assert mask is None
         out = flash_attn_wrapper(
             q.transpose(1, 2),
             k.transpose(1, 2),
@@ -339,7 +343,7 @@ def attention_flash(q, k, v, heads, mask=None, attn_precision=None, skip_reshape
         ).transpose(1, 2)
         _fallback = False
     except Exception as e:
-        logger.error(f"Error running flash_attn: {e}")
+        logger.debug(f"FlashAttention unavailable; falling back to SDPA: {e}")
         _fallback = True
 
     if _fallback:

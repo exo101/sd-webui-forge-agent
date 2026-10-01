@@ -157,7 +157,21 @@ def load_huggingface_component(guess, component_name, lib_name, cls_name, repo_p
                 with using_forge_operations(**to_args, manual_cast_enabled=True):
                     model = IntegratedCLIP(CLIPTextModel, config, add_text_projection=True).to(**to_args)
 
-            load_state_dict(model, state_dict, ignore_errors=["transformer.text_projection.weight", "transformer.text_model.embeddings.position_ids", "logit_scale"], log_name=cls_name)
+            # 兼容新旧 transformers：新版 CLIPTextModel 没有 text_model 中间层，
+            # 需把 state_dict 中的 transformer.text_model.* 映射为 transformer.*
+            if not hasattr(model.transformer, "text_model"):
+                new_sd = {}
+                for k, v in state_dict.items():
+                    if k.startswith("transformer.text_model."):
+                        new_sd["transformer." + k[len("transformer.text_model."):]] = v
+                    else:
+                        new_sd[k] = v
+                state_dict = new_sd
+                ignore_errors = ["transformer.text_projection.weight", "transformer.embeddings.position_ids", "logit_scale"]
+            else:
+                ignore_errors = ["transformer.text_projection.weight", "transformer.text_model.embeddings.position_ids", "logit_scale"]
+
+            load_state_dict(model, state_dict, ignore_errors=ignore_errors, log_name=cls_name)
             return model
         if cls_name == "Qwen2_5_VLForConditionalGeneration":
             assert isinstance(state_dict, dict) and len(state_dict) > 16, "You do not have Qwen 2.5 state dict!"
@@ -924,7 +938,10 @@ def forge_loader(sd: os.PathLike, additional_state_dicts: list[os.PathLike] = No
     backend.args.dynamic_args.wan = "Wan" in repo_name
     backend.args.dynamic_args.pid = "PiD" in repo_name
     backend.args.dynamic_args.krea2 = "krea" in repo_name.lower() or "Krea2" in str(type(estimated_config))
-    backend.args.dynamic_args.qwen21 = "Qwen-Image-2.1" in repo_name
+    # Model repository names are not guaranteed to preserve capitalization
+    # (local exports commonly use qwen-image-2.1).  Keep Qwen 2.1 on its
+    # dedicated multimodal path regardless of filename/repo casing.
+    backend.args.dynamic_args.qwen21 = "qwen-image-2.1" in str(repo_name).lower()
     # DiffSynth uses a separate model layout and pipeline.  Route only the
     # explicit *_ds checkpoint to it; ordinary ConvRot checkpoints stay on
     # Forge's native comfy_kitchen kernel path.

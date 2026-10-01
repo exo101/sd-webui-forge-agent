@@ -36,6 +36,11 @@ class ScriptSampler(scripts.ScriptBuiltinUI):
         return self.steps, self.sampler_name, self.scheduler
 
     def setup(self, p, steps, sampler_name, scheduler):
-        p.steps = steps
+        try:
+            p.steps = int(float(steps))
+        except (TypeError, ValueError):
+            # A malformed script-input mapping must not place paths or other
+            # UI values into the sampler step count.
+            p.steps = 30
         p.sampler_name = sampler_name
         p.scheduler = scheduler

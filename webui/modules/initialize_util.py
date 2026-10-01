@@ -66,6 +66,41 @@ def fix_asyncio_event_loop_policy():
     asyncio.set_event_loop_policy(AnyThreadEventLoopPolicy())
 
 
+def install_asyncio_connection_noise_filter():
+    """Suppress expected Windows client-disconnect noise from asyncio.
+
+    Browsers, Gradio and local plugins can close an HTTP/WebSocket connection
+    while the Proactor transport is shutting down. Python then reports
+    WinError 10054/10053 through the loop exception handler even though the
+    request has completed or was intentionally cancelled. Keep all other
+    exceptions visible.
+    """
+    import asyncio
+
+    loop = asyncio.get_event_loop()
+    if getattr(loop, "_forge_connection_noise_filter", False):
+        return
+    previous = loop.get_exception_handler()
+
+    def is_harmless(context):
+        exc = context.get("exception")
+        if isinstance(exc, (ConnectionResetError, BrokenPipeError, ConnectionAbortedError)):
+            return True
+        message = str(context.get("message") or "")
+        return any(code in message for code in ("WinError 10054", "WinError 10053"))
+
+    def handler(loop_, context):
+        if is_harmless(context):
+            return
+        if previous is not None:
+            previous(loop_, context)
+        else:
+            loop_.default_exception_handler(context)
+
+    loop.set_exception_handler(handler)
+    loop._forge_connection_noise_filter = True
+
+
 def restore_config_state_file():
     from modules import config_states, shared
 

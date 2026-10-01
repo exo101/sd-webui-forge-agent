@@ -78,6 +78,7 @@ class BatchTaskManager:
     """批量任务队列管理器"""
 
     def __init__(self):
+        pass
         self.tasks: list[BatchTask] = []
         self._lock = threading.Lock()
         self._is_running = False
@@ -223,7 +224,11 @@ class BatchTaskManager:
         """处理单个任务：使用 txt2img + image_stitch 参考图生成"""
         from modules.sd_models import FakeInitialModel
         forge_model_mode = getattr(shared.opts, 'forge_model_mode', 'local')
-        is_api_mode = forge_model_mode == "api" or isinstance(shared.sd_model, FakeInitialModel)
+        # A placeholder model means the local model has not been loaded yet;
+        # it must not be treated as API mode.  API mode is selected only by
+        # the explicit setting, otherwise load the selected local edit model
+        # before encoding reference images.
+        is_api_mode = forge_model_mode == "api"
 
         if not is_api_mode and isinstance(shared.sd_model, FakeInitialModel):
             # 本地模式但模型未加载：尝试加载模型
@@ -237,6 +242,9 @@ class BatchTaskManager:
             except Exception as e:
                 _log(f"[Batch] 尝试加载模型失败: {e}")
                 raise RuntimeError("模型未加载，请先在 WebUI 中选择并加载模型")
+
+            if isinstance(shared.sd_model, FakeInitialModel):
+                raise RuntimeError("本地编辑模型加载失败，请先在 WebUI 中选择并加载模型")
 
         # 获取当前主界面参数
         width = getattr(txt2img_w_slider, "value", 512) if txt2img_w_slider else 512
@@ -305,9 +313,10 @@ batch_manager = BatchTaskManager()
 
 class ImageStitch(scripts.Script):
     sorting_priority = 529
+    cached_parameters = None
 
     def __init__(self):
-        self.cached_parameters: list[int] = None
+        pass
 
     def title(self):
         return "多图参考"
@@ -322,31 +331,14 @@ class ImageStitch(scripts.Script):
             enable = gr.Checkbox(label="启用多图参考（上传参考图后勾选此框生效）", value=True, elem_id=f"{tab}_image_stitch_enable")
             gr.HTML(i2i_info if is_img2img else t2i_info)
 
-            # 使用 State 存储当前图片列表
-            current_images_state = gr.State(value=[])
-
-            # 图片上传区域
-            with gr.Row():
-                upload_btn = gr.UploadButton("📤 上传图片", file_types=["image"], type="binary", size="sm", scale=1)
-                delete_btn = gr.Button("🗑️ 删除选中", size="sm", variant="stop", scale=1)
-                clear_btn = gr.Button("清空", size="sm", scale=1)
-
-            # 图片选择器
-            image_selector = gr.Dropdown(
-                label="选择要删除的图片",
-                choices=[],
-                value=None,
-                interactive=True,
-                allow_custom_value=False,
-                scale=2
-            )
-
             references = gr.Gallery(
                 value=None,
                 type="pil",
-                interactive=False,
+                interactive=True,
                 show_label=False,
                 container=False,
+                show_download_button=False,
+                show_share_button=False,
                 label="参考潜空间",
                 min_width=384,
                 height=384,
@@ -354,8 +346,16 @@ class ImageStitch(scripts.Script):
                 rows=1,
                 allow_preview=False,
                 object_fit="contain",
-                elem_id="image_stitch_ref_latent",
+                elem_id=self.elem_id("ref_latent"),
             )
+            select_index = gr.State(-1)
+            with gr.Row():
+                upload = gr.Image(height=225, width=225, sources="upload", type="pil", label="上传参考图", show_download_button=False, show_share_button=False)
+                with gr.Column():
+                    btn_upload = gr.Button("追加图片")
+                    btn_replace = gr.Button("替换选中图片")
+                    btn_delete = gr.Button("删除选中图片", variant="stop")
+                    btn_clear = gr.Button("清空参考图", variant="stop")
 
             # 最大边长限制
             max_dim = gr.Slider(
@@ -756,68 +756,42 @@ class ImageStitch(scripts.Script):
                 except Exception as e:
                     _log(f"Sync to global failed: {e}")
 
-            def _add_image(new_img, current_list):
-                """Add one uploaded image to the list."""
-                from io import BytesIO
-                updated = list(current_list) if current_list else []
-                if new_img is not None:
-                    if isinstance(new_img, bytes):
-                        updated.append(Image.open(BytesIO(new_img)))
-                    elif isinstance(new_img, str):
-                        updated.append(Image.open(new_img))
-                    elif isinstance(new_img, tuple) and len(new_img) >= 2 and isinstance(new_img[1], bytes):
-                        updated.append(Image.open(BytesIO(new_img[1])))
-                    elif isinstance(new_img, tuple) and len(new_img) >= 1 and isinstance(new_img[0], str):
-                        updated.append(Image.open(new_img[0]))
-                    else:
-                        # Try to convert directly
-                        try:
-                            updated.append(Image.open(new_img) if isinstance(new_img, (str, bytes)) else Image.open(BytesIO(new_img)))
-                        except Exception:
-                            _log(f"Unknown upload format: {type(new_img)}")
-                _sync_to_api(updated)
-                choices = [f"图片 {i+1}" for i in range(len(updated))]
-                return updated, updated, gr.update(choices=choices, value=None)
+            def _upload(gallery, image):
+                if image is None:
+                    return gr.skip(), gr.skip()
+                gallery = list(gallery or [])
+                gallery.append((image, None))
+                _sync_to_api(gallery)
+                return gr.update(value=gallery), gr.update(value=None)
 
-            def _delete_selected(selected_label, current_list):
-                """Delete the selected image from the list."""
-                if selected_label is None or not current_list:
-                    return current_list, current_list, gr.update()
-                try:
-                    idx = int(selected_label.split(" ")[1]) - 1
-                    if 0 <= idx < len(current_list):
-                        updated = [img for i, img in enumerate(current_list) if i != idx]
-                        _sync_to_api(updated)
-                        choices = [f"图片 {i+1}" for i in range(len(updated))]
-                        return updated, updated, gr.update(choices=choices, value=None)
-                except (ValueError, IndexError):
-                    pass
-                return current_list, current_list, gr.update()
+            def _replace(index, gallery, image):
+                gallery = list(gallery or [])
+                if image is None or index is None or index < 0 or index >= len(gallery):
+                    return -1, gr.skip(), gr.skip()
+                gallery[index] = (image, None)
+                _sync_to_api(gallery)
+                return -1, gr.update(value=gallery), gr.update(value=None)
 
-            def _clear_all():
-                """Clear all images."""
-                _sync_to_api([])
-                return [], [], gr.update(choices=[], value=None)
+            def _delete(index, gallery):
+                gallery = list(gallery or [])
+                if index is None or index < 0 or index >= len(gallery):
+                    return -1, gr.skip()
+                gallery.pop(index)
+                _sync_to_api(gallery)
+                return -1, gr.update(value=gallery)
 
-            upload_btn.upload(
-                fn=_add_image,
-                inputs=[upload_btn, current_images_state],
-                outputs=[current_images_state, references, image_selector],
-                show_progress=False
+            # Some Gradio versions can emit a final empty select event after
+            # generation; do not dereference None in that case.
+            references.select(
+                lambda evt: getattr(evt, "index", -1) if evt is not None else -1,
+                outputs=[select_index],
+                queue=False,
+                show_progress=False,
             )
-
-            delete_btn.click(
-                fn=_delete_selected,
-                inputs=[image_selector, current_images_state],
-                outputs=[current_images_state, references, image_selector],
-                show_progress=False
-            )
-
-            clear_btn.click(
-                fn=_clear_all,
-                outputs=[current_images_state, references, image_selector],
-                show_progress=False
-            )
+            btn_upload.click(_upload, inputs=[references, upload], outputs=[references, upload], queue=False, show_progress=False)
+            btn_replace.click(_replace, inputs=[select_index, references, upload], outputs=[select_index, references, upload], queue=False, show_progress=False)
+            btn_delete.click(_delete, inputs=[select_index, references], outputs=[select_index, references], queue=False, show_progress=False)
+            btn_clear.click(lambda: [-1, gr.update(value=[])], outputs=[select_index, references], queue=False, show_progress=False)
 
             # ===== 从首图同步尺寸比例到主UI =====
             def _get_first_image_size(images):
@@ -825,16 +799,19 @@ class ImageStitch(scripts.Script):
                 if not images or len(images) == 0:
                     return "", ""
                 try:
-                    w, h = images[0].size
+                    first = images[0][0] if isinstance(images[0], tuple) else images[0]
+                    w, h = first.size
                     w = max(64, min(2048, int(round(w / 8)) * 8))
                     h = max(64, min(2048, int(round(h / 8)) * 8))
-                    return str(w), str(h)
+                    # Width/height components are numeric. Returning strings
+                    # makes Forge fail later at `p.width + 32`.
+                    return w, h
                 except Exception:
                     return "", ""
 
             auto_size_btn.click(
                 fn=_get_first_image_size,
-                inputs=[current_images_state],
+                inputs=[references],
                 outputs=[sync_w_box, sync_h_box],
                 show_progress=False,
                 queue=False,
@@ -1107,22 +1084,35 @@ class ImageStitch(scripts.Script):
         has_edit_model = any(getattr(dynamic_args, key) for key in ("kontext", "edit", "klein", "wan", "krea2", "qwen21"))
         effective_enable = enable or bool(references)
         if not (effective_enable and references and has_edit_model):
-            if self.cached_parameters is None:
+            if ImageStitch.cached_parameters is None:
                 return
 
             # if previously enabled, clear out the ref_latents
-            self.cached_parameters = None
+            ImageStitch.cached_parameters = None
             self.reset_references(p)
             return
 
         references = self.extract_images(references)
+        print(
+            f"[ImageStitch] model={sd_models.model_data.sd_model.filename if sd_models.model_data.sd_model else 'unknown'} "
+            f"qwen21={getattr(dynamic_args, 'qwen21', False)} reference_images={len(references)}",
+            flush=True,
+        )
 
         # cache is based on reference inputs & model
         cache: list[str | int | bool] = [str(sd_models.model_data.forge_loading_parameters), *(self.hash_image(ref) for ref in references), (dynamic_args.wan and isinstance(p, StableDiffusionProcessingTxt2Img))]
-        if self.cached_parameters == cache:
-            return
+        if ImageStitch.cached_parameters == cache:
+            # The model can be unloaded/reloaded between generations while
+            # the script instance keeps its hash cache.  Only skip the VAE
+            # pass when the current model still owns every reference latent.
+            current_refs = getattr(p.sd_model, "ref_latents", None)
+            dynamic_refs = getattr(dynamic_args, "ref_latents", None)
+            if current_refs is not None and len(current_refs) == len(references) and len(dynamic_refs or []) == len(references):
+                print(f"[ImageStitch] reference cache valid: {len(references)} latent(s)", flush=True)
+                return
+            print("[ImageStitch] reference cache stale; rebuilding reference latents", flush=True)
 
-        self.cached_parameters = cache
+        ImageStitch.cached_parameters = cache
         self.reset_references(p)
 
         _batch_size: int = None
@@ -1158,7 +1148,11 @@ class ImageStitch(scripts.Script):
                 empty = torch.empty(dim, dtype=torch.float32, device=device)
                 image = torch.cat([image, empty], dim=0)
 
-            images_tensor_to_samples(image, 0, p.sd_model)  # calls encode_first_stage
+            images_tensor_to_samples(image, 0, p.sd_model)  # encode_first_stage inserts the reference latent
+
+            # All edit models, including Qwen-Image 2.1, use the same
+            # original ImageStitch contract: encode_first_stage() owns
+            # insertion into model.ref_latents.
 
         dynamic_args.is_referencing = False
 

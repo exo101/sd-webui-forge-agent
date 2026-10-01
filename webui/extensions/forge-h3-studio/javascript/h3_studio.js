@@ -9,12 +9,14 @@
     i2v: { label: "首帧图生", short: "I2V", icon: "◫", hint: "以一张首帧图片作为构图与角色起点" },
     fl2v: { label: "首尾帧", short: "FL2V", icon: "⇥", hint: "分别指定首帧与尾帧，控制镜头始末" },
     ref: { label: "多模态参考", short: "REF", icon: "⌘", hint: "最多 9 图、3 视频、3 音频参考" },
+    swap: { label: "人物替换", short: "SWAP", icon: "⧉", hint: "原视频 + 人物参考图：保留运镜与场景，只换主角" },
   };
   const KIND_META = {
     image: { label: "图片", icon: "▧", accept: ["png", "jpg", "jpeg", "webp", "gif", "bmp"] },
     video: { label: "视频", icon: "▶", accept: ["mp4", "mov", "webm", "mkv", "avi", "m4v"] },
     audio: { label: "音频", icon: "♫", accept: ["mp3", "wav", "flac", "m4a", "aac", "ogg"] },
   };
+  const SWAP_DEFAULT_PROMPT = "将原视频中的人物替换成参考图中的角色，整个人物都完成替换，但是要保证原视频的镜头运动、景别切换、场景等内容跟原视频保持一致，只更改主角";
   const ASPECT_RATIOS = {
     "1:1": [1, 1],
     "2:3": [2, 3],
@@ -51,6 +53,8 @@
     frameCrops: { first: null, last: null },
     references: { image: [], video: [], audio: [] },
     refVideoAudio: [],
+    swap: { video: null, images: [], keep_audio: true, frames_follow: true },
+    frameCandidates: [],
     loras: [],
     loraPresets: [],
     jobs: [],
@@ -159,6 +163,7 @@
       frameCrops: state.frameCrops,
       references: state.references,
       refVideoAudio: state.refVideoAudio,
+      swap: state.swap,
       loras: state.loras,
       params: state.params,
     };
@@ -187,6 +192,12 @@
       }
       if (Array.isArray(saved.refVideoAudio)) state.refVideoAudio = saved.refVideoAudio.map((value) => value !== false);
       while (state.refVideoAudio.length < state.references.video.length) state.refVideoAudio.push(true);
+      if (saved.swap && typeof saved.swap === "object") {
+        state.swap.video = saved.swap.video || null;
+        state.swap.images = Array.isArray(saved.swap.images) ? saved.swap.images.slice(0, 9) : [];
+        state.swap.keep_audio = saved.swap.keep_audio !== false;
+        state.swap.frames_follow = saved.swap.frames_follow !== false;
+      }
       if (Array.isArray(saved.loras)) state.loras = saved.loras;
       if (saved.params && typeof saved.params === "object") Object.assign(state.params, saved.params);
       if (!ASPECT_RATIOS[state.params.aspect_ratio]) state.params.aspect_ratio = "16:9";
@@ -440,6 +451,37 @@
     return options.join("");
   }
 
+  /**
+   * 按量化格式过滤模型文件。
+   * - nf4: 只返回文件名含 nf4 的模型
+   * - int8: DiT/TE 返回含 int8 的；VAE 返回不含 nf4 的（即 original VAE）
+   * - auto: 优先 nf4
+   * 如果筛选后只有一个匹配项，返回该单项（外层可自动选中）。
+   */
+  function filterByQuant(files, quant, type) {
+    if (!files || files.length === 0) return [];
+    const q = (quant || "auto").toLowerCase();
+    const hasNf4 = files.some((f) => f.toLowerCase().includes("nf4"));
+    if (q === "nf4") return files.filter((f) => f.toLowerCase().includes("nf4"));
+    if (q === "int8") {
+      if (type === "vae") return files.filter((f) => !f.toLowerCase().includes("nf4"));
+      return files.filter((f) => f.toLowerCase().includes("int8"));
+    }
+    // auto: 优先 nf4
+    if (hasNf4) return files.filter((f) => f.toLowerCase().includes("nf4"));
+    return files;
+  }
+
+  /**
+   * 自动选择匹配的模型：如果当前未选中或选中的不在筛选列表中，且筛选后只有一项，则自动选中。
+   */
+  function autoPickModel(filtered, current) {
+    if (!filtered || filtered.length === 0) return current;
+    if (filtered.includes(current)) return current;
+    if (filtered.length === 1) return filtered[0];
+    return current;
+  }
+
   function icon(name) {
     const icons = {
       play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
@@ -514,7 +556,7 @@
             </section>
           </main>
           <aside class="h3s-inspector">
-            <nav class="h3s-inspector-tabs"><button data-inspector-tab="project" class="active">项目参数</button><button data-inspector-tab="asset">素材属性</button></nav>
+          <nav class="h3s-inspector-tabs"><button data-inspector-tab="project" class="active">项目参数</button></nav>
             <div class="h3s-inspector-scroll" data-role="inspector-content"></div>
           </aside>
         </div>
@@ -539,6 +581,98 @@
     renderAll();
     bootstrap();
     watchVisibility();
+    watchExternalAssets();
+    watchTxt2ImgGallery();
+  }
+
+  function watchTxt2ImgGallery() {
+    const scan = () => {
+      const gallery = document.querySelector("#txt2img_gallery");
+      if (!gallery) return;
+      gallery.querySelectorAll("img").forEach((image) => {
+        const host = image.closest(".thumbnail-item, .grid-item, .gallery-item") || image.parentElement;
+        if (!host || host.querySelector(".h3s-send-image-btn")) return;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "h3s-send-image-btn forge-h3-studio-send-image";
+        button.textContent = "发送到 H3";
+        button.title = "将这张文生图发送到 H3 工作台素材区";
+        button.addEventListener("click", async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          try {
+            const response = await fetch(image.currentSrc || image.src);
+            if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+            const blob = await response.blob();
+            const form = new FormData();
+            const name = `txt2img_${Date.now()}.png`;
+            form.append("file", blob, name);
+            const item = await request("/assets/upload", { method: "POST", body: form });
+            if (!state.assets.some((asset) => asset.url === item.url)) {
+              state.assets.unshift({ id: uid("txt2img"), name: item.name || name, kind: "image",
+                file: item.file || item.name || name, url: item.url, size: blob.size, source: "imported",
+                width: image.naturalWidth || 0, height: image.naturalHeight || 0, duration: 0,
+                createdAt: Date.now() / 1000 });
+              renderSidebar();
+              saveProject();
+            }
+            toast("文生图已发送到 H3 素材区", "success");
+          } catch (error) {
+            toast(`发送文生图失败：${error.message}`, "error", 6500);
+          }
+        });
+        host.appendChild(button);
+      });
+    };
+    scan();
+    const observer = new MutationObserver(scan);
+    observer.observe(document.body, { childList: true, subtree: true });
+    window.setInterval(scan, 1500);
+  }
+
+  function watchExternalAssets() {
+    // Gradio callbacks in the sibling multimedia tabs publish imported assets
+    // through hidden textboxes. Polling is intentional: Gradio updates the
+    // value property without consistently emitting a DOM input event.
+    const lastValues = new WeakMap();
+    const ingest = (items) => {
+      let added = 0;
+      (Array.isArray(items) ? items : [items]).forEach((item) => {
+        if (!item || !item.url) return;
+        const name = item.name || item.filename || item.file || "素材";
+        const ext = String(name).split(".").pop().toLowerCase();
+        const kind = ["mp3", "wav", "flac", "m4a", "aac", "ogg"].includes(ext) ? "audio"
+          : ["mp4", "mov", "webm", "mkv", "avi", "m4v"].includes(ext) ? "video" : "image";
+        if (state.assets.some((asset) => asset.url === item.url)) return;
+        state.assets.unshift({ id: uid("imported"), name, kind, file: item.file || name,
+          url: item.url, size: 0, source: "imported", width: 0, height: 0, duration: 0,
+          createdAt: Date.now() / 1000 });
+        added += 1;
+      });
+      if (added) {
+        renderSidebar();
+        saveProject();
+        toast(`${added} 个素材已发送到 H3 工作台素材区`, "success");
+      }
+    };
+    window.setInterval(() => {
+      request("/external-assets").then((result) => ingest(result?.items || [])).catch(() => {});
+      $$("[id^='h3studio-asset-bridge-']").forEach((node) => {
+        // Gradio may put the elem_id on the wrapper instead of the actual
+        // textarea. Read both forms so hidden bridge updates are not lost.
+        const field = node.matches("textarea,input") ? node : node.querySelector("textarea,input");
+        const value = (field?.value || node.value || node.textContent || "").trim();
+        if (!value || value === lastValues.get(node)) return;
+        lastValues.set(node, value);
+        try {
+          ingest(JSON.parse(value));
+        } catch (error) {
+          console.warn("[H3 Studio] external asset bridge error", error);
+        }
+        if (field) field.value = "";
+        node.value = "";
+      });
+    }, 500);
   }
 
   async function bootstrap() {
@@ -608,7 +742,7 @@
   async function ensureBackend(force = false) {
     if (state.backendStarting || state.backend.ready) return;
     if (!force && state.config.auto_start_on_tab === false) return;
-    // 云端 API / 本地 DiffSynth 模式不启动 ComfyUI，仅刷新后端状态
+    // 云端 API / 本地 WebUI 模式不启动 ComfyUI，仅刷新后端状态
     if (["api", "local"].includes(state.config.backend_mode)) {
       try {
         state.backend = await request("/backend/status");
@@ -683,16 +817,17 @@
   }
 
   function autoSelectModels() {
-    const models = state.catalog.models || [];
+    const quant = state.config?.dit_quant || "auto";
+    const models = filterByQuant(state.catalog.models || [], quant);
     if (state.params.auto_model || !models.includes(state.params.model)) {
-      const target = state.mode === "ref"
+      const target = ["ref", "swap"].includes(state.mode)
         ? findPreferred(models, ["minimax", "h3", "ref2va"]) || findPreferred(models, ["h3", "ref"])
         : findPreferred(models, ["minimax", "h3", "fl2va"]) || findPreferred(models, ["h3"], ["ref"]);
       if (target) state.params.model = target;
     }
-    const clips = state.catalog.text_encoders || [];
+    const clips = filterByQuant(state.catalog.text_encoders || [], quant);
     if (!clips.includes(state.params.text_encoder)) state.params.text_encoder = findPreferred(clips, ["minimax", "h3"]) || findPreferred(clips, ["minimax"]) || clips[0] || "";
-    const vaes = state.catalog.vaes || [];
+    const vaes = filterByQuant(state.catalog.vaes || [], quant, "vae");
     if (!vaes.includes(state.params.video_vae)) state.params.video_vae = findPreferred(vaes, ["minimax", "h3", "video"]) || findPreferred(vaes, ["h3", "video"]) || "";
     if (!vaes.includes(state.params.audio_vae)) state.params.audio_vae = findPreferred(vaes, ["minimax", "h3", "audio"]) || findPreferred(vaes, ["h3", "audio"]) || "";
     const samplers = state.catalog.samplers || [];
@@ -800,7 +935,8 @@
     const progress = jobProgress(job);
     const currentNode = job.live?.nodeTitle || (job.state === "queued" ? `队列第 ${job.queue_position || "?"} 位` : status);
     const eta = jobEta(job);
-    return `<article class="h3s-job-card ${state.activeJobId === job.id ? "active" : ""}" data-state="${esc(job.state)}" data-action="select-job" data-id="${esc(job.id)}"><div class="h3s-job-thumb">${jobPreviewHtml(job)}</div><div class="h3s-job-main"><div class="h3s-job-title"><strong>${esc(job.summary?.mode_name || "H3 视频")}</strong><b>${job.state === "running" ? `${progress.overall.toFixed(0)}%` : status}</b></div><small>${esc(job.summary?.resolution || "")} · ${job.summary?.frames || "?"}f${eta ? ` · 约 ${formatElapsed(eta)}` : ""}</small><div class="h3s-job-progress overall"><i style="width:${progress.overall}%"></i></div>${!compact && ["queued", "running"].includes(job.state) ? `<div class="h3s-job-node"><span title="${esc(currentNode)}">${esc(currentNode)}</span><b>${progress.node.toFixed(0)}%</b></div><div class="h3s-job-progress node"><i style="width:${progress.node}%"></i></div>` : ""}</div><div class="h3s-job-actions">${["queued", "running"].includes(job.state) ? `<button data-action="cancel-specific-job" data-id="${esc(job.id)}" title="中断">×</button>` : ""}<button data-action="job-details" data-id="${esc(job.id)}" title="任务细节">•••</button></div></article>`;
+    const isTerminal = ["completed", "failed", "cancelled"].includes(job.state);
+    return `<article class="h3s-job-card ${state.activeJobId === job.id ? "active" : ""}" data-state="${esc(job.state)}" data-action="select-job" data-id="${esc(job.id)}"><div class="h3s-job-thumb">${jobPreviewHtml(job)}</div><div class="h3s-job-main"><div class="h3s-job-title"><strong>${esc(job.summary?.mode_name || "H3 视频")}</strong><b>${job.state === "running" ? `${progress.overall.toFixed(0)}%` : status}</b></div><small>${esc(job.summary?.resolution || "")} · ${job.summary?.frames || "?"}f${eta ? ` · 约 ${formatElapsed(eta)}` : ""}</small><div class="h3s-job-progress overall"><i style="width:${progress.overall}%"></i></div>${!compact && ["queued", "running"].includes(job.state) ? `<div class="h3s-job-node"><span title="${esc(currentNode)}">${esc(currentNode)}</span><b>${progress.node.toFixed(0)}%</b></div><div class="h3s-job-progress node"><i style="width:${progress.node}%"></i></div>` : ""}</div><div class="h3s-job-actions">${["queued", "running"].includes(job.state) ? `<button data-action="cancel-specific-job" data-id="${esc(job.id)}" title="中断">×</button>` : ""}${isTerminal ? `<button data-action="delete-specific-job" data-id="${esc(job.id)}" title="删除任务">🗑</button>` : ""}<button data-action="job-details" data-id="${esc(job.id)}" title="任务细节">•••</button></div></article>`;
   }
 
   function taskListHtml(compact = false) {
@@ -823,6 +959,8 @@
       stage.innerHTML = `<div class="h3s-t2v-empty"><div class="h3s-nebula"><i></i><i></i><i></i><span>✦</span></div><strong>用文字构建一个有声音的镜头</strong><p>在下方描述场景、人物动作、镜头语言和环境声音。H3 将同步生成视频与音频。</p><div><span>${state.params.width} × ${state.params.height}</span><span>${alignFrames(state.params.frames)} 帧</span><span>24 FPS 基准</span></div></div>`;
     } else if (state.mode === "i2v" || state.mode === "fl2v") {
       stage.innerHTML = `<div class="h3s-keyframe-stage ${state.mode === "i2v" ? "single" : ""}">${slotHtml("first", "首帧", state.firstFrame)}${state.mode === "fl2v" ? '<div class="h3s-keyframe-arrow"><span>镜头演化</span><i>→</i></div>' + slotHtml("last", "尾帧", state.lastFrame) : ""}</div>`;
+    } else if (state.mode === "swap") {
+      stage.innerHTML = swapStageHtml();
     } else {
       stage.innerHTML = refStageHtml();
     }
@@ -851,6 +989,33 @@
     return `<div class="h3s-ref-stage">${groups}</div>`;
   }
 
+  function swapStageHtml() {
+    const videoAsset = assetById(state.swap.video);
+    const videoSlot = videoAsset
+      ? `<video src="${esc(videoAsset.url)}#t=0.1" muted playsinline preload="metadata"></video><div class="h3s-swap-shade"></div><b>Video 1</b><span title="${esc(videoAsset.name)}">${esc(videoAsset.name)}</span>${videoAsset.duration > 0 ? `<em>${Number(videoAsset.duration).toFixed(2)}s</em>` : ""}<button class="h3s-ref-audio-toggle ${state.swap.keep_audio ? "active" : ""}" data-action="toggle-swap-audio" title="${state.swap.keep_audio ? "使用原视频音轨（Audio 1）" : "忽略原视频音轨"}">♫</button><button class="h3s-ref-remove" data-action="clear-swap" data-target="video">×</button>`
+      : `<i>▶</i><strong>源视频</strong><span>拖入视频或点击选择 · 可编辑参考</span><button data-action="fill-swap" data-target="video">从素材库选择</button>`;
+    const imageCells = Array.from({ length: 9 }, (_, index) => {
+      const asset = assetById(state.swap.images[index]);
+      if (!asset) return `<div class="h3s-ref-cell" data-swap-cell="${index}"><b>${index + 1}</b><i>${KIND_META.image.icon}</i><span>拖入</span></div>`;
+      return `<div class="h3s-ref-cell filled" data-swap-cell="${index}"><b>${index + 1}</b><img src="${esc(asset.url)}" alt=""><span title="${esc(asset.name)}">${esc(asset.name)}</span><button class="h3s-ref-remove" data-action="clear-swap" data-target="image" data-index="${index}">×</button></div>`;
+    }).join("");
+    return `<div class="h3s-ref-stage h3s-swap-stage">
+      <div class="h3s-ref-group h3s-swap-source-group">
+        <header><i data-kind="video"></i><strong>源视频</strong><span>可编辑参考 · 保留运镜与场景</span></header>
+        <div class="h3s-swap-slot ${videoAsset ? "filled" : ""}" data-swap-slot="video">${videoSlot}</div>
+      </div>
+      <div class="h3s-ref-group">
+        <header><i></i><strong>人物参考图</strong><span>${state.swap.images.filter(Boolean).length}/9</span></header>
+        <div class="h3s-ref-grid h3s-ref-image">${imageCells}</div>
+      </div>
+      <div class="h3s-swap-controls">
+        <label class="h3s-swap-follow"><input type="checkbox" data-role="swap-follow" ${state.swap.frames_follow ? "checked" : ""}><span>跟随源视频时长（24 FPS 基准，自动对齐 17k+5 帧）</span></label>
+        <button data-action="swap-prompt">⚡ 填入推荐换人提示词</button>
+      </div>
+      <div class="h3s-swap-note"><i>i</i><span>人物替换由 H3 参考重生成实现：原视频与人物图一起送入 Ref2VA 模型整体重绘视频，不是逐帧换脸，因此镜头运动、景别切换和场景会与原视频保持一致。</span></div>
+    </div>`;
+  }
+
   function resultHtml(result) {
     const outputs = result.outputs || [];
     const item = outputs.find((output) => /\.(mp4|webm|mkv|mov)$/i.test(output.filename || ""))
@@ -873,7 +1038,9 @@
     if (count) count.textContent = `${state.params.prompt.length} 字`;
     const tools = $("[data-role='anchor-tools']", root());
     if (tools) {
-      tools.innerHTML = state.mode === "ref" ? referenceAnchorToolsHtml() : '<span>H3 标准链路不使用负面提示词与 CFG</span>';
+      tools.innerHTML = state.mode === "ref" ? referenceAnchorToolsHtml()
+        : state.mode === "swap" ? swapAnchorToolsHtml()
+        : '<span>H3 标准链路不使用负面提示词与 CFG</span>';
     }
   }
 
@@ -899,6 +1066,18 @@
     return buttons.join("");
   }
 
+  function swapAnchorToolsHtml() {
+    const buttons = [];
+    state.swap.images.forEach((id, index) => {
+      if (id) buttons.push(`<button data-action="insert-anchor" data-kind="image" data-index="${index}">Picture ${index + 1}</button>`);
+    });
+    if (state.swap.video) {
+      if (state.swap.keep_audio) buttons.push(`<button data-action="insert-anchor" data-kind="audio" data-index="0" title="源视频音轨">Audio 1·音轨</button>`);
+      buttons.push(`<button data-action="insert-anchor" data-kind="video" data-index="0">Video 1</button>`);
+    }
+    return buttons.length ? buttons.join("") : '<span>放入源视频与人物图后，这里会出现锚点标签</span>';
+  }
+
   function renderTimeline() {
     const track = $("[data-role='timeline-track']", root());
     if (!track) return;
@@ -909,6 +1088,10 @@
     if (state.firstFrame) chips += `<span class="h3s-clip-chip image">首帧 · ${esc(assetById(state.firstFrame)?.name || "图片")}</span>`;
     if (state.lastFrame) chips += `<span class="h3s-clip-chip image">尾帧 · ${esc(assetById(state.lastFrame)?.name || "图片")}</span>`;
     for (const [kind, items] of Object.entries(state.references)) for (const id of items) if (id) chips += `<span class="h3s-clip-chip ${kind}">${KIND_META[kind].icon} ${esc(assetById(id)?.name || kind)}</span>`;
+    if (state.mode === "swap") {
+      if (state.swap.video) chips += `<span class="h3s-clip-chip video">▶ ${esc(assetById(state.swap.video)?.name || "源视频")}</span>`;
+      for (const id of state.swap.images) if (id) chips += `<span class="h3s-clip-chip image">▧ ${esc(assetById(id)?.name || "人物图")}</span>`;
+    }
     track.innerHTML = `<div class="h3s-video-clip"><div class="h3s-clip-thumbs">${Array.from({length: 12}, (_, i) => `<i style="opacity:${0.35 + i / 20}"></i>`).join("")}</div><div class="h3s-clip-info">${chips}<strong>${esc(state.params.prompt || "未填写提示词")}</strong></div></div>`;
   }
 
@@ -916,8 +1099,7 @@
     const content = $("[data-role='inspector-content']", root());
     if (!content) return;
     $$('[data-inspector-tab]', root()).forEach((button) => button.classList.toggle("active", button.dataset.inspectorTab === state.inspectorTab));
-    if (state.inspectorTab === "asset") content.innerHTML = assetInspectorHtml();
-    else content.innerHTML = projectInspectorHtml();
+    content.innerHTML = projectInspectorHtml();
   }
 
   function field(label, html, hint = "") { return `<label class="h3s-field"><span>${label}${hint ? `<i title="${esc(hint)}">?</i>` : ""}</span>${html}</label>`; }
@@ -930,11 +1112,24 @@
       return `<option value="${mp}" ${Number(p.megapixels) === Number(mp) ? "selected" : ""}>${label} MP${exact ? ` · ${exact[0]} × ${exact[1]}` : ""}</option>`;
     }).join("");
     const calculated = calculatedResolution();
+    const videoOptions = state.assets.filter((asset) => asset.kind === "video").map((asset) => `<option value="${esc(asset.id)}">${esc(asset.name)}</option>`).join("");
+    const frameSection = `<section class="h3s-insp-section"><header data-action="toggle-section"><div><i>05</i><strong>关键帧提取</strong></div><span>⌄</span></header><div class="h3s-insp-body"><p class="h3s-field-help">从视频中生成较多候选画面，选择需要的帧后再加入素材区。</p>${field("视频素材", `<select data-role="frame-video"><option value="">选择视频</option>${videoOptions}</select>`)}${field("提取方式", `<select data-role="frame-mode"><option value="uniform">均匀分布</option><option value="change">变化检测</option></select>`)}<button class="h3s-primary-btn" data-action="extract-project-frames">提取关键帧</button></div></section>`;
     return `<section class="h3s-insp-section"><header data-action="toggle-section"><div><i>01</i><strong>模型与组件</strong></div><span>⌄</span></header><div class="h3s-insp-body">
-      ${field("H3 扩散模型", `<select data-param="model">${modelOptions(state.catalog.models, p.model, state.backend.ready ? "选择 H3 模型" : "连接后端后读取")}</select>`)}
+      ${(() => {
+        const quant = state.config?.dit_quant || "auto";
+        const filteredDit = filterByQuant(state.catalog.models, quant);
+        const filteredTe = filterByQuant(state.catalog.text_encoders, quant);
+        const filteredVae = filterByQuant(state.catalog.vaes, quant, "vae");
+        const pickedDit = autoPickModel(filteredDit, p.model);
+        const pickedTe = autoPickModel(filteredTe, p.text_encoder);
+        const pickedVideoVae = autoPickModel(filteredVae, p.video_vae);
+        const pickedAudioVae = autoPickModel(filteredVae, p.audio_vae);
+        const quantLabel = quant === "auto" ? "自动" : quant.toUpperCase();
+        return `${field("H3 扩散模型", `<select data-param="model">${modelOptions(filteredDit, pickedDit, state.backend.ready ? `选择 H3 模型（${quantLabel}）` : "连接后端后读取")}</select>`)}
       <label class="h3s-toggle-line"><input type="checkbox" data-param="auto_model" ${p.auto_model ? "checked" : ""}><span><b>按模式自动匹配模型</b><small>首尾帧使用 FL2VA，多参考使用 Ref2VA</small></span></label>
-      ${field("MiniMax 文本编码器", `<select data-param="text_encoder">${modelOptions(state.catalog.text_encoders, p.text_encoder, "选择文本编码器")}</select>`)}
-      <div class="h3s-field-grid">${field("视频 VAE", `<select data-param="video_vae">${modelOptions(state.catalog.vaes, p.video_vae, "视频 VAE")}</select>`)}${field("音频 VAE", `<select data-param="audio_vae">${modelOptions(state.catalog.vaes, p.audio_vae, "音频 VAE")}</select>`)}</div>
+      ${field("MiniMax 文本编码器", `<select data-param="text_encoder">${modelOptions(filteredTe, pickedTe, `选择文本编码器（${quantLabel}）`)}</select>`)}
+      <div class="h3s-field-grid">${field("视频 VAE", `<select data-param="video_vae">${modelOptions(filteredVae, pickedVideoVae, "视频 VAE")}</select>`)}${field("音频 VAE", `<select data-param="audio_vae">${modelOptions(filteredVae, pickedAudioVae, "音频 VAE")}</select>`)}</div>`;
+      })()}
       <div class="h3s-field-grid">${field("模型精度", `<select data-param="weight_dtype"><option>default</option><option ${p.weight_dtype === "fp8_e4m3fn" ? "selected" : ""}>fp8_e4m3fn</option><option ${p.weight_dtype === "fp8_e4m3fn_fast" ? "selected" : ""}>fp8_e4m3fn_fast</option><option ${p.weight_dtype === "fp8_e5m2" ? "selected" : ""}>fp8_e5m2</option></select>`)}${field("编码器设备", `<select data-param="clip_device"><option value="default">自动</option><option value="cpu" ${p.clip_device === "cpu" ? "selected" : ""}>CPU</option></select>`)}</div>
       <button class="h3s-wide-secondary" data-side-tab="loras">管理 LoRA 栈 <b>${state.loras.filter((l) => l.enabled).length}</b></button>
     </div></section>
@@ -947,7 +1142,7 @@
       <div class="h3s-resolution-note"><i></i><span>${p.resolution_linked ? `联动结果 ${calculated[0]} × ${calculated[1]}` : `自定义 ${p.width} × ${p.height}`} · ${esc(p.aspect_ratio)} · ${Number(p.megapixels)} MP · 倍数 ${Number(p.rounding_multiple)}</span></div>
       <div class="h3s-number-pair">${field("帧数", `<input type="number" data-param="frames" min="5" max="3600" step="17" value="${p.frames}">`, "提交时自动向上对齐 17k+5")}${field("秒数", `<input type="number" data-role="seconds" min="0.21" step="0.1" value="${(alignFrames(p.frames) / 24).toFixed(2)}">`, "H3 生成基准固定为 24 FPS")}</div>
       <div class="h3s-range-note ${alignFrames(p.frames) < 124 || alignFrames(p.frames) > 362 ? "warning" : ""}"><i></i><span>${alignFrames(p.frames)} 帧 · ${(alignFrames(p.frames) / 24).toFixed(2)} 秒${alignFrames(p.frames) < 124 || alignFrames(p.frames) > 362 ? " · 超出主要训练范围 124–362 帧" : " · 位于推荐训练范围"}</span></div>
-      ${state.mode === "ref" ? field("参考图尺寸", `<select data-param="ref_image_size"><option value="match">匹配生成面积（较快）</option><option value="max" ${p.ref_image_size === "max" ? "selected" : ""}>2048 短边（身份更稳、更慢）</option></select>`) : ""}
+      ${["ref", "swap"].includes(state.mode) ? field("参考图尺寸", `<select data-param="ref_image_size"><option value="match">匹配生成面积（较快）</option><option value="max" ${p.ref_image_size === "max" ? "selected" : ""}>2048 短边（身份更稳、更慢）</option></select>`) : ""}
     </div></section>
     <section class="h3s-insp-section"><header data-action="toggle-section"><div><i>03</i><strong>采样参数</strong></div><span>⌄</span></header><div class="h3s-insp-body">
       <div class="h3s-field-grid">${field("Steps", `<input type="number" data-param="steps" min="1" max="200" value="${p.steps}">`)}${field("Denoise", `<input type="number" data-param="denoise" min="0.01" max="1" step="0.01" value="${p.denoise}">`)}</div>
@@ -960,14 +1155,15 @@
       <div class="h3s-field-grid">${field("封装", `<select data-param="output_format"><option value="auto">自动</option><option value="mp4" ${p.output_format === "mp4" ? "selected" : ""}>MP4</option><option value="webm" ${p.output_format === "webm" ? "selected" : ""}>WebM</option><option value="mkv" ${p.output_format === "mkv" ? "selected" : ""}>MKV</option></select>`)}${field("编码", `<select data-param="output_codec"><option value="auto">自动</option><option value="h264" ${p.output_codec === "h264" ? "selected" : ""}>H.264</option></select>`)}</div>
       <div class="h3s-field-grid">${field("导出 FPS", `<input type="number" data-param="output_fps" min="1" max="120" value="${p.output_fps}">`, "非 24 FPS 会改变播放速度")}${field("CRF", `<input type="number" data-param="output_crf" min="0" max="51" value="${p.output_crf}" ${p.output_codec === "h264" ? "" : "disabled"}>`)}</div>
       ${field("位深", `<select data-param="bit_depth"><option value="8">8-bit</option><option value="10" ${Number(p.bit_depth) === 10 ? "selected" : ""}>10-bit</option></select>`)}
-    </div></section>`;
+    </div></section>${frameSection}`;
   }
 
   function assetInspectorHtml() {
     const asset = selectedAsset();
     if (!asset) return '<div class="h3s-inspector-empty"><i>◇</i><strong>未选择素材</strong><span>点击左侧素材卡查看属性</span></div>';
     const generatedActions = asset.jobId ? `<div class="h3s-asset-use"><button data-action="reuse-job" data-id="${esc(asset.jobId)}">复用 Seed 与参数</button><a href="${API}/jobs/${encodeURIComponent(asset.jobId)}/metadata" download>参数 JSON</a></div>` : "";
-    return `<div class="h3s-selected-preview">${asset.kind === "image" ? `<img src="${esc(asset.url)}">` : asset.kind === "video" ? `<video src="${esc(asset.url)}" controls></video>` : '<div class="h3s-big-audio">♫</div>'}</div><section class="h3s-insp-section open"><header><div><i>${KIND_META[asset.kind].icon}</i><strong>${KIND_META[asset.kind].label}素材</strong></div></header><div class="h3s-insp-body"><dl class="h3s-meta"><dt>名称</dt><dd>${esc(asset.name)}</dd><dt>后端文件</dt><dd>${esc(asset.file)}</dd><dt>大小</dt><dd>${esc(formatBytes(asset.size) || "未知")}</dd>${asset.summary?.seed !== undefined ? `<dt>Seed</dt><dd>${esc(asset.summary.seed)}</dd>` : ""}</dl>${asset.source === "generated" ? generatedActions : asset.kind === "image" ? '<div class="h3s-asset-use"><button data-action="assign-selected" data-target="first">设为首帧</button><button data-action="assign-selected" data-target="last">设为尾帧</button><button data-action="assign-selected" data-target="ref">加入参考</button></div>' : `<div class="h3s-asset-use"><button data-action="assign-selected" data-target="ref">加入${KIND_META[asset.kind].label}参考</button></div>`}</div></section>`;
+    const frameAction = asset.kind === "video" ? `<div class="h3s-asset-use"><button data-action="send-to-keyframe" data-id="${esc(asset.id)}">🎞️ 发送到关键帧提取</button></div>` : "";
+    return `<div class="h3s-selected-preview">${asset.kind === "image" ? `<img src="${esc(asset.url)}">` : asset.kind === "video" ? `<video src="${esc(asset.url)}" controls></video>` : '<div class="h3s-big-audio">♫</div>'}</div><section class="h3s-insp-section open"><header><div><i>${KIND_META[asset.kind].icon}</i><strong>${KIND_META[asset.kind].label}素材</strong></div></header><div class="h3s-insp-body"><dl class="h3s-meta"><dt>名称</dt><dd>${esc(asset.name)}</dd><dt>后端文件</dt><dd>${esc(asset.file)}</dd><dt>大小</dt><dd>${esc(formatBytes(asset.size) || "未知")}</dd>${asset.summary?.seed !== undefined ? `<dt>Seed</dt><dd>${esc(asset.summary.seed)}</dd>` : ""}</dl>${frameAction}${asset.source === "generated" ? generatedActions : asset.kind === "image" ? '<div class="h3s-asset-use"><button data-action="assign-selected" data-target="first">设为首帧</button><button data-action="assign-selected" data-target="last">设为尾帧</button><button data-action="assign-selected" data-target="ref">加入参考</button></div>' : `<div class="h3s-asset-use"><button data-action="assign-selected" data-target="ref">加入${KIND_META[asset.kind].label}参考</button></div>`}</div></section>`;
   }
 
   function bindShell() {
@@ -985,6 +1181,74 @@
       if (event.key.toLowerCase() === "g") generate();
       if (event.key === "Escape") closeModal();
     });
+  }
+
+  async function extractFrames(asset, selectedMode = "") {
+    if (!asset?.url) return;
+    const mode = selectedMode || window.prompt("关键帧模式：输入 uniform=均匀分布，或 change=变化检测", "uniform");
+    if (!mode || !["uniform", "change"].includes(mode.trim().toLowerCase())) return;
+    const video = document.createElement("video");
+    video.crossOrigin = "anonymous";
+    video.muted = true;
+    video.preload = "auto";
+    video.src = asset.url;
+    await new Promise((resolve, reject) => { video.onloadedmetadata = resolve; video.onerror = reject; });
+    const count = Math.min(120, Math.max(16, Math.ceil(video.duration * 2)));
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 1024; canvas.height = video.videoHeight || 576;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    let previous = null;
+    const positions = [];
+    for (let i = 0; i < count; i++) positions.push(video.duration * i / Math.max(1, count - 1));
+    const selected = [];
+    for (const position of positions) {
+      await new Promise((resolve) => {
+        const done = () => { video.removeEventListener("seeked", done); resolve(); };
+        video.addEventListener("seeked", done, { once: true });
+        video.currentTime = position;
+      });
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let different = !previous;
+      if (mode.trim().toLowerCase() === "change" && previous) {
+        let changed = 0;
+        for (let p = 0; p < frame.data.length; p += 32) if (Math.abs(frame.data[p] - previous.data[p]) > 24) changed++;
+        different = changed > frame.data.length / 160;
+      }
+      if (different || mode.trim().toLowerCase() === "uniform") {
+        selected.push(canvas.toDataURL("image/jpeg", 0.9));
+      }
+      previous = frame;
+    }
+    // Some codecs produce very small pixel differences. Always leave a useful
+    // set of evenly spaced candidates instead of showing a single frame.
+    if (selected.length < 2) {
+      selected.length = 0;
+      for (const position of positions) {
+        await new Promise((resolve) => {
+          const done = () => { video.removeEventListener("seeked", done); resolve(); };
+          video.addEventListener("seeked", done, { once: true });
+          video.currentTime = position;
+        });
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        selected.push(canvas.toDataURL("image/jpeg", 0.9));
+      }
+    }
+    state.frameCandidates = selected.map((data, i) => ({ data, name: `${asset.name.replace(/\.[^.]+$/, "")}_frame_${String(i + 1).padStart(3, "0")}.jpg`, width: canvas.width, height: canvas.height }));
+    const layer = $("[data-role='modal-layer']", root());
+    layer.innerHTML = `<div class="h3s-modal-backdrop" data-action="close-modal"></div><div class="h3s-modal"><header><div><strong>选择关键帧</strong><span>默认不选择，只导入勾选的画面</span></div><button data-action="close-modal">×</button></header><div class="h3s-asset-grid">${state.frameCandidates.map((frame, i) => `<label class="h3s-asset-card"><input type="checkbox" data-frame-index="${i}"><img src="${frame.data}"><span>帧 ${i + 1}</span></label>`).join("")}</div><footer><button data-action="select-all-frames">全选</button><button class="h3s-primary-btn" data-action="import-selected-frames">导入选中帧</button></footer></div>`;
+  }
+
+  async function importSelectedFrames() {
+    const layer = $("[data-role='modal-layer']", root());
+    const selected = $$('[data-frame-index]', layer).filter((input) => input.checked).map((input) => state.frameCandidates[Number(input.dataset.frameIndex)]).filter(Boolean);
+    for (const frame of selected) {
+      const blob = await (await fetch(frame.data)).blob();
+      const form = new FormData(); form.append("file", blob, frame.name);
+      const item = await request("/assets/upload", { method: "POST", body: form });
+      state.assets.unshift({ id: uid("frame"), name: item.name, kind: "image", file: item.file || item.name, url: item.url, size: blob.size, source: "imported", width: frame.width, height: frame.height, duration: 0, createdAt: Date.now() / 1000 });
+    }
+    state.frameCandidates = []; closeModal(); renderSidebar(); renderInspector(); saveProject(); toast(`${selected.length} 个关键帧已加入素材区`, "success");
   }
 
   function handleClick(event) {
@@ -1009,7 +1273,7 @@
       const asset = assetById(assetCard.dataset.assetId);
       if (asset?.source === "generated") { openMediaViewer(asset); return; }
       state.selectedAssetId = assetCard.dataset.assetId;
-      state.inspectorTab = "asset";
+      state.inspectorTab = "project";
       renderSidebar(); renderInspector();
       if (state.mode !== "t2v") quickAssign(assetCard.dataset.assetId);
       return;
@@ -1022,6 +1286,18 @@
     else if (name === "open-settings") openSettings();
     else if (name === "open-task-panel") openTaskPanel();
     else if (name === "generate") generate();
+    else if (name === "extract-frames") extractFrames(assetById(action.dataset.id));
+    else if (name === "extract-project-frames") {
+      const video = assetById($("[data-role='frame-video']", root())?.value);
+      const mode = $("[data-role='frame-mode']", root())?.value || "uniform";
+      if (video) extractFrames(video, mode); else toast("请先导入并选择视频素材", "error");
+    }
+    else if (name === "open-frame-extractor") {
+      const video = state.assets.find((asset) => asset.kind === "video");
+      if (video) extractFrames(video); else toast("请先导入一个视频素材", "error");
+    }
+    else if (name === "select-all-frames") $$('[data-frame-index]', root()).forEach((input) => { input.checked = true; });
+    else if (name === "import-selected-frames") importSelectedFrames();
     else if (name === "cancel-job") cancelActiveJob();
     else if (name === "close-result") { state.result = null; renderStage(); }
     else if (name === "preview-asset") openMediaViewer(assetById(action.dataset.id));
@@ -1033,8 +1309,17 @@
     else if (name === "reset-crop") resetCropEditor();
     else if (name === "clear-ref") clearReference(action.dataset.kind, Number(action.dataset.index));
     else if (name === "toggle-ref-audio") { const index = Number(action.dataset.index); state.refVideoAudio[index] = state.refVideoAudio[index] === false; projectChanged(); }
+    else if (name === "clear-swap") {
+      if (action.dataset.target === "video") state.swap.video = null;
+      else state.swap.images.splice(Number(action.dataset.index), 1);
+      projectChanged();
+    }
+    else if (name === "toggle-swap-audio") { state.swap.keep_audio = !state.swap.keep_audio; projectChanged(); }
+    else if (name === "fill-swap") chooseForSwap(action.dataset.target);
+    else if (name === "swap-prompt") fillSwapPrompt();
     else if (name === "remove-asset") removeAsset(action.dataset.id);
     else if (name === "assign-selected") assignAsset(state.selectedAssetId, action.dataset.target);
+    else if (name === "send-to-keyframe") sendToKeyframe(action.dataset.id);
     else if (name === "insert-anchor") insertAnchor(action.dataset.kind, Number(action.dataset.index));
     else if (name === "toggle-section") action.closest(".h3s-insp-section")?.classList.toggle("open");
     else if (name === "apply-resolution") { applyResolutionSelection(); projectChanged(); }
@@ -1056,6 +1341,7 @@
     else if (name === "delete-lora-preset") deleteLoraPreset();
     else if (name === "select-job") selectJob(action.dataset.id);
     else if (name === "cancel-specific-job") cancelJob(action.dataset.id);
+    else if (name === "delete-specific-job") deleteJob(action.dataset.id);
     else if (name === "job-details") openJobDetails(action.dataset.id);
     else if (name === "reuse-job") reuseJobParameters(action.dataset.id);
     else if (name === "copy-job-id") copyText(action.dataset.value, "任务 ID 已复制");
@@ -1107,7 +1393,7 @@
     const param = event.target.dataset.param;
     if (param && param !== "prompt") {
       state.params[param] = valueFromInput(event.target);
-      if (param === "frames") state.params.frames = alignFrames(state.params.frames);
+      if (param === "frames") { state.params.frames = alignFrames(state.params.frames); if (state.mode === "swap") state.swap.frames_follow = false; }
       if (param === "rounding_multiple") state.params.rounding_multiple = clamp(Math.round(Number(state.params.rounding_multiple) || 1), 1, 512);
       if (param === "random_seed") renderInspector();
       if (param === "auto_model" && state.params.auto_model) autoSelectModels();
@@ -1129,8 +1415,15 @@
       renderSidebar(); debounceSave();
       return;
     }
+    if (event.target.matches("[data-role='swap-follow']")) {
+      state.swap.frames_follow = event.target.checked;
+      if (state.swap.frames_follow) syncSwapDuration();
+      projectChanged();
+      return;
+    }
     if (event.target.matches("[data-role='seconds']")) {
       state.params.frames = alignFrames(Number(event.target.value) * 24);
+      if (state.mode === "swap") state.swap.frames_follow = false;
       projectChanged();
     } else if (event.target.matches("[data-asset-filter]")) {
       state.assetFilter = event.target.dataset.assetFilter;
@@ -1149,7 +1442,7 @@
   }
 
   function handleDragOver(event) {
-    if (event.target.closest("[data-slot], [data-ref-kind], [data-role='dropzone']")) {
+    if (event.target.closest("[data-slot], [data-ref-kind], [data-swap-slot], [data-swap-cell], [data-role='dropzone']")) {
       event.preventDefault();
       event.dataTransfer.dropEffect = "copy";
     }
@@ -1159,6 +1452,19 @@
     const dropzone = event.target.closest("[data-role='dropzone']");
     const slot = event.target.closest("[data-slot]");
     const ref = event.target.closest("[data-ref-kind]");
+    const swapSlot = event.target.closest("[data-swap-slot]");
+    const swapCell = event.target.closest("[data-swap-cell]");
+    // 优先识别 H3 素材卡片拖拽：浏览器拖动 <img> 时会把图片放进 dataTransfer.files，
+    // 若不先判断 asset ID 会走到文件上传分支并产生重复素材。
+    const id = event.dataTransfer.getData("application/x-h3s-asset");
+    if (id) {
+      event.preventDefault();
+      if (slot) assignAsset(id, slot.dataset.slot);
+      else if (ref) assignReference(id, ref.dataset.refKind, Number(ref.dataset.refIndex));
+      else if (swapSlot) assignSwapAsset(id);
+      else if (swapCell) assignSwapImage(id, Number(swapCell.dataset.swapCell));
+      return;
+    }
     const localFiles = Array.from(event.dataTransfer.files || []);
     if (localFiles.length) {
       event.preventDefault();
@@ -1170,13 +1476,17 @@
         const file = localFiles.find((item) => kindFromName(item.name, item.type) === ref.dataset.refKind);
         if (!file) return toast(`这里需要${KIND_META[ref.dataset.refKind].label}文件`, "warning");
         uploadFiles([file], { refKind: ref.dataset.refKind, refIndex: Number(ref.dataset.refIndex) });
+      } else if (swapSlot) {
+        const video = localFiles.find((file) => kindFromName(file.name, file.type) === "video");
+        if (!video) return toast("源视频槽位只能拖入视频文件", "warning");
+        uploadFiles([video], { swap: "video" });
+      } else if (swapCell) {
+        const image = localFiles.find((file) => kindFromName(file.name, file.type) === "image");
+        if (!image) return toast("人物参考图槽位只能拖入图片文件", "warning");
+        uploadFiles([image], { swap: "image", swapIndex: Number(swapCell.dataset.swapCell) });
       } else if (dropzone) uploadFiles(localFiles);
       return;
     }
-    const id = event.dataTransfer.getData("application/x-h3s-asset");
-    if (!id) return;
-    if (slot) { event.preventDefault(); assignAsset(id, slot.dataset.slot); }
-    else if (ref) { event.preventDefault(); assignReference(id, ref.dataset.refKind, Number(ref.dataset.refIndex)); }
   }
 
   function setMode(mode) {
@@ -1184,6 +1494,10 @@
     state.mode = mode;
     state.result = null;
     if (state.params.auto_model) autoSelectModels();
+    if (mode === "swap") {
+      if (!state.params.prompt) state.params.prompt = SWAP_DEFAULT_PROMPT;
+      if (state.swap.frames_follow) syncSwapDuration();
+    }
     projectChanged();
   }
 
@@ -1198,6 +1512,21 @@
   async function uploadFiles(files, destination = null) {
     const accepted = Array.from(files || []).filter((file) => kindFromName(file.name, file.type));
     if (!accepted.length) return toast("没有可用的图片、视频或音频文件", "warning");
+    // A file dragged from the H3 asset list can also appear in
+    // dataTransfer.files in some browsers. Reuse the existing asset instead
+    // of uploading a second copy.
+    const existing = accepted.map((file) => state.assets.find((asset) =>
+      asset.name === file.name && asset.size === file.size &&
+      (!asset.lastModified || !file.lastModified || asset.lastModified === file.lastModified)
+    )).filter(Boolean);
+    if (existing.length === accepted.length) {
+      const asset = existing[0];
+      if (destination?.slot) assignAsset(asset.id, destination.slot);
+      else if (destination?.refKind) assignReference(asset.id, destination.refKind, destination.refIndex);
+      else if (destination?.swap === "video") assignSwapAsset(asset.id);
+      else if (destination?.swap === "image") assignSwapImage(asset.id, destination.swapIndex);
+      return existing;
+    }
     if (!state.backend.ready) {
       toast("需要先启动并连接 H3 后端", "warning");
       await ensureBackend(true);
@@ -1212,9 +1541,10 @@
         const dimensions = kind === "image" ? await imageSizeFromFile(file) : { width: 0, height: 0 };
         const form = new FormData(); form.append("file", file, file.name);
         const result = await request("/assets/upload", { method: "POST", body: form });
-        const asset = { id: uid("asset"), name: file.name, kind, file: result.file, url: result.url, size: file.size, source: "imported", width: dimensions.width, height: dimensions.height, createdAt: Date.now() / 1000 };
+        const asset = { id: uid("asset"), name: file.name, kind, file: result.file, url: result.url, size: file.size, lastModified: file.lastModified || 0, source: "imported", width: dimensions.width, height: dimensions.height, duration: 0, createdAt: Date.now() / 1000 };
         state.assets.push(asset);
         uploaded.push(asset);
+        if (kind === "video") loadVideoDuration(asset);
         state.selectedAssetId = asset.id;
         toast(`${file.name} 已加入素材库`, "success", 2400);
         } catch (error) { toast(`${file.name} 上传失败：${error.message}`, "error", 7000); }
@@ -1226,6 +1556,8 @@
     const assigned = uploaded[0];
     if (assigned && destination?.slot) assignAsset(assigned.id, destination.slot);
     else if (assigned && destination?.refKind) assignReference(assigned.id, destination.refKind, destination.refIndex);
+    else if (assigned && destination?.swap === "video") assignSwapAsset(assigned.id);
+    else if (assigned && destination?.swap === "image") assignSwapImage(assigned.id, destination.swapIndex);
     else projectChanged();
     return uploaded;
   }
@@ -1234,6 +1566,7 @@
     const asset = assetById(id); if (!asset) return;
     if (state.mode === "i2v" && asset.kind === "image" && !state.firstFrame) assignAsset(id, "first");
     else if (state.mode === "fl2v" && asset.kind === "image" && (!state.firstFrame || !state.lastFrame)) assignAsset(id, state.firstFrame ? "last" : "first");
+    else if (state.mode === "swap" && asset.kind === "video" && !state.swap.video) assignSwapAsset(id);
   }
 
   function chooseSelectedForSlot(slot) {
@@ -1248,6 +1581,7 @@
     if ((target === "first" || target === "last") && asset.kind !== "image") return toast("首尾帧只能使用图片", "warning");
     if (target === "first") { state.firstFrame = id; state.frameCrops.first = null; }
     else if (target === "last") { state.lastFrame = id; state.frameCrops.last = null; }
+    else if (state.mode === "swap") assignSwapAsset(id);
     else assignReference(id, asset.kind);
     projectChanged();
     if (target === "first" || target === "last") {
@@ -1280,6 +1614,79 @@
     state.references[kind].splice(index, 1);
     if (kind === "video") state.refVideoAudio.splice(index, 1);
     projectChanged();
+  }
+
+  function assignSwapAsset(id) {
+    const asset = assetById(id); if (!asset) return;
+    if (asset.source === "generated") return toast("生成结果已归档，但作为输入前请先下载并重新导入", "warning", 6000);
+    if (asset.kind !== "video") return toast("源视频槽位只能使用视频素材", "warning");
+    state.swap.video = id;
+    if (state.swap.frames_follow) syncSwapDuration();
+    state.mode = "swap";
+    projectChanged();
+  }
+
+  function assignSwapImage(id, forcedIndex = null) {
+    const asset = assetById(id); if (!asset) return;
+    if (asset.source === "generated") return toast("生成结果已归档，但作为输入前请先下载并重新导入", "warning", 6000);
+    if (asset.kind !== "image") return toast("人物参考图槽位只能使用图片素材", "warning");
+    const count = state.swap.images.filter(Boolean).length;
+    if (count >= 9) return toast("人物参考图最多 9 张", "warning");
+    const target = Math.min(forcedIndex == null ? count : forcedIndex, count);
+    state.swap.images[target] = id;
+    state.mode = "swap";
+    projectChanged();
+  }
+
+  function loadVideoDuration(asset) {
+    const probe = document.createElement("video");
+    probe.preload = "metadata";
+    probe.muted = true;
+    probe.src = asset.url;
+    probe.onloadedmetadata = () => {
+      const saved = assetById(asset.id);
+      if (saved && isFinite(probe.duration) && probe.duration > 0) {
+        saved.duration = probe.duration;
+        if (state.mode === "swap" && state.swap.video === saved.id && state.swap.frames_follow) applySwapFrames(saved.duration);
+        renderStage();
+        debounceSave();
+      }
+    };
+  }
+
+  function applySwapFrames(seconds) {
+    state.params.frames = alignFrames(Math.max(17, Math.round(Number(seconds || 0) * 24)));
+  }
+
+  function syncSwapDuration() {
+    const asset = assetById(state.swap.video);
+    if (!asset) return;
+    if (!asset.duration || asset.duration <= 0) { loadVideoDuration(asset); return; }
+    applySwapFrames(asset.duration);
+    projectChanged();
+  }
+
+  function fillSwapPrompt() {
+    if (!state.swap.video) return toast("请先放入源视频", "warning");
+    if (!state.swap.images.filter(Boolean).length) return toast("请至少放入一张人物参考图", "warning");
+    const pictureTags = state.swap.images.map((id, index) => (id ? `<Picture ${index + 1}>` : null)).filter(Boolean).join(" ");
+    let prompt = SWAP_DEFAULT_PROMPT.replace("原视频", "原视频 <Video 1>").replace("参考图", `参考图 ${pictureTags}`);
+    if (state.swap.keep_audio) prompt += "，同时保持 <Audio 1> 的语音与环境声与原视频一致";
+    state.params.prompt = prompt;
+    renderPrompt(); renderTimeline();
+    const textarea = $("textarea[data-param='prompt']", root());
+    if (textarea) { textarea.focus(); textarea.selectionStart = textarea.selectionEnd = textarea.value.length; }
+    debounceSave();
+  }
+
+  function chooseForSwap(target) {
+    const asset = selectedAsset();
+    if (target === "video") {
+      if (asset && asset.kind === "video") return assignSwapAsset(asset.id);
+      return toast("请先在素材库选择一个视频", "warning");
+    }
+    if (asset && asset.kind === "image") return assignSwapImage(asset.id);
+    return toast("请先在素材库选择一张图片", "warning");
   }
 
   async function openCropEditor(slot) {
@@ -1468,7 +1875,17 @@
         state.refVideoAudio = audio;
       } else state.references[kind] = state.references[kind].filter((item) => item !== id);
     }
+    if (state.swap.video === id) state.swap.video = null;
+    state.swap.images = state.swap.images.filter((item) => item !== id);
     projectChanged();
+  }
+
+  function sendToKeyframe(id) {
+    const asset = assetById(id);
+    if (!asset) return toast("未找到该素材", "warning");
+    if (asset.kind !== "video") return toast("只有视频素材可以提取关键帧", "warning");
+    // 直接使用 H3 工作台内置的关键帧提取功能，弹出候选帧选择模态框
+    extractFrames(asset);
   }
 
   function insertAnchor(kind, index) {
@@ -1532,9 +1949,21 @@
 
   async function generationPayload() {
     const p = state.params;
+    if (state.mode === "swap") {
+      const source = assetById(state.swap.video);
+      if (!source) throw new Error("请先放入源视频");
+      const characters = state.swap.images.map((id) => assetById(id)).filter(Boolean);
+      if (!characters.length) throw new Error("请至少放入一张人物参考图");
+      if (state.swap.frames_follow) syncSwapDuration();
+    }
     const refList = [];
-    for (const [kind, ids] of Object.entries(state.references)) for (const [index, id] of ids.entries()) {
+    if (state.mode === "ref") for (const [kind, ids] of Object.entries(state.references)) for (const [index, id] of ids.entries()) {
       const asset = assetById(id); if (asset) refList.push({ kind, file: asset.file, include_audio: kind === "video" && state.refVideoAudio[index] !== false });
+    }
+    if (state.mode === "swap") {
+      const source = assetById(state.swap.video);
+      refList.push({ kind: "video", file: source.file, include_audio: state.swap.keep_audio !== false });
+      for (const id of state.swap.images) { const asset = assetById(id); if (asset) refList.push({ kind: "image", file: asset.file, include_audio: true }); }
     }
     const first = assetById(state.firstFrame);
     const last = assetById(state.lastFrame);
@@ -1571,11 +2000,14 @@
       shift_audio: p.shift_audio,
       denoise: p.denoise,
       ref_image_size: p.ref_image_size,
+      source_video: state.mode === "swap" ? assetById(state.swap.video)?.file || null : null,
+      character_images: state.mode === "swap" ? state.swap.images.map((id) => assetById(id)?.file).filter(Boolean) : [],
+      keep_source_audio: state.mode === "swap" ? state.swap.keep_audio !== false : true,
       first_frame: ["i2v", "fl2v"].includes(state.mode) ? first?.file || null : null,
       last_frame: state.mode === "fl2v" ? last?.file || null : null,
       first_frame_crop: ["i2v", "fl2v"].includes(state.mode) ? state.frameCrops.first : null,
       last_frame_crop: state.mode === "fl2v" ? state.frameCrops.last : null,
-      references: state.mode === "ref" ? refList : [],
+      references: ["ref", "swap"].includes(state.mode) ? refList : [],
       loras: state.loras,
       output: { filename_prefix: p.filename_prefix, format: p.output_format, codec: p.output_codec, crf: p.output_crf, fps: p.output_fps, bit_depth: p.bit_depth },
     };
@@ -1758,6 +2190,24 @@
     } catch (error) { toast(error.message, "error"); }
   }
 
+  async function deleteJob(id) {
+    if (!window.confirm("确定要删除这个任务记录吗？此操作不可撤销。")) return;
+    try {
+      await request(`/jobs/${id}`, { method: "DELETE" });
+      if (state.activeJobId === id) { state.activeJobId = null; }
+      const tracker = state.trackers.get(id);
+      if (tracker) {
+        clearInterval(tracker.timer); clearTimeout(tracker.reconnectTimer);
+        try { tracker.socket?.close(); } catch (_) {}
+        state.trackers.delete(id);
+      }
+      state.jobs = state.jobs.filter((job) => job.id !== id);
+      renderTaskSurfaces();
+      closeModal();
+      toast("任务已删除", "success");
+    } catch (error) { toast(error.message, "error"); }
+  }
+
   async function clearJobs(scope) {
     try {
       const result = await request("/jobs/clear", { method: "POST", body: { scope } });
@@ -1832,8 +2282,18 @@
       state.references[ref.kind].push(asset.id);
       if (ref.kind === "video") state.refVideoAudio.push(ref.include_audio !== false);
     }
+    state.swap = { video: null, images: [], keep_audio: true, frames_follow: true };
+    if (saved.swap) {
+      const source = saved.swap.source_video ? inputAsset(saved.swap.source_video) : null;
+      state.swap.video = source?.id || null;
+      state.swap.keep_audio = saved.swap.keep_source_audio !== false;
+      const characters = (saved.swap.character_images || []).map(inputAsset).filter(Boolean);
+      for (const asset of characters.slice(0, 9)) state.swap.images.push(asset.id);
+    }
+    const missingSwap = saved.swap && ((saved.swap.source_video && !state.swap.video)
+      || (saved.swap.character_images || []).some((file) => !inputAsset(file)));
     const missingInputs = (saved.first_frame && !first) || (saved.last_frame && !last)
-      || (saved.references || []).some((ref) => !inputAsset(ref.file));
+      || (saved.references || []).some((ref) => !inputAsset(ref.file)) || missingSwap;
     state.result = null;
     state.inspectorTab = "project";
     closeModal();
@@ -1889,17 +2349,17 @@
     const keySet = !!c.minimax_api_key_set;
     const layer = $("[data-role='modal-layer']", root());
     layer.innerHTML = `<div class="h3s-modal-backdrop" data-action="close-modal"></div><div class="h3s-modal h3s-settings-modal"><header><div><strong>后端连接与启动</strong><span>切换到工作台时可自动启动并连接</span></div><button data-action="close-modal">${icon("close")}</button></header><div class="h3s-settings-grid"><section><h3>连接方式</h3>
-      ${field("后端模式", `<select data-setting="backend_mode" data-role="backend-mode"><option value="managed" ${c.backend_mode && !["external", "api", "local"].includes(c.backend_mode) ? "selected" : ""}>Forge 托管本地 ComfyUI</option><option value="external" ${c.backend_mode === "external" ? "selected" : ""}>连接已经运行的 ComfyUI</option><option value="api" ${c.backend_mode === "api" ? "selected" : ""}>云端 API（MiniMax H3）</option><option value="local" ${c.backend_mode === "local" ? "selected" : ""}>本地 WebUI（DiffSynth 进程内）</option></select>`)}
+      ${field("后端模式", `<select data-setting="backend_mode" data-role="backend-mode"><option value="managed" ${c.backend_mode && !["external", "api", "local"].includes(c.backend_mode) ? "selected" : ""}>Forge 托管本地 ComfyUI</option><option value="external" ${c.backend_mode === "external" ? "selected" : ""}>连接已经运行的 ComfyUI</option><option value="api" ${c.backend_mode === "api" ? "selected" : ""}>云端 API（MiniMax H3）</option><option value="local" ${c.backend_mode === "local" ? "selected" : ""}>本地 WebUI</option></select>`)}
       <div data-role="cloud-api-section" hidden>
         ${field("API Base URL", `<input data-setting="minimax_api_base" value="${esc(c.minimax_api_base || "https://api.minimaxi.com")}" placeholder="https://api.minimaxi.com">`, "国内站默认 https://api.minimaxi.com；国际站可改为 https://api.minimax.io")}
         ${field("API Key", `<div class="h3s-api-key-row"><input type="password" data-setting="minimax_api_key" autocomplete="off" placeholder="${keySet ? "已配置（留空保持不变）" : "sk-api-..."}"><button class="h3s-row-danger" data-action="clear-api-key" ${keySet ? "" : "hidden"}>清除已保存 Key</button></div>`, "密钥仅保存在本机 data/config.json，不会写入项目文件")}
         <div class="h3s-settings-note"><i>i</i><span>云端模式由后端直接调用 MiniMax H3 接口，无需启动本地 ComfyUI。保存后即生效。</span></div>
       </div>
       <div data-role="local-diffsynth-section" hidden>
-        ${field("本地模型目录", `<input data-setting="local_models_dir" value="${esc(c.local_models_dir || "")}" placeholder="留空自动探测：webui/models（diffusion_models / text_encoder 子目录，下载器唯一写入位置）→ ComfyUI models（仅读取已下载的权重，不写入）">`, "存放 H3 DiT 与文本编码器量化权重（*.safetensors），按文件哈希自动识别型号，多个候选目录自动合并；下载始终写入 webui/models 下的 diffusion_models / text_encoder（text_encoders 复数目录也兼容识别）")}
+        ${field("本地模型目录", `<input data-setting="local_models_dir" value="${esc(c.local_models_dir || "")}" placeholder="留空自动探测：webui/models（diffusion_models / text_encoder / vae 子目录）→ ComfyUI models（仅读取，不写入）">`, "存放 H3 DiT（diffusion_models）、文本编码器（text_encoder）、VAE（vae 子目录，original 变体）。NF4 VAE 自动下载到 webui/models/DiffSynth-Studio/MiniMax-H3-NF4/；下载始终写入 webui/models 下")}
         ${field("Processor 目录", `<input data-setting="local_processor_path" value="${esc(c.local_processor_path || "")}" placeholder="留空则首次生成时自动从 ModelScope 下载">`, "VAE 优先复用 webui/models/vae 下已存在的 minimax_h3_video_vae_*/minimax_h3_audio_vae_* 文件（自动校验兼容性）；其余（标准 VAE、processor）首次生成时自动从 ModelScope 下载并缓存到 webui/models 下")}
-        ${field("VAE 变体", `<select data-setting="local_vae_variant"><option value="original" ${(c.local_vae_variant || "original") === "original" ? "selected" : ""}>标准 fp16/fp32（INT8 组合配套，MiniMax/MiniMax-H3）</option><option value="nf4" ${c.local_vae_variant === "nf4" ? "selected" : ""}>NF4 4bit 量化（DiffSynth-Studio/MiniMax-H3-NF4）</option></select>`, "INT8 组合使用标准 fp16/fp32 VAE（优先自动复用本地 Comfy-Org 命名文件）；NF4 仅用于 NF4 组合。缺失的 VAE 首次使用时自动下载；DiT/文本编码器若放入 NF4 权重也会自动按 NF4 加载")}
-        <div class="h3s-settings-note"><i>i</i><span>本地 WebUI 模式在 Forge 进程内直接运行 DiffSynth 的 MiniMax H3 pipeline，无需启动 ComfyUI；保存后即生效。</span></div>
+        ${field("模型量化格式", `<select data-setting="dit_quant" data-role="dit-quant"><option value="auto" ${(c.dit_quant || "auto") === "auto" ? "selected" : ""}>自动（优先 NF4）</option><option value="nf4" ${c.dit_quant === "nf4" ? "selected" : ""}>NF4（4-bit，显存最省）</option><option value="int8" ${c.dit_quant === "int8" ? "selected" : ""}>INT8（8-bit，精度更好）</option></select>`, "选择后模型列表自动筛选对应量化格式的主模型、文本编码器与 VAE，无需手动逐个选择。NF4 适合 16GB 显卡，INT8 适合显存充足的场景。")}
+        <div class="h3s-settings-note"><i>i</i><span>本地 WebUI 模式在 Forge 进程内通过 DiffSynth Pipeline 直接运行 MiniMax H3 生成，无需启动 ComfyUI；保存后即生效。</span></div>
       </div>
       <div data-role="local-backend-section">
       ${field("ComfyUI 地址", `<input data-setting="comfy_url" value="${esc(c.comfy_url || "http://127.0.0.1:8189")}">`)}

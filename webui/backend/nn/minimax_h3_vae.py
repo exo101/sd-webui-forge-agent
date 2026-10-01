@@ -6,6 +6,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils import weight_norm
 
 from backend import memory_management
 from backend.attention import attention_function
@@ -31,6 +32,29 @@ LATENTS_STD = [
     0.7996809482574463, 0.44988900423049925, 0.7197399735450745, 0.69362932443618775,
     2.961095094680786, 2.7694199085235595, 3.0496184825897215, 2.1088054180145265,
     3.276226282119751, 3.1627357006073, 2.28168129920959475, 2.6127843856811525,
+]
+
+# 音频 VAE latent 归一化统计（来自 DiffSynth，权重文件中不存储）
+_AUDIO_LATENTS_MEAN = [
+    -0.020211687488382354, 0.3876466479950502, -0.04398279799186767, -0.28591514936373,
+    0.08179686214561671, -0.35782641352446604, 0.040623809960919084, -0.01552534501956604,
+    -0.223362481667332, 0.1821006842509091, 0.2941778783780663, -0.07901167601970885,
+    -0.056815072777201, -0.3699028221860095, -0.31616315591624855, 0.5905951377425391,
+    -0.052139568068853864, 0.013673160263486295, -0.03691647864630577, 0.09732660653298163,
+    -0.3394662328788498, -0.30685677538541667, -0.24504598907458763, -0.034698524462007344,
+    0.02868032184767538, -0.21217779266454084, -0.1678263169941987, 0.3221287889040614,
+    -0.1223055851554907, 0.4356604928128464, -0.0502599202236253, 0.3979258376211797,
+]
+
+_AUDIO_LATENTS_STD = [
+    1.6895524230479284, 2.76263727217653, 1.7945344281264435, 1.6801681847309828,
+    1.6390226546605453, 2.7788298348882177, 1.7659090095747236, 1.6199757612137327,
+    2.6336525640336896, 1.8539356672817833, 2.5056497896915633, 1.811019237886178,
+    1.9579657790720237, 1.6685498243529284, 1.4922469314453364, 3.298670198067373,
+    1.9491804496832168, 1.8720003270431442, 1.8334080103291832, 1.6488070416529093,
+    1.6176957696319716, 1.9131449234774398, 1.5695245398428617, 1.6943659940415912,
+    1.8318420762504692, 1.5540637421583379, 1.9344930328968526, 1.599198216109855,
+    1.718045989838149, 1.6307219190837705, 1.8661226051202384, 1.5613768203168363,
 ]
 
 
@@ -886,9 +910,9 @@ class ResidualUnit(nn.Module):
         pad = ((7 - 1) * dilation) // 2
         self.block = nn.Sequential(
             Snake1d(dim),
-            nn.Conv1d(dim, dim, kernel_size=7, dilation=dilation, padding=pad),
+            weight_norm(nn.Conv1d(dim, dim, kernel_size=7, dilation=dilation, padding=pad)),
             Snake1d(dim),
-            nn.Conv1d(dim, dim, kernel_size=1),
+            weight_norm(nn.Conv1d(dim, dim, kernel_size=1)),
         )
 
     def forward(self, x):
@@ -907,13 +931,13 @@ class EncoderBlock(nn.Module):
             ResidualUnit(dim // 2, dilation=3),
             ResidualUnit(dim // 2, dilation=9),
             Snake1d(dim // 2),
-            nn.Conv1d(
+            weight_norm(nn.Conv1d(
                 dim // 2,
                 dim,
                 kernel_size=2 * stride,
                 stride=stride,
                 padding=math.ceil(stride / 2),
-            ),
+            )),
         )
 
     def forward(self, x):
@@ -923,13 +947,13 @@ class EncoderBlock(nn.Module):
 class Encoder(nn.Module):
     def __init__(self, d_model=64, strides=(2, 4, 4, 5, 5), d_latent=2048):
         super().__init__()
-        block = [nn.Conv1d(1, d_model, kernel_size=7, padding=3)]
+        block = [weight_norm(nn.Conv1d(1, d_model, kernel_size=7, padding=3))]
         for stride in strides:
             d_model *= 2
             block += [EncoderBlock(d_model, stride=stride)]
         block += [
             Snake1d(d_model),
-            nn.Conv1d(d_model, d_latent, kernel_size=3, padding=1),
+            weight_norm(nn.Conv1d(d_model, d_latent, kernel_size=3, padding=1)),
         ]
         self.block = nn.Sequential(*block)
 
@@ -1004,13 +1028,13 @@ class AMPBlock1(nn.Module):
         super().__init__()
         self.convs1 = nn.ModuleList(
             [
-                nn.Conv1d(channels, channels, kernel_size, stride=1, dilation=d, padding=get_padding(kernel_size, d))
+                weight_norm(nn.Conv1d(channels, channels, kernel_size, stride=1, dilation=d, padding=get_padding(kernel_size, d)))
                 for d in dilation
             ]
         )
         self.convs2 = nn.ModuleList(
             [
-                nn.Conv1d(channels, channels, kernel_size, stride=1, dilation=1, padding=get_padding(kernel_size, 1))
+                weight_norm(nn.Conv1d(channels, channels, kernel_size, stride=1, dilation=1, padding=get_padding(kernel_size, 1)))
                 for _ in range(len(dilation))
             ]
         )
@@ -1049,20 +1073,20 @@ class BigVGAN(nn.Module):
         self.num_kernels = len(resblock_kernel_sizes)
         self.num_upsamples = len(upsample_rates)
 
-        self.conv_pre = nn.Conv1d(num_mels, upsample_initial_channel, 7, 1, padding=3)
+        self.conv_pre = weight_norm(nn.Conv1d(num_mels, upsample_initial_channel, 7, 1, padding=3))
 
         self.ups = nn.ModuleList()
         for i, (u, k) in enumerate(zip(upsample_rates, upsample_kernel_sizes)):
             self.ups.append(
                 nn.ModuleList(
                     [
-                        nn.ConvTranspose1d(
+                        weight_norm(nn.ConvTranspose1d(
                             upsample_initial_channel // (2 ** i),
                             upsample_initial_channel // (2 ** (i + 1)),
                             k,
                             u,
                             padding=(k - u) // 2,
-                        )
+                        ))
                     ]
                 )
             )
@@ -1074,7 +1098,7 @@ class BigVGAN(nn.Module):
                 self.resblocks.append(AMPBlock1(ch, k, d))
 
         self.activation_post = Activation1d(activation=SnakeBeta(ch))
-        self.conv_post = nn.Conv1d(ch, 1, 7, 1, padding=3, bias=False)
+        self.conv_post = weight_norm(nn.Conv1d(ch, 1, 7, 1, padding=3, bias=False))
 
     def forward(self, x):
         x = self.conv_pre(x)
@@ -1134,8 +1158,8 @@ class MiniMaxH3AudioVAE(nn.Module):
         self.dec_in_proj = nn.Conv1d(vae_latent_channels, latent_dim, 1)
         self.decoder = BigVGAN(num_mels=latent_dim, upsample_initial_channel=decoder_dim)
 
-        self.register_buffer("latents_mean", torch.empty(vae_latent_channels))
-        self.register_buffer("latents_std", torch.empty(vae_latent_channels))
+        self.register_buffer("latents_mean", torch.tensor(_AUDIO_LATENTS_MEAN, dtype=torch.float32))
+        self.register_buffer("latents_std", torch.tensor(_AUDIO_LATENTS_STD, dtype=torch.float32))
 
     def decode(self, z):
         """Decode normalized latents [B, 32, 2, T] to stereo waveforms [B, 2, L] at 32 kHz."""

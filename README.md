@@ -383,7 +383,7 @@ models/VAE/
 | 扩展目录 | 用途简述 |
 |---------|---------|
 | **aadetailer-neoforge** | ADetailer 人脸/手部自动修复 |
-| **forge-h3-studio** | H3 Studio 综合工具集 |
+| **forge-h3-studio** | H3 Studio 全栈视听工作台：视频生成、关键帧提取、声音合成（Breeze-TTS）、音乐生成（ACE-Step） |
 | **infinite-browsing** | 无限图像浏览，快速查看历史生成图 |
 | **sd-civitai-browser-neo** | Civitai 模型在线浏览与一键下载 |
 | **sd-dynamic-prompts_neo** | 动态提示词模板，支持变量与逻辑分支 |
@@ -416,6 +416,19 @@ models/VAE/
 
 > 完整的逐条更新记录见 [CHANGELOG.md](./CHANGELOG.md)。
 > 使用启动器「Update 内核更新」后，会**自动弹窗提示本次更新的新增内容**（按提交号匹配 CHANGELOG.md）。
+
+### 2026-10-01
+
+**新增**
+
+- **全栈式视听工作台（H3 Studio）**：整合视频生成、视频关键帧提取、声音合成、音乐生成
+- **MiniMax-H3 视频生成**：DiffSynth Pipeline 本地推理，支持 INT8 / NF4 量化，自动匹配 VAE 与文本编码器
+- **声音合成（Breeze-TTS-2）**：声音克隆、声音设计、声音引导，开源双语 TTS
+- **音乐生成（ACE-Step 1.5）**
+- **Qwen-Image-2.1**：本地图像生成与编辑
+- **开源社区模型下载器**：一键下载 MiniMax-H3、Qwen-Image-2.1、Breeze-TTS-2 等模型组合
+
+**⚠️ transformers 版本隔离**：音乐生成与声音合成需 transformers 4.57.3（旧版），MiniMax-H3 与 Qwen-Image-2.1 需 transformers 5.17.0（新版），声音/音乐模块需部署在独立 Python 环境中
 
 ### 2026-09-28
 

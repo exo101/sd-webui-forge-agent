@@ -469,6 +469,13 @@ class StableDiffusionProcessing:
         return cache[1]
 
     def setup_conds(self):
+        # Numeric Gradio controls can arrive as strings when an extension
+        # updates them through a hidden component.
+        try:
+            self.steps = int(float(self.steps))
+        except (TypeError, ValueError):
+            logger.warning("Invalid sampling steps %r; falling back to 30", self.steps)
+            self.steps = 30
         prompts = prompt_parser.SdConditioning(self.prompts, width=self.width, height=self.height, distilled_cfg_scale=self.distilled_cfg_scale)
         negative_prompts = prompt_parser.SdConditioning(self.negative_prompts, width=self.width, height=self.height, is_negative_prompt=True, distilled_cfg_scale=self.distilled_cfg_scale)
 
@@ -934,6 +941,15 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
 
 
 def process_images_inner(p: StableDiffusionProcessing) -> Processed:
+    # Normalize numeric UI values before samplers and CFG math consume them.
+    # Some extensions update Gradio controls through text-backed components.
+    for name, default in (("cfg_scale", 1.0), ("distilled_cfg_scale", 3.5), ("denoising_strength", 1.0)):
+        value = getattr(p, name, default)
+        try:
+            setattr(p, name, float(value))
+        except (TypeError, ValueError):
+            logger.warning("Invalid %s %r; falling back to %s", name, value, default)
+            setattr(p, name, float(default))
     """this is the main loop that both txt2img and img2img use; it calls func_init once inside all the scopes and func_sample once per batch"""
 
     _times = 1
@@ -971,9 +987,24 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
             raise Exception(f"Could not find checkpoint with name {p.refiner_checkpoint}")
 
     if hasattr(shared.sd_model, "fix_dimensions"):
+        # Gradio extensions may update numeric sliders through hidden text
+        # inputs, which can leave width/height as strings. Normalize them
+        # before model-specific dimension handling.
+        try:
+            p.width = int(float(p.width))
+            p.height = int(float(p.height))
+        except (TypeError, ValueError):
+            logger.warning("Invalid image dimensions width=%r height=%r; falling back to 1024x1024", p.width, p.height)
+            p.width, p.height = 1024, 1024
         p.width, p.height = shared.sd_model.fix_dimensions(p.width, p.height)
     else:
         # 确保宽高为64的倍数，防止VAE latent尺寸与noise不匹配
+        try:
+            p.width = int(float(p.width))
+            p.height = int(float(p.height))
+        except (TypeError, ValueError):
+            logger.warning("Invalid image dimensions width=%r height=%r; falling back to 1024x1024", p.width, p.height)
+            p.width, p.height = 1024, 1024
         p.width = max(((p.width + 32) // 64) * 64, 64)
         p.height = max(((p.height + 32) // 64) * 64, 64)
 

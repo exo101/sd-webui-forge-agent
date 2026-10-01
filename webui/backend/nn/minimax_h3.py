@@ -837,7 +837,7 @@ def build_minimax_h3_model(state_dict, log_name=None):
     quant_config = detect_quantization(state_dict, is_unet=True)
 
     if quant_config is not None:
-        # 量化模型：权重留在 initial_device（通常 CPU），运行时由 weights_manual_cast / 流式换入
+        # ComfyUI 量化模型（int8_convrot / fp8 等）：权重留在 initial_device，运行时 manual cast
         storage_dtype = state_dict_dtype
         memory_management.logger.info("MiniMax H3: Using MixedPrecision for Model")
         if memory_management.should_use_bf16(load_device):
@@ -849,8 +849,24 @@ def build_minimax_h3_model(state_dict, log_name=None):
         initial_device = memory_management.unet_initial_load_device(parameters=state_dict_parameters, dtype=storage_dtype)
 
         with no_init_weights():
-            # 量化模型权重常驻 CPU/int8，forward 必须走 manual cast（设备 + 计算 dtype）
             with using_forge_operations(manual_cast_enabled=True, bnb_dtype=quant_config):
+                model = MiniMaxH3Model(**config)
+    elif state_dict_dtype in ["nf4", "fp4", "gguf"]:
+        # bitsandbytes 预量化模型（nf4/fp4）或 gguf：权重以量化格式常驻，forward 走 bnb 内核
+        # 注意：bitsandbytes 4-bit 量化必须在 CUDA 设备上初始化，因此 initial_device 强制为 GPU
+        storage_dtype = state_dict_dtype
+        memory_management.logger.info(f"MiniMax H3: Using pre-quantized {storage_dtype} for Model")
+        if memory_management.should_use_bf16(load_device):
+            computation_dtype = torch.bfloat16
+        elif memory_management.should_use_fp16(load_device, prioritize_performance=True):
+            computation_dtype = torch.float16
+        else:
+            computation_dtype = torch.float32
+        # bitsandbytes NF4/FP4 必须在 GPU 上加载，否则无法量化
+        initial_device = load_device
+
+        with no_init_weights():
+            with using_forge_operations(device=initial_device, dtype=computation_dtype, manual_cast_enabled=True, bnb_dtype=storage_dtype):
                 model = MiniMaxH3Model(**config)
     else:
         supported_dtypes = [torch.float16, torch.bfloat16, torch.float32]
@@ -869,9 +885,11 @@ def build_minimax_h3_model(state_dict, log_name=None):
     load_state_dict(model, state_dict, log_name=log_name or "MiniMaxH3Model")
 
     # 标准 load 的 copy_ 不改变空权重的 dtype/grad 标志：统一收尾
+    # bitsandbytes 的 ForgeParams4bit 不是 comfy_kitchen.QuantizedTensor 子类，需单独判断
     for p in model.parameters():
         p.requires_grad = False
-        if not isinstance(p, QuantizedTensor) and p.dtype != computation_dtype:
+        is_bnb = getattr(p, 'bnb_quantized', False)
+        if not isinstance(p, QuantizedTensor) and not is_bnb and p.dtype != computation_dtype:
             p.data = p.data.to(computation_dtype)
 
     model.storage_dtype = storage_dtype

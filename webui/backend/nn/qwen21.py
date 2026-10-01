@@ -300,6 +300,13 @@ class QwenImage21Transformer2DModel(nn.Module):
         dtype = x.dtype
         ref_latents = [ref.to(x) for ref in (ref_latents or dynamic_args.ref_latents or [])]
         image_slots = list(image_slots or dynamic_args.qwen21_image_slots or [])
+        if not getattr(self, "_h3_ref_diag_printed", False):
+            print(
+                f"[Qwen21 DiT] refs={len(ref_latents)} image_slots={len(image_slots)} "
+                f"slot_values={image_slots[:8]} context_shape={tuple(context.shape)}",
+                flush=True,
+            )
+            self._h3_ref_diag_printed = True
 
         hidden_states, pe, segments = self.build_sequence(x, context, ref_latents, image_slots)
         prefix_len = hidden_states.shape[1] - H * W

@@ -56,6 +56,7 @@ def initialize():
 
     initialize_util.fix_torch_version()
     initialize_util.fix_asyncio_event_loop_policy()
+    initialize_util.install_asyncio_connection_noise_filter()
     initialize_util.validate_tls_options()
     initialize_util.configure_sigint_handler()
     initialize_util.configure_neveroom()
