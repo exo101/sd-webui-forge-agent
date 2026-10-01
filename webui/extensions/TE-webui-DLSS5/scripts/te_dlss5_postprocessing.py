@@ -11,7 +11,9 @@ import gradio as gr
 import numpy as np
 from PIL import Image
 
-from modules import scripts_postprocessing
+from modules import paths_internal, scripts_postprocessing
+
+_OUTPUT_DIR = Path(paths_internal.script_path) / "outputs" / "dlss5"
 
 _EXTENSION_ROOT = Path(__file__).resolve().parents[1]
 if str(_EXTENSION_ROOT) not in sys.path:
@@ -368,7 +370,15 @@ class TEDLSS5PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
                 yield None, "❌ 合成视频失败：未生成输出文件"
                 return
 
-            yield str(out_video), f"✅ 处理完成：{total} 帧，输出 {out_video.name}"
+            # 持久化保存到 outputs/dlss5/（临时目录可能被系统清理）
+            try:
+                _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+                import time as _time
+                persistent = _OUTPUT_DIR / f"{src.stem}_dlss5_{_time.strftime('%Y%m%d_%H%M%S')}.mp4"
+                shutil.copy2(out_video, persistent)
+                yield str(out_video), f"✅ 处理完成：{total} 帧\n输出：{persistent}"
+            except Exception as e:
+                yield str(out_video), f"✅ 处理完成：{total} 帧（保存到持久目录失败：{e}）\n临时文件：{out_video}"
 
         finally:
             # 清理临时帧目录（保留输出视频供 Gradio 读取，由调用方/系统后续清理）
