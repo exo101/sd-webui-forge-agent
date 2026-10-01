@@ -437,7 +437,7 @@ function extraNetworksSearchButton(tabname, extra_networks_tabname, event) {
         "#" + tabname + "_" + extra_networks_tabname + "_extra_search",
     );
     let button = event.currentTarget || event.target;
-    // 兼容 Gradio 5.x：按钮可能嵌套子元素，向上找到带 search-all class 的真实按钮
+    // 兼容 Gradio 5.x：按钮可能嵌套子元素，向上找到带 custom-button class 的真实按钮
     while (button && !button.classList.contains("custom-button") && button.parentElement) {
         button = button.parentElement;
     }
@@ -447,6 +447,8 @@ function extraNetworksSearchButton(tabname, extra_networks_tabname, event) {
 
     searchTextarea.value = text;
     updateInput(searchTextarea);
+    // 兼容 Gradio 5.x：直接触发过滤，不依赖 input 事件冒泡
+    applyExtraNetworkFilter(tabname + "_" + extra_networks_tabname);
 }
 
 function extraNetworksTreeProcessFileClick(
@@ -524,6 +526,8 @@ function extraNetworksTreeProcessDirectoryClick(
         );
         search_input_elem.value = _search_text;
         updateInput(search_input_elem);
+        // 兼容 Gradio 5.x：直接触发过滤
+        applyExtraNetworkFilter(tabname + "_" + extra_networks_tabname);
     }
 
     // If user clicks on the chevron, then we do not select the folder.
