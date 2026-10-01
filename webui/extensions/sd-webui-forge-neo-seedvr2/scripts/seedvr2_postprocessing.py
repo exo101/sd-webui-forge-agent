@@ -81,7 +81,7 @@ class SeedVR2PostprocessingScript(scripts_postprocessing.ScriptPostprocessing):
             dit_model = gr.Dropdown(
                 label="SeedVR2 模型",
                 choices=dit_dropdown_choices(),
-                value="seedvr2_ema_3b_fp16.safetensors",
+                value="seedvr2_ema_3b_fp8_e4m3fn.safetensors",
                 allow_custom_value=True,
                 info="自动扫描 models/SEEDVR2。FP16质量最高；FP8更省显存；GGUF最省显存。",
             )

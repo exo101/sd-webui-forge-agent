@@ -9,7 +9,7 @@ from typing import List, Tuple
 class SeedVR2Config:
     enabled: bool = True
     only_final_output: bool = True
-    dit_model: str = "seedvr2_ema_3b_fp16.safetensors"
+    dit_model: str = "seedvr2_ema_3b_fp8_e4m3fn.safetensors"
     vae_model: str = "ema_vae_fp16.safetensors"
 
     # Simple output control. The basic UI exposes this instead of internal tile math.
@@ -129,7 +129,7 @@ def describe_dit_model(filename: str) -> str:
     return f"{size}{sharp} — {precision} — {filename}"
 
 
-def dit_dropdown_choices(default_name: str = "seedvr2_ema_3b_fp16.safetensors"):
+def dit_dropdown_choices(default_name: str = "seedvr2_ema_3b_fp8_e4m3fn.safetensors"):
     files = list_dit_model_files()
     if default_name not in files:
         files.insert(0, default_name)
