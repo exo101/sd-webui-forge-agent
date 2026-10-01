@@ -429,6 +429,22 @@ assert cuda or xpu or mps
         run_pip(f'install -r "{requirements_file}"', "requirements")
         startup_timer.record("install requirements")
 
+    # diffusers 0.41.0.dev0 不在 PyPI，需从 git 安装；用 --no-deps 避免覆盖
+    # huggingface-hub==0.36.2（diffusers 0.41 要求 huggingface-hub>=1.32）
+    if not args.skip_install:
+        try:
+            import diffusers
+            _dv = getattr(diffusers, '__version__', '0')
+            _need = _dv < '0.41.0'
+        except Exception:
+            _need = True
+        if _need:
+            try:
+                run_pip("install git+https://github.com/huggingface/diffusers.git --no-deps", "diffusers (git 0.41.0.dev0)")
+                startup_timer.record("install diffusers")
+            except RuntimeError:
+                print("Failed to install diffusers from git; H3/Qwen models may not work")
+
     if args.onnxruntime_gpu and not is_installed("onnxruntime-gpu"):
         # https://onnxruntime.ai/docs/install/#nightly-for-cuda-13x
         _deps = "coloredlogs flatbuffers numpy packaging protobuf sympy"
