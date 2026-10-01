@@ -395,7 +395,6 @@ models/VAE/
 | **sd-webui-forge-neo-seedvr2** | SeedVR2 视频超分辨率增强 |
 | **sd-webui-model-keyword** | 自动识别模型关键词，避免漏触发 |
 | **sd-webui-model_downloader** | 模型批量下载工具 |
-| **sd-webui-multimodal-media** | 多媒体处理：TTS 语音、唇形同步、Qwen 视频、ACE-Step 音乐 |
 | **sd-webui-openpose-editor** | OpenPose 姿态可视化编辑器 |
 | **sd-webui-prompt-all-in-one-neo** | 提示词管理一体化（历史记录、翻译、权重） |
 | **sd-webui-ps-plugin-api** | Photoshop 插件对接 API，PS 内直接生图 |
