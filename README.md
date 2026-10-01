@@ -426,6 +426,7 @@ models/VAE/
 - **音乐生成（ACE-Step 1.5）**
 - **Qwen-Image-2.1**：本地图像生成与编辑
 - **开源社区模型下载器**：一键下载 MiniMax-H3、Qwen-Image-2.1、Breeze-TTS-2 等模型组合
+- **DLLSS5神经画质视频处理
 
 **⚠️ transformers 版本隔离**：音乐生成与声音合成需 transformers 4.57.3（旧版），MiniMax-H3 与 Qwen-Image-2.1 需 transformers 5.17.0（新版），声音/音乐模块需部署在独立 Python 环境中
 
