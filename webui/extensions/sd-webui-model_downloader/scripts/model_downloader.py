@@ -299,6 +299,16 @@ MODEL_LORAS = [
         "target_dir": "Lora",
         "size": "870 MB",
     },
+    {
+        "id": "zimage-3d",
+        "name": "Zimage 3D 风格",
+        "cover": "zimage-3D.png",
+        "role": "Zimage 3D 风格 LoRA",
+        "repo_id": "yangyufeng/3dzimge",
+        "file_path": "3dzimge_1.safetensors",
+        "target_dir": "Lora",
+        "size": "635 MB",
+    },
 ]
 
 
