@@ -815,7 +815,7 @@ class FastBreezeStreamingRuntime:
                 prefill_cache = None
                 cache_position = None
                 backbone_out = self.model.backbone_model(
-                    inputs_embeds=branch.inputs_embeds,
+                    input_embeds=branch.inputs_embeds,
                     attention_mask=attention_mask,
                     position_ids=position_ids,
                     past_key_values=prefill_cache,

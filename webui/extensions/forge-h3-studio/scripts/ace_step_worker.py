@@ -32,6 +32,10 @@ def main():
 
     from ace_step_ui import generate_music
     import torch
+    # 禁用 transformers 4.57.3 对 huggingface_hub<1.0 的硬性版本检查
+    # 我们用 huggingface_hub==1.33.0 兼容 WebUI 的 diffusers
+    import transformers.utils.versions as _tf_versions
+    _tf_versions.require_version = lambda *a, **k: None
     import transformers
 
     print(
@@ -46,10 +50,17 @@ def main():
         print(f"[ACE-Step worker] flash_attn=unavailable: {exc}", flush=True)
 
     request = json.loads(sys.argv[-1])
+    print("[ACE-Step worker] 调用 generate_music...", flush=True)
     path, error = generate_music(**request)
+    print(f"[ACE-Step worker] generate_music 返回: path={path}, error={error}", flush=True)
     print("H3_ACE_RESULT=" + json.dumps({"path": path, "error": error}, ensure_ascii=False))
     return 0 if path and not error else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

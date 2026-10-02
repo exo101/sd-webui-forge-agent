@@ -57,8 +57,10 @@ def _quantized_apply(module: torch.nn.Module, fn, recurse=True):
         if param is None:
             continue
         p = fn(param)
-        if (not torch.is_inference_mode_enabled()) and p.is_inference():
-            p = p.clone()
+        if p.is_inference():
+            # inference tensors cannot have requires_grad set; clone outside inference mode
+            with torch.inference_mode(False):
+                p = p.clone()
         module.register_parameter(key, torch.nn.Parameter(p, requires_grad=False))
     for key, buf in module._buffers.items():
         if buf is not None:
@@ -103,6 +105,15 @@ def _load_quantized_module(module: torch.nn.Module, super_load, state_dict: dict
             module._full_precision_mm = True
         if module.quant_format is None:
             raise ValueError(f"Unknown quantization format for layer {layer_name}")
+
+        if module.quant_format not in QUANT_ALGOS:
+            logger.warning(
+                f"Unsupported quantization format '{module.quant_format}' for layer {layer_name}, "
+                f"falling back to full precision. Supported: {list(QUANT_ALGOS.keys())}"
+            )
+            module._full_precision_mm = True
+            module.weight = torch.nn.Parameter(weight.to(device=device, dtype=compute_dtype), requires_grad=False)
+            return
 
         qconfig = QUANT_ALGOS[module.quant_format]
         module.layout_type = qconfig["comfy_tensor_layout"]

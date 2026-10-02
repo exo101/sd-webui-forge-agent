@@ -207,6 +207,7 @@ class BreezeBackboneAdapter(nn.Module):
         position_ids: torch.LongTensor | None = None,
         past_key_values: Cache | None = None,
         inputs_embeds: torch.FloatTensor | None = None,
+        input_embeds: torch.FloatTensor | None = None,
         cache_position: torch.LongTensor | None = None,
         text_encoder_layer_hidden_states: torch.FloatTensor | None = None,
         text_ids_mask: torch.BoolTensor | None = None,
@@ -228,6 +229,9 @@ class BreezeBackboneAdapter(nn.Module):
         Returns:
             BaseModelOutputWithPast with last_hidden_state
         """
+        # 兼容 input_embeds / inputs_embeds 两种参数名
+        if inputs_embeds is None and input_embeds is not None:
+            inputs_embeds = input_embeds
         # Embed tokens if not provided
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)

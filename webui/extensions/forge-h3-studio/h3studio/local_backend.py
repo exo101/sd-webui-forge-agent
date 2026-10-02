@@ -24,6 +24,18 @@ from .cloud_client import CLOUD_UPLOAD_DIR
 from .config import EXTENSION_ROOT, load_config
 from .errors import H3StudioError
 
+# 部分云端环境（如共享 GPU 实例）的 CA 证书链不完整，导致 modelscope.cn
+# SSL 验证失败（CERTIFICATE_VERIFY_FAILED）。若用户显式设置了
+# H3_DISABLE_SSL_VERIFY=1，则全局跳过 HTTPS 证书验证，确保 VAE 等模型可下载。
+if os.environ.get("H3_DISABLE_SSL_VERIFY") == "1":
+    import ssl
+
+    ssl._create_default_https_context = ssl._create_unverified_context
+    os.environ.setdefault("CURL_CA_BUNDLE", "")
+    os.environ.setdefault("REQUESTS_CA_BUNDLE", "")
+    os.environ.setdefault("MODELSCOPE_SDK_DEBUG", "0")
+    print("[H3 Studio] 已按 H3_DISABLE_SSL_VERIFY=1 跳过 HTTPS 证书验证", flush=True)
+
 WEBUI_DIR = EXTENSION_ROOT.parent.parent
 LOCAL_OUTPUT_DIR = WEBUI_DIR / "outputs" / "h3_video"
 MODEL_CACHE_DIR = WEBUI_DIR / "models"
@@ -241,12 +253,45 @@ def _hash_safetensors(path: Path) -> str | None:
 
 
 def _list_h3_files(directory: Path, model_name: str) -> list[str]:
+    """列出目录中属于指定 H3 组件的 safetensors 文件名。
+
+    识别策略（双重保险）：
+    1. 优先用 diffsynth 的文件哈希匹配 MODEL_CONFIGS（精确识别型号）
+    2. 哈希识别失败时（diffsynth 未安装 / MODEL_CONFIGS 无该模型 / 哈希计算失败），
+       回退到文件名特征匹配，避免因 diffsynth 版本问题导致已有模型被漏报
+    """
     found: list[str] = []
     if not directory.is_dir():
         return found
+
+    # 文件名 fallback 规则：根据要找的组件类型，匹配文件名中的关键词
+    def _match_by_filename(filename: str, target: str) -> bool:
+        name_lower = filename.lower()
+        if target == "minimax_h3_dit":
+            # DiT 主模型：含 h3 且不含 vae / text_encoder / qwen（TE 通常含 qwen）
+            return "h3" in name_lower and not any(
+                k in name_lower for k in ("vae", "text_encoder", "qwen", "audio")
+            )
+        if target == "minimax_h3_text_encoder":
+            # 文本编码器：含 qwen 或 text_encoder
+            return "qwen" in name_lower or "text_encoder" in name_lower
+        if target == "minimax_h3_video_vae":
+            return "vae" in name_lower and "video" in name_lower
+        if target == "minimax_h3_audio_vae":
+            return "vae" in name_lower and "audio" in name_lower
+        # 通用 VAE：含 vae
+        if "vae" in target:
+            return "vae" in name_lower
+        return False
+
     for path in sorted(directory.glob("*.safetensors")):
+        # 策略 1：diffsynth 哈希识别
         hash_value = _hash_safetensors(path)
         if hash_value and model_name in _known_model_names(hash_value):
+            found.append(path.name)
+            continue
+        # 策略 2：文件名 fallback
+        if _match_by_filename(path.name, model_name):
             found.append(path.name)
     return found
 
@@ -278,8 +323,16 @@ def resolve_processor_dir(config: dict[str, Any]) -> Path | None:
     if configured:
         candidate = Path(configured).expanduser()
         return candidate if candidate.is_dir() else None
-    downloaded = MODEL_CACHE_DIR / H3_REPO_ID.replace("/", os.sep) / "FL2VA" / "processor"
-    return downloaded if downloaded.is_dir() else None
+    # 检查多个可能的 processor 位置（original + nf4）
+    candidates = [
+        MODEL_CACHE_DIR / H3_REPO_ID.replace("/", os.sep) / "FL2VA" / "processor",
+        MODEL_CACHE_DIR / H3_NF4_REPO_ID.replace("/", os.sep) / "FL2VA" / "processor",
+        MODEL_CACHE_DIR / H3_NF4_REPO_ID.replace("/", os.sep) / "processor",
+    ]
+    for c in candidates:
+        if c.is_dir():
+            return c
+    return None
 
 
 def vae_variant(config: dict[str, Any], dit_path: Path | None = None) -> str:
@@ -418,11 +471,15 @@ def find_local_vae(config: dict[str, Any], which: str, variant: str | None = Non
     variant 为 None 时从 config 读取。
     """
     v = variant or vae_variant(config)
-    dirs: list[Path] = [MODEL_CACHE_DIR / "vae"]
-    dirs += [d / "vae" for d in iter_models_dirs(config)]
+    # Linux 大小写敏感，同时扫描 vae / VAE / Vae
+    dirs: list[Path] = [MODEL_CACHE_DIR / "vae", MODEL_CACHE_DIR / "VAE", MODEL_CACHE_DIR / "Vae"]
+    for d in iter_models_dirs(config):
+        dirs += [d / "vae", d / "VAE", d / "Vae"]
     # 也扫描 DiT 同级目录（如 webui/models/MiniMax），用户常把 VAE 放在那里
     dirs += [MODEL_CACHE_DIR / "MiniMax"]
     dirs += list(iter_models_dirs(config))
+    # NF4 模型缓存目录（DiffSynth-Studio/MiniMax-H3-NF4）
+    dirs += [MODEL_CACHE_DIR / "DiffSynth-Studio" / "MiniMax-H3-NF4"]
     seen: set[str] = set()
 
     if v == "nf4":
@@ -445,6 +502,7 @@ def find_local_vae(config: dict[str, Any], which: str, variant: str | None = Non
         return None
 
     spec = LOCAL_VAE_SPECS[which]
+    fallback_path: Path | None = None
     for directory in dirs:
         try:
             if not directory.is_dir():
@@ -458,7 +516,12 @@ def find_local_vae(config: dict[str, Any], which: str, variant: str | None = Non
         for path in sorted(directory.glob(spec["pattern"])):
             if _verify_local_vae(path, spec):
                 return path
-    return None
+            # 验证未通过但文件存在：优先用本地文件，避免回退到 ModelScope 下载
+            # （云端可能因 SSL/网络问题无法下载）。加载失败时 diffsynth 会报错。
+            if fallback_path is None:
+                fallback_path = path
+                print(f"[H3 Studio] 警告：本地 VAE 严格校验未通过，仍尝试使用 {path.name}（若加载失败请重新从模型下载器获取）", flush=True)
+    return fallback_path
 
 
 _PATCHED_VAE_CONVERTERS: set[str] = set()
@@ -553,8 +616,10 @@ def local_catalog(config: dict[str, Any]) -> dict[str, Any]:
 
     # VAE：自动检测所有可用的本地 VAE 文件（original + nf4）
     vae_files: list[str] = []
-    vae_dirs = [MODEL_CACHE_DIR / "vae"]
-    vae_dirs += [d / "vae" for d in models_dirs]
+    # Linux 大小写敏感，同时扫描 vae / VAE / Vae 三种常见命名
+    vae_dirs = [MODEL_CACHE_DIR / "vae", MODEL_CACHE_DIR / "VAE", MODEL_CACHE_DIR / "Vae"]
+    for d in models_dirs:
+        vae_dirs += [d / "vae", d / "VAE", d / "Vae"]
     # 也扫描 DiT 同级目录（如 webui/models/MiniMax），用户常把 VAE 放在那里
     vae_dirs += [MODEL_CACHE_DIR / "MiniMax"]
     vae_dirs += list(models_dirs)

@@ -118,6 +118,53 @@ def is_installed(package):
     return dist is not None
 
 
+def get_installed_torch_info():
+    """获取已安装 torch 的版本号和 CUDA 后缀。
+
+    返回 (version, cuda_suffix)，例如 ("2.10.0", "cu128")。
+    若 torch 未安装或无法解析，返回 (None, None)。
+    """
+    try:
+        dist = importlib.metadata.distribution("torch")
+        version = dist.version
+        # 版本号形如 2.10.0+cu128 或 2.11.0+cu130
+        if "+" in version:
+            base, cuda_suffix = version.split("+", 1)
+            return base, cuda_suffix
+        return version, None
+    except importlib.metadata.PackageNotFoundError:
+        return None, None
+
+
+def is_torchaudio_matches_torch():
+    """检查已安装的 torchaudio 的 CUDA 后缀是否与 torch 一致。
+
+    transformers 会导入 torchaudio，若 torchaudio 的 CUDA 版本与 torch 不一致
+    （例如 torch 是 cu128 但 torchaudio 从默认 PyPI 装了 CPU 版或其他 CUDA 版），
+    加载时会因找不到对应 libcudart.so 而崩溃，进而导致 ControlNet / IP-Adapter /
+    ADetailer 等所有依赖预处理器的扩展报错。
+    """
+    torch_version, torch_cuda = get_installed_torch_info()
+    if not torch_cuda:
+        # torch 没有 CUDA 后缀（CPU 版或未安装），跳过检查
+        return True
+    try:
+        ta_dist = importlib.metadata.distribution("torchaudio")
+        ta_version = ta_dist.version
+        return f"+{torch_cuda}" in ta_version
+    except importlib.metadata.PackageNotFoundError:
+        return False
+
+
+def get_matching_torchaudio_command():
+    """构造与已安装 torch 版本匹配的 torchaudio 安装命令。"""
+    torch_version, torch_cuda = get_installed_torch_info()
+    if not torch_version or not torch_cuda:
+        return None
+    index_url = f"https://download.pytorch.org/whl/{torch_cuda}"
+    return f"pip install torchaudio=={torch_version}+{torch_cuda} --extra-index-url {index_url}"
+
+
 def repo_dir(name):
     return os.path.join(script_path, dir_repos, name)
 
@@ -319,6 +366,16 @@ def prepare_environment():
     if args.reinstall_torch or not is_installed("torch") or not is_installed("torchvision"):
         run(f'"{python}" -m {torch_command}', "Installing torch and torchvision", "Couldn't install torch", live=True)
         startup_timer.record("install torch")
+
+    # torchaudio 版本自适应修复：确保 torchaudio 的 CUDA 后缀与已安装的 torch 一致。
+    # 云端（cu128/torch 2.10）和本地（cu130/torch 2.11）可能不同，不能硬编码。
+    # 若 torchaudio 从默认 PyPI 装了不匹配的版本，transformers 导入时会崩溃。
+    if not is_torchaudio_matches_torch():
+        ta_cmd = get_matching_torchaudio_command()
+        if ta_cmd:
+            torch_ver, torch_cuda = get_installed_torch_info()
+            run(f'"{python}" -m {ta_cmd}', f"Installing torchaudio matching torch {torch_ver}+{torch_cuda}", "Couldn't install torchaudio", live=True)
+            startup_timer.record("install torchaudio")
 
     if not args.skip_torch_cuda_test:
         TORCH_CHECK: str = """

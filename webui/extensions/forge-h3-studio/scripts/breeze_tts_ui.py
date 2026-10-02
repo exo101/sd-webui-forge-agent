@@ -152,6 +152,29 @@ def check_model() -> tuple:
     return True, f"✅ 模型已就绪：`{MODEL_DIR}`"
 
 
+def _patch_transformers_version_check() -> None:
+    """禁用 transformers 4.57.3 对 huggingface_hub<1.0 的硬性版本检查。
+    transformers 在 import 时就执行 dependency_versions_check，运行时 monkey-patch 来不及，
+    因此直接修改 venv 中的源文件。"""
+    for sp in list(VENV_DIR.glob("Lib/site-packages")) + list(VENV_DIR.glob("lib/python*/site-packages")):
+        dep_check = sp / "transformers" / "dependency_versions_check.py"
+        if dep_check.is_file():
+            src = dep_check.read_text(encoding="utf-8")
+            if "_patched_no_ver_check" in src:
+                continue
+            # 在文件开头标记，并用 no-op 替换 require_version_core 调用
+            marker = "# _patched_no_ver_check: disable huggingface_hub version gate\n"
+            if "require_version_core" in src:
+                import re
+                new_src = marker + re.sub(
+                    r"require_version_core\(deps\[pkg\]\)",
+                    "pass  # _patched_no_ver_check",
+                    src,
+                )
+                dep_check.write_text(new_src, encoding="utf-8")
+            break
+
+
 def _patch_qwen_tts_causal_mask() -> str:
     """根据 venv 中实际安装的 transformers 版本，修正 qwen-tts 0.1.1 源码里
     create_causal_mask 的参数名。transformers 4.57.x 的签名是
@@ -161,40 +184,90 @@ def _patch_qwen_tts_causal_mask() -> str:
     import inspect
 
     target = None
-    for p in (VENV_DIR / "Lib" / "site-packages").glob("qwen_tts/**/modeling_qwen3_tts_tokenizer_v2.py"):
-        target = p
-        break
+    # 用 venv 的 Python 定位 qwen_tts 包路径（比硬编码 glob 更可靠）
+    try:
+        probe = subprocess.run(
+            [str(VENV_PYTHON), "-c",
+             "import qwen_tts, os; print(os.path.dirname(qwen_tts.__file__))"],
+            capture_output=True, text=True,
+        )
+        if probe.returncode == 0 and probe.stdout.strip():
+            pkg_dir = Path(probe.stdout.strip())
+            for p in pkg_dir.glob("**/modeling_qwen3_tts_tokenizer_v2.py"):
+                target = p
+                break
+    except Exception:
+        pass
+
+    # 回退：手动 glob
+    if target is None:
+        for sp in list(VENV_DIR.glob("Lib/site-packages")) + list(VENV_DIR.glob("lib/python*/site-packages")):
+            for p in (sp / "qwen_tts").glob("**/modeling_qwen3_tts_tokenizer_v2.py"):
+                target = p
+                break
+            if target is not None:
+                break
     if target is None:
         return "⚠️ 未在独立环境中找到 qwen_tts 的 modeling 文件，跳过修补。"
 
-    # 探测 venv 里 transformers.create_causal_mask 的真实参数
+    # 用 venv 的 Python 探测 transformers 签名（WebUI 自己的 transformers 版本可能不同）
+    # 先禁用 transformers 对 huggingface_hub 的版本检查（我们用 1.33.0 兼容 diffusers）
     try:
-        from transformers.masking_utils import create_causal_mask
-        sig = inspect.signature(create_causal_mask)
-        params = set(sig.parameters.keys())
+        probe = subprocess.run(
+            [str(VENV_PYTHON), "-c",
+             "import transformers.utils.versions as v; v.require_version=lambda *a,**k:None; "
+             "import inspect; from transformers.masking_utils import create_causal_mask; "
+             "print(','.join(inspect.signature(create_causal_mask).parameters.keys()))"],
+            capture_output=True, text=True,
+        )
+        if probe.returncode != 0:
+            return f"⚠️ 无法探测 venv transformers 签名：{probe.stderr.strip()}，跳过修补。"
+        params = set(probe.stdout.strip().split(","))
     except Exception as e:
-        return f"⚠️ 无法探测 transformers 签名：{e}，跳过修补。"
+        return f"⚠️ 无法探测 venv transformers 签名：{e}，跳过修补。"
 
     embeds_key = "inputs_embeds" if "inputs_embeds" in params else "input_embeds"
     has_cache_position = "cache_position" in params
 
     src = target.read_text(encoding="utf-8")
-    # 统一替换为目标写法
-    new_src = src.replace('"input_embeds": inputs_embeds,', f'"{embeds_key}": inputs_embeds,')
+    new_src = src
+    # 全局替换：把文件中所有 inputs_embeds / input_embeds 统一对齐到目标签名
+    # 包括函数签名参数名、变量名、字典键、关键字参数，确保函数体内外一致
+    if embeds_key == "inputs_embeds":
+        new_src = new_src.replace("input_embeds", "inputs_embeds")
+    else:
+        new_src = new_src.replace("inputs_embeds", "input_embeds")
     if not has_cache_position:
         new_src = new_src.replace('                "cache_position": cache_position,\n', "")
     else:
-        # 确保 cache_position 行存在（若之前被删掉则补回）
         if '"cache_position": cache_position,' not in new_src:
             new_src = new_src.replace(
-                f'"{embeds_key}": inputs_embeds,\n                "attention_mask": attention_mask,',
-                f'"{embeds_key}": inputs_embeds,\n                "attention_mask": attention_mask,\n                "cache_position": cache_position,',
+                f'"{embeds_key}": {embeds_key},\n                "attention_mask": attention_mask,',
+                f'"{embeds_key}": {embeds_key},\n                "attention_mask": attention_mask,\n                "cache_position": cache_position,',
             )
 
-    if new_src == src:
-        return "⚠️ qwen_tts 源码已是匹配当前 transformers 的状态，跳过。"
-    target.write_text(new_src, encoding="utf-8")
-    return f"✅ 已按 transformers 签名对齐 qwen_tts（embeds={embeds_key}, cache_position={has_cache_position}）。"
+    if new_src != src:
+        target.write_text(new_src, encoding="utf-8")
+        modeling_patched = True
+    else:
+        modeling_patched = False
+
+    # 同时修补 breeze-tts 项目自身的调用方（如 lane.py），把 inputs_embeds= 对齐到目标签名
+    patched_calls = 0
+    for py_file in BREEZE_DIR.rglob("*.py"):
+        try:
+            fsrc = py_file.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        if embeds_key == "inputs_embeds":
+            fnew = fsrc.replace("input_embeds=", "inputs_embeds=")
+        else:
+            fnew = fsrc.replace("inputs_embeds=", "input_embeds=")
+        if fnew != fsrc:
+            py_file.write_text(fnew, encoding="utf-8")
+            patched_calls += 1
+
+    return f"✅ 已按 transformers 签名对齐（embeds={embeds_key}, cache_position={has_cache_position}, modeling={'已修补' if modeling_patched else '已匹配'}, 调用方修补={patched_calls}）。"
 
 
 def prepare_environment():
@@ -206,14 +279,46 @@ def prepare_environment():
         return f"❌ 未找到依赖清单：{req}"
     logs = []
     if not VENV_PYTHON.is_file():
-        code, tail = _run_stream([sys.executable, "-m", "venv", str(VENV_DIR)], logs)
+        # 用 --system-site-packages 继承 WebUI 已安装的 torch，避免重新下载几个 GB
+        code, tail = _run_stream([sys.executable, "-m", "venv", "--system-site-packages", str(VENV_DIR)], logs)
         if code != 0 or not VENV_PYTHON.is_file():
             return "❌ 创建独立环境失败：\n" + "\n".join(tail)
     code, tail = _run_stream([str(VENV_PYTHON), "-m", "pip", "install", "--upgrade", "pip"], logs)
-    if code == 0:
-        code, tail = _run_stream([str(VENV_PYTHON), "-m", "pip", "install", "-r", str(req)], logs)
+    if code != 0:
+        return "❌ pip 升级失败：\n" + "\n".join(tail)
+
+    # 检查 venv 是否能访问 WebUI 的 torch（--system-site-packages 继承）
+    check_torch = subprocess.run(
+        [str(VENV_PYTHON), "-c", "import torch; print(torch.__version__)"],
+        capture_output=True, text=True,
+    )
+    if check_torch.returncode == 0:
+        logs.append(f"复用 WebUI torch: {check_torch.stdout.strip()}")
+    else:
+        # 没有继承到 torch，手动安装 cu128 + 2.10
+        code, tail = _run_stream([
+            str(VENV_PYTHON), "-m", "pip", "install",
+            "torch==2.10.0+cu128",
+            "torchaudio==2.10.0+cu128",
+            "--index-url", "https://download.pytorch.org/whl/cu128",
+        ], logs)
+        if code != 0:
+            return "❌ torch 安装失败（cu128 + 2.10）：\n" + "\n".join(tail)
+
+    code, tail = _run_stream([str(VENV_PYTHON), "-m", "pip", "install", "-r", str(req),
+                              "--extra-index-url", "https://pypi.org/simple"], logs)
     if code != 0:
         return "❌ Breeze-TTS 依赖安装失败：\n" + "\n".join(tail)
+    # 强制安装 huggingface_hub==1.33.0（与 WebUI 一致，兼容 diffusers），跳过依赖检查
+    # transformers 4.57.3 声明需要 huggingface_hub<1.0，但实际运行兼容 1.33.0
+    code, tail = _run_stream([str(VENV_PYTHON), "-m", "pip", "install",
+                              "huggingface_hub==1.33.0", "--no-deps",
+                              "--extra-index-url", "https://pypi.org/simple"], logs)
+    if code != 0:
+        logs.append("⚠️ huggingface_hub 升级失败，ACE-Step 可能无法使用 diffusers")
+    # 禁用 transformers 4.57.3 对 huggingface_hub<1.0 的硬性版本检查
+    # 直接修改 venv 中的 dependency_versions_check.py，因为运行时 monkey-patch 来不及
+    _patch_transformers_version_check()
     patch_msg = _patch_qwen_tts_causal_mask()
     return f"✅ Breeze-TTS 独立推理环境准备完成。\n{patch_msg}"
 
@@ -222,11 +327,18 @@ def prepare_environment():
 # 子进程执行（流式收集输出）
 # ════════════════════════════════════════════════════════════════
 def _run_stream(cmd, log_lines, max_tail=400):
-    """运行命令并流式收集输出，返回 (返回码, 尾部日志)。"""
+    """运行命令并流式收集输出，返回 (返回码, 尾部日志)。
+
+    每行输出同时 print 到 WebUI 后台，避免用户以为卡住没进度。
+    """
     log_lines.clear()
+    cmd_str = " ".join(str(c) for c in cmd)
+    print(f"[Breeze-TTS-2] 执行: {cmd_str}", flush=True)
 
     def _append(line):
         log_lines.append(line)
+        # 实时输出到后台，让用户看到进度
+        print(f"[Breeze-TTS-2] {line}", flush=True)
         if len(log_lines) > max_tail:
             del log_lines[: len(log_lines) - max_tail]
 
@@ -248,6 +360,7 @@ def _run_stream(cmd, log_lines, max_tail=400):
     for line in proc.stdout:
         _append(line.rstrip())
     code = proc.wait()
+    print(f"[Breeze-TTS-2] 命令结束，返回码: {code}", flush=True)
     return code, list(log_lines)
 
 
@@ -292,6 +405,8 @@ def generate_breeze_speech(mode, text, instruction, ref_audio, ref_text, cfg_sca
         return None, model_msg
     if not check_environment():
         return None, "❌ Breeze-TTS 独立环境未准备完成，请先点击「准备推理环境」。"
+    # 每次生成前都确保 qwen_tts 的 causal_mask 补丁已应用（防止重复点击准备环境后源码被还原）
+    _patch_qwen_tts_causal_mask()
 
     text = (text or "").strip()
     instruction = (instruction or "").strip()

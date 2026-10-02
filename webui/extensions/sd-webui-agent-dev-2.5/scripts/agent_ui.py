@@ -43,15 +43,22 @@ def _h3_studio_key_path():
 
 
 def _set_h3_studio_minimax_key(key):
-    """把 API Key 写入 forge-h3-studio 的 minimax_api_key（文件不存在则跳过）。"""
+    """把 API Key 写入 forge-h3-studio 的 minimax_api_key（文件不存在则创建）。
+
+    注意：只同步 API Key，不改变 backend_mode。
+    云端 GPU 本地加载模型（local/managed/external）与远程 API 调用（api）是两回事，
+    由用户在 forge-h3-studio 设置中自行选择后端模式。
+    """
     try:
         h3_cfg_path = _h3_studio_key_path()
+        os.makedirs(os.path.dirname(h3_cfg_path), exist_ok=True)
+        h3_cfg = {}
         if os.path.exists(h3_cfg_path):
             with open(h3_cfg_path, 'r', encoding='utf-8') as f:
                 h3_cfg = json.load(f)
-            h3_cfg['minimax_api_key'] = key
-            with open(h3_cfg_path, 'w', encoding='utf-8') as f:
-                json.dump(h3_cfg, f, ensure_ascii=False, indent=2)
+        h3_cfg['minimax_api_key'] = key
+        with open(h3_cfg_path, 'w', encoding='utf-8') as f:
+            json.dump(h3_cfg, f, ensure_ascii=False, indent=2)
     except Exception as e:
         print(f'[Agent] 同步 h3-studio key 失败: {e}')
 

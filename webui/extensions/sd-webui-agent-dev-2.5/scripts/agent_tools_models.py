@@ -46,11 +46,13 @@ def switch_model_tool(model_name):
                     break
 
         if matched is None:
+            missing = _build_missing_models_info(model_name, None, "model", model_name, "Stable-diffusion")
             return {
                 "status": "error",
                 "error": f"未找到模型 '{model_name}'",
                 "available_models": model_filenames[:30],
-                "hint": "请使用 list_models 工具查看准确的模型文件名"
+                "hint": "请使用 list_models 工具查看准确的模型文件名",
+                "missing_models": [missing],
             }
 
         # 使用 Forge 官方 checkpoint_change API（会自动刷新加载参数）
@@ -239,6 +241,139 @@ def list_controlnet_tool():
         }
     except Exception as e:
         return {"error": str(e)}
+
+
+# 模型下载来源映射：为每个模型提供 HuggingFace / ModelScope 仓库链接，
+# 当本地缺失模型文件时，供 set_model_components 返回给 agent 告知用户。
+# 字段说明：
+#   repo_hf  : HuggingFace 仓库（owner/repo），国内可通过 hf-mirror.com 访问
+#   repo_ms  : ModelScope 仓库（owner/repo）
+#   files    : 该模型需要的文件清单（model=主模型, te=文本编码器, vae=VAE）
+MODEL_DOWNLOAD_SOURCES = {
+    "krea2": {
+        "repo_hf": "krea-ai/Krea-2-Turbo",
+        "repo_ms": "krea/Krea-2-Turbo",
+        "files": {
+            "model": ["krea2_turbo_int8_convrot.safetensors"],
+            "te": ["qwen3vl_4b_fp8_scaled.safetensors"],
+            "vae": ["qwen_image_vae.safetensors"],
+        },
+    },
+    "flux-2-klein": {
+        "repo_hf": "Kijai/Flux2-Klein-9B-True-V3-fp8mixed",
+        "repo_ms": "",
+        "files": {
+            "model": ["Flux2-Klein-9B-True-V3-fp8mixed.safetensors"],
+            "te": ["qwen_3_8b_fp8mixed.safetensors"],
+            "vae": ["flux2-vae.safetensors"],
+        },
+    },
+    "flux2-klein": {
+        "repo_hf": "Kijai/Flux2-Klein-9B-True-V3-fp8mixed",
+        "repo_ms": "",
+        "files": {
+            "model": ["Flux2-Klein-9B-True-V3-fp8mixed.safetensors"],
+            "te": ["qwen_3_8b_fp8mixed.safetensors"],
+            "vae": ["flux2-vae.safetensors"],
+        },
+    },
+    "qwen_image_2.1": {
+        "repo_hf": "Qwen/Qwen-Image-2.1",
+        "repo_ms": "Qwen/Qwen-Image-2.1",
+        "files": {
+            "model": ["qwen_image_2.1_int8_convrot.safetensors"],
+            "te": ["qwen3vl_8b_int8_convrot.safetensors"],
+            "vae": ["qwen_image_2.1_vae_bf16.safetensors"],
+        },
+    },
+    "qwen_image_edit": {
+        "repo_hf": "Qwen/Qwen-Image",
+        "repo_ms": "Qwen/Qwen-Image",
+        "files": {
+            "model": [],
+            "te": ["qwen3vl_4b_fp8_scaled.safetensors"],
+            "vae": ["qwen_image_vae.safetensors"],
+        },
+    },
+    "z_image": {
+        "repo_hf": "Tongyi-MAI/Z-Image",
+        "repo_ms": "Tongyi-MAI/Z-Image",
+        "files": {
+            "model": [],
+            "te": ["qwen_3_4b.safetensors"],
+            "vae": ["flux-ae.safetensors"],
+        },
+    },
+    "anima": {
+        "repo_hf": "",
+        "repo_ms": "",
+        "files": {
+            "model": [],
+            "te": ["qwen_3_06b_base.safetensors"],
+            "vae": ["qwen_image_vae.safetensors"],
+        },
+    },
+    "illustrious": {
+        "repo_hf": "",
+        "repo_ms": "",
+        "files": {"model": [], "te": [], "vae": []},
+    },
+    "xl": {
+        "repo_hf": "",
+        "repo_ms": "",
+        "files": {"model": [], "te": [], "vae": []},
+    },
+}
+
+
+def _build_missing_models_info(model_name, guide, missing_component, missing_filename, target_subdir):
+    """当某个模型组件文件缺失时，构造结构化的缺失信息，供 agent 告知用户。
+
+    参数:
+        model_name: 用户请求的主模型名（用于匹配 MODEL_DOWNLOAD_SOURCES）
+        guide: 匹配到的 MODEL_GUIDE 条目（可能为 None）
+        missing_component: 缺失组件类型 'model' / 'te' / 'vae'
+        missing_filename: 缺失的文件名
+        target_subdir: 该文件应放入的模型子目录（Stable-diffusion / text_encoder / vae）
+
+    返回: dict，包含缺失文件、目标目录、下载来源
+    """
+    # 匹配下载来源
+    src = None
+    model_lower = str(model_name or "").lower()
+    for key, s in MODEL_DOWNLOAD_SOURCES.items():
+        if key in model_lower:
+            src = s
+            break
+
+    sources = []
+    if src:
+        if src.get("repo_hf"):
+            sources.append(f"HuggingFace: https://huggingface.co/{src['repo_hf']} （国内可用 https://hf-mirror.com/{src['repo_hf']}）")
+        if src.get("repo_ms"):
+            sources.append(f"ModelScope: https://modelscope.cn/models/{src['repo_ms']}")
+
+    # 目标目录绝对路径
+    try:
+        from modules import paths
+        target_dir = os.path.join(paths.models_path, target_subdir)
+    except Exception:
+        target_dir = f"<models目录>/{target_subdir}"
+
+    component_label = {
+        "model": "主模型 (checkpoint)",
+        "te": "文本编码器 (Text Encoder)",
+        "vae": "VAE",
+    }.get(missing_component, missing_component)
+
+    return {
+        "component": missing_component,
+        "component_label": component_label,
+        "filename": missing_filename,
+        "target_dir": target_dir,
+        "sources": sources,
+        "note": "下载后请将文件放入上述目录，然后重新启动 WebUI 或在模型管理中刷新列表。",
+    }
 
 
 MODEL_GUIDE = {
@@ -598,7 +733,13 @@ def set_model_components_tool(model_name=None, te_name=None, vae_name=None):
                 if os.path.isfile(candidate):
                     te_full_path = candidate
                 else:
-                    return {"status": "error", "step": "resolve_te", "error": f"文本编码器文件未找到: {te_name}"}
+                    missing = _build_missing_models_info(model_name, None, "te", te_name, "text_encoder")
+                    return {
+                        "status": "error",
+                        "step": "resolve_te",
+                        "error": f"文本编码器文件未找到: {te_name}",
+                        "missing_models": [missing],
+                    }
             new_modules.append(te_full_path)
 
         # 添加新 VAE
@@ -611,7 +752,13 @@ def set_model_components_tool(model_name=None, te_name=None, vae_name=None):
                 if os.path.isfile(candidate):
                     vae_full_path = candidate
                 else:
-                    return {"status": "error", "step": "resolve_vae", "error": f"VAE 文件未找到: {vae_name}"}
+                    missing = _build_missing_models_info(model_name, None, "vae", vae_name, "vae")
+                    return {
+                        "status": "error",
+                        "step": "resolve_vae",
+                        "error": f"VAE 文件未找到: {vae_name}",
+                        "missing_models": [missing],
+                    }
             new_modules.append(vae_full_path)
 
         # 4. 一次性更新 opts（主模型 + 附加模块）
@@ -626,7 +773,13 @@ def set_model_components_tool(model_name=None, te_name=None, vae_name=None):
                         new_ckpt_info = info
                         break
             if new_ckpt_info is None:
-                return {"status": "error", "step": "resolve_model", "error": f"主模型文件未找到: {model_name}"}
+                missing = _build_missing_models_info(model_name, None, "model", model_name, "Stable-diffusion")
+                return {
+                    "status": "error",
+                    "step": "resolve_model",
+                    "error": f"主模型文件未找到: {model_name}",
+                    "missing_models": [missing],
+                }
             shared.opts.set("sd_model_checkpoint", new_ckpt_info.title)
             model_changed = True
 

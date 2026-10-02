@@ -700,7 +700,7 @@ class BreezeDepthDecoderForCausalLM(BreezePreTrainedModel, GenerationMixin):
             attention_mask=attention_mask,
             position_ids=position_ids,
             past_key_values=past_key_values,
-            inputs_embeds=inputs_embeds,
+            input_embeds=inputs_embeds,
             use_cache=use_cache,
             cache_position=cache_position,
             **kwargs,
@@ -1492,7 +1492,7 @@ class BreezeForConditionalGeneration(BreezePreTrainedModel, BreezeGenerationMixi
                     0
                 )
                 projected_segments.append(
-                    proj(inputs_embeds=seg_hs, position_ids=seg_pos).squeeze(0)
+                    proj(input_embeds=seg_hs, position_ids=seg_pos).squeeze(0)
                 )
         text_embeds = torch.cat(projected_segments, dim=0)
 
@@ -1689,7 +1689,7 @@ class BreezeForConditionalGeneration(BreezePreTrainedModel, BreezeGenerationMixi
             input_ids=input_ids,
             past_key_values=past_key_values,
             attention_mask=attention_mask,
-            inputs_embeds=inputs_embeds,
+            input_embeds=inputs_embeds,
             cache_position=cache_position,
             **kwargs,
         )
@@ -1784,7 +1784,7 @@ class BreezeForConditionalGeneration(BreezePreTrainedModel, BreezeGenerationMixi
             attention_mask=attention_mask,
             position_ids=position_ids,
             past_key_values=past_key_values,
-            inputs_embeds=inputs_embeds,
+            input_embeds=inputs_embeds,
             use_cache=use_cache,
             cache_position=cache_position,
             text_encoder_layer_hidden_states=text_encoder_layer_hidden_states,

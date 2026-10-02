@@ -77,6 +77,10 @@ _load_config_fn = None
 _get_current_checkpoint_fn = None
 _get_system_prompt_fn = None
 _execute_tool_fn = None
+_parse_mentions_fn = None
+_handle_model_mention_fn = None
+_activate_api_model_mentions_fn = None
+_handle_tool_mentions_fn = None
 
 
 def _ensure_modules_loaded():
@@ -84,6 +88,8 @@ def _ensure_modules_loaded():
     global _modules_loaded, _load_error, _TOOLS, _TOOL_FUNCTIONS
     global _REGISTRY_AVAILABLE, _get_registered_tools_fn, _load_config_fn
     global _get_current_checkpoint_fn, _get_system_prompt_fn, _execute_tool_fn
+    global _parse_mentions_fn, _handle_model_mention_fn
+    global _activate_api_model_mentions_fn, _handle_tool_mentions_fn
 
     if _modules_loaded:
         return
@@ -98,11 +104,19 @@ def _ensure_modules_loaded():
         from agent_tools import TOOLS, TOOL_FUNCTIONS
         from agent_prompts import _get_system_prompt
         from agent import _execute_tool
+        from agent_ui import (
+            _parse_mentions, _handle_model_mention,
+            _activate_api_model_mentions, _handle_tool_mentions,
+        )
 
         _load_config_fn = load_config
         _get_current_checkpoint_fn = _get_current_checkpoint
         _get_system_prompt_fn = _get_system_prompt
         _execute_tool_fn = _execute_tool
+        _parse_mentions_fn = _parse_mentions
+        _handle_model_mention_fn = _handle_model_mention
+        _activate_api_model_mentions_fn = _activate_api_model_mentions
+        _handle_tool_mentions_fn = _handle_tool_mentions
         _TOOLS = TOOLS
         _TOOL_FUNCTIONS = TOOL_FUNCTIONS
 
@@ -124,6 +138,10 @@ def _ensure_modules_loaded():
         _get_current_checkpoint_fn = lambda: getattr(shared.opts, 'sd_model_checkpoint', '') or ""
         _get_system_prompt_fn = lambda model="": "你是一个 SD WebUI 智能助手。"
         _execute_tool_fn = lambda *a, **kw: ("", [])
+        _parse_mentions_fn = lambda text: (text, [])
+        _handle_model_mention_fn = lambda actions: ("", [])
+        _activate_api_model_mentions_fn = lambda actions: ("", [])
+        _handle_tool_mentions_fn = lambda actions: ""
         _TOOLS = []
         _TOOL_FUNCTIONS = {}
         _REGISTRY_AVAILABLE = False
@@ -658,10 +676,33 @@ def agent_chat(body: dict, on_event=None):
         except Exception as e:
             print(f"[PS Agent] SD 模型切换失败: {e}")
 
+    # ===== @mention 处理（与 WebUI 端一致）=====
+    # PS 面板的本地模型下拉会在消息前加 @qwen/@klein 等标签，
+    # 必须在这里解析并自动切换模型，否则标签被当成普通文本，LLM 不会切换模型，
+    # 导致用错模型（例如选了 @qwen 实际用 klein）。
+    clean_text, actions = _parse_mentions_fn(user_message)
+    model_note, _switch_results = _handle_model_mention_fn(actions)
+    api_model_note, _api_switch_results = _activate_api_model_mentions_fn(actions)
+    tool_hints = _handle_tool_mentions_fn(actions)
+    # 用清洗后的文本（去掉 @标签）作为用户消息
+    user_message = clean_text
+
     # 构建消息
     tools = _get_filtered_tools()
     system_prompt = _build_ps_system_prompt(cfg)
     system_prompt += "\n注意：用户在 Photoshop 中操作，生成的图片会显示在 PS 面板中。"
+
+    # @mention 隐藏提示注入（模型切换结果等）
+    hidden_notes = []
+    if model_note:
+        hidden_notes.append(model_note)
+    if api_model_note:
+        hidden_notes.append(api_model_note)
+    if tool_hints:
+        hidden_notes.append(tool_hints)
+    if hidden_notes:
+        hint_text = "[系统提示 - 以下是用户 @标签 触发的自动操作]\n" + "\n".join(hidden_notes) + "\n[请根据以上提示执行任务]"
+        system_prompt += "\n\n" + hint_text
 
     # 记忆注入（与 WebUI 端共享同一记忆库）
     if cfg.get("memory_enabled"):

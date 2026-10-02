@@ -131,9 +131,13 @@ def h3_video_generate_tool(prompt, duration=5, aspect_ratio="16:9",
         except ImportError as e:
             return {"status": "error", "error": f"无法导入 forge-h3-studio CloudClient: {e}"}
 
-        client = CloudClient(cfg)
+        # 注意：bootstrap 返回的公开 config 中 minimax_api_key 被清空（安全考虑，
+        # 见 forge-h3-studio/h3studio/api.py 的 _public_config）。因此不能把 cfg
+        # 传给 CloudClient，否则 api_key 为空、enabled() 返回 False。
+        # 不传 config，让 CloudClient 内部调用 load_config() 从配置文件读取真实 Key。
+        client = CloudClient()
         if not client.enabled():
-            return {"status": "error", "error": "MiniMax API Key 未配置，请在 forge-h3-studio 设置中填写"}
+            return {"status": "error", "error": "MiniMax API Key 未配置，请在 forge-h3-studio 设置或智能体「图像/视频生成 API 设置」中填写"}
 
         # 将参考图复制到 CLOUD_UPLOAD_DIR（CloudClient 从这里读取并转为 data URL）
         import shutil
@@ -224,12 +228,46 @@ def h3_video_generate_tool(prompt, duration=5, aspect_ratio="16:9",
         return {"status": "error", "error": f"视频生成超时（超过 {max_wait} 秒）"}
 
     # ============================================================
-    # 本地模式（managed/external）：通过 forge-h3-studio HTTP API
+    # 本地模式（local / managed / external）：通过 forge-h3-studio HTTP API
     # ============================================================
     else:
-        # 检查后端是否就绪
-        if not backend.get("ready"):
+        # local 模式（Forge 进程内 DiffSynth）不需要 ComfyUI，即使 backend.ready
+        # 为 False（模型未下载）也可以提交——后端会在首次运行时自动下载缺失组件。
+        # 只有 managed/external（ComfyUI）模式才需要强制检查后端就绪。
+        if mode != "local" and not backend.get("ready"):
             return {"status": "error", "error": f"H3 后端未就绪: state={backend.get('state')}。请先启动 ComfyUI 后端。"}
+
+        # 从 catalog 获取实际可用的模型文件名，避免硬编码文件名与云端 GPU 上
+        # 实际下载的文件名不匹配（例如 pruned 版本、不同量化版本等）。
+        try:
+            catalog_resp = httpx.get(f"{base}/h3studio/api/catalog", timeout=15)
+            catalog_resp.raise_for_status()
+            catalog = catalog_resp.json()
+        except Exception as e:
+            catalog = {}
+            print(f"[Agent] 获取 H3 catalog 失败，使用默认文件名: {e}")
+
+        dit_models = catalog.get("models") or []
+        te_models = catalog.get("text_encoders") or []
+        vae_models = catalog.get("vaes") or []
+
+        # 如果 catalog 显示模型未就绪，给出明确提示（不自动跳过，让用户知道缺什么）
+        if mode == "local" and not catalog.get("h3_ready", True):
+            missing = catalog.get("missing_nodes") or []
+            missing_text = "；".join(missing) if missing else "本地模型目录中未找到 H3 权重"
+            return {
+                "status": "error",
+                "error": f"H3 本地模型未就绪：{missing_text}。请在 forge-h3-studio 的模型下载器中下载 H3 模型（DiT + 文本编码器），VAE 可由后端自动下载。",
+            }
+
+        # 自动选择可用的模型文件名（取列表第一个；catalog 已按优先级排序）
+        model_name = dit_models[0] if dit_models else "minimax_h3_fl2va_fp8.safetensors"
+        te_name = te_models[0] if te_models else "qwen3vl_32b_minimax_h3_fp8.safetensors"
+        # VAE：优先从 catalog 中选，找不到就用默认名（后端会自动下载）
+        video_vae_name = next((v for v in vae_models if "video" in v.lower()), None) or "minimax_h3_video_vae_fp16.safetensors"
+        audio_vae_name = next((v for v in vae_models if "audio" in v.lower()), None) or "minimax_h3_audio_vae_fp32.safetensors"
+
+        print(f"[Agent] H3 模型选择: model={model_name}, te={te_name}, video_vae={video_vae_name}, audio_vae={audio_vae_name}")
 
         # 上传参考图
         def _upload_asset(img_path):
@@ -257,10 +295,10 @@ def h3_video_generate_tool(prompt, duration=5, aspect_ratio="16:9",
 
         request = {
             "mode": "t2v",
-            "model": "minimax_h3_fl2va_fp8.safetensors",
-            "text_encoder": "qwen3vl_32b_minimax_h3_fp8.safetensors",
-            "video_vae": "minimax_h3_video_vae_fp16.safetensors",
-            "audio_vae": "minimax_h3_audio_vae_fp32.safetensors",
+            "model": model_name,
+            "text_encoder": te_name,
+            "video_vae": video_vae_name,
+            "audio_vae": audio_vae_name,
             "prompt": prompt,
             "width": w,
             "height": h,

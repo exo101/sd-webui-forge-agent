@@ -260,7 +260,7 @@ class BackboneGraph:
         # position_ids: [batch_size, 1] — per-batch logical position for RoPE
         # cache_position: [1] — shared KV cache slot for all batches
         out = self.model(
-            inputs_embeds=inputs_embeds,
+            input_embeds=inputs_embeds,
             attention_mask=self.attn_mask,
             past_key_values=self.static_cache,
             position_ids=self.position_ids,

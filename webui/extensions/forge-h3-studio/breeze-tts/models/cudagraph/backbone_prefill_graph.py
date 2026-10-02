@@ -100,7 +100,7 @@ class BackbonePrefillGraphCache:
         cache_position: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         output = self.model(
-            inputs_embeds=inputs_embeds,
+            input_embeds=inputs_embeds,
             attention_mask=attention_mask,
             position_ids=position_ids,
             past_key_values=self.backbone_graph.static_cache,
@@ -196,7 +196,7 @@ class BackbonePrefillGraphCache:
                 record = _PrefillRecord(
                     graph=graph,
                     stream=capture_stream,
-                    inputs_embeds=static_embeds,
+                    input_embeds=static_embeds,
                     attention_mask=static_mask,
                     position_ids=static_positions,
                     causal_mask=static_causal_mask,

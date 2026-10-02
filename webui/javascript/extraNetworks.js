@@ -77,10 +77,12 @@ function setupExtraNetworksForTab(tabname) {
                 let searchTerm = search.value.toLowerCase();
 
                 // get UI preset
-                radioUI = gradioApp().querySelector("#forge_ui_preset");
-                radioButtons = radioUI.getElementsByTagName("input");
-                UIresult = 3; //  default to 'all'
-                for (i = 0; i < radioButtons.length; i++) {
+                let radioUI = gradioApp().querySelector("#forge_ui_preset");
+                let radioButtons = radioUI
+                    ? radioUI.getElementsByTagName("input")
+                    : [];
+                let UIresult = 3; // default to 'all'
+                for (let i = 0; i < radioButtons.length; i++) {
                     if (radioButtons[i].checked) {
                         UIresult = i;
                     }
@@ -102,15 +104,15 @@ function setupExtraNetworksForTab(tabname) {
                         let visible = true;
                         if (searchOnly && searchTerm.length < 4) visible = false;
 
-                        splitSearch = searchTerm.split(" ");
+                        let splitSearch = searchTerm.split(" ");
                         splitSearch.forEach(function (partial) {
                             if (text.indexOf(partial) == -1) visible = false;
                         });
 
-                        sdversion = elem.getAttribute("data-sort-sdversion");
+                        let sdversion = elem.getAttribute("data-sort-sdversion");
                         if (sdversion == null);
                         else if (sdversion == "SdVersion.Unknown");
-                        else if (opts.lora_filter_disabled == True);
+                        else if (opts.lora_filter_disabled == true);
                         else if (UIresult == 3); //  'all'
                         else if (UIresult == 0) {
                             //  'sd'

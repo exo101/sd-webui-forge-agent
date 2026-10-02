@@ -510,22 +510,6 @@ def build_h3_workflow(request: dict[str, Any]) -> tuple[dict[str, Any], dict[str
         summary["warnings"].append("H3 按 24 FPS 生成；其他导出 FPS 会改变播放速度")
     if data["width"] * data["height"] > 1344 * 768:
         summary["warnings"].append("当前像素面积高于 1344×768，显存占用和生成时间会明显增加")
-    if data["mode"] in {"ref", "swap"}:
-        expected_tags: list[str] = []
-        image_count = sum(ref["kind"] == "image" for ref in data["references"])
-        video_refs = [ref for ref in data["references"] if ref["kind"] == "video"]
-        standalone_audio_count = sum(ref["kind"] == "audio" for ref in data["references"])
-        expected_tags.extend(f"<Picture {index}>" for index in range(1, image_count + 1))
-        audio_ordinal = 0
-        for index, ref in enumerate(video_refs, start=1):
-            if ref["include_audio"]:
-                audio_ordinal += 1
-                expected_tags.append(f"<Audio {audio_ordinal}>")
-            expected_tags.append(f"<Video {index}>")
-        for _ in range(standalone_audio_count):
-            audio_ordinal += 1
-            expected_tags.append(f"<Audio {audio_ordinal}>")
-        missing_tags = [tag for tag in expected_tags if tag not in data["prompt"]]
-        if missing_tags:
-            summary["warnings"].append("这些参考锚点尚未出现在提示词中：" + "、".join(missing_tags))
+    # 锚点（<Picture i>/<Video k>/<Audio j>）是可选语法：不写时 H3 也能正常生成，
+    # 强制要求反而会误导用户添加无效锚点导致报错，故不做缺失检查。
     return graph.nodes, summary

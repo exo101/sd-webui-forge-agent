@@ -301,7 +301,7 @@ class _LaneCore(nn.Module):
             dtype=hidden.dtype,
         )
         hidden = self.pre_transformer(
-            inputs_embeds=hidden,
+            input_embeds=hidden,
             use_cache=True,
             past_key_values=binding.request_slot.kv,
             cache_position=cache_position,

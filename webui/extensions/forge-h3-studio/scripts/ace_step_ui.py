@@ -197,7 +197,7 @@ def get_llm_handler(model_version=None):
     return _llm_handler_instance
 
 def generate_music(prompt, lyrics, duration, infer_steps, guidance_scale, model_version, bpm, key_scale, time_signature, vocal_language,
-                   task_mode="文本生成音乐", cover_src_audio=None, cover_strength=1.0, cover_noise=0.0):
+                   task_mode="文本生成音乐", cover_src_audio=None, reference_audio=None, cover_strength=1.0, cover_noise=0.0):
     """生成音乐：文本生成音乐 或 翻唱（基于源音频）"""
     print(
         f"[ACE-Step-1.5] callback module={__name__}, file={__file__}, "
@@ -209,7 +209,8 @@ def generate_music(prompt, lyrics, duration, infer_steps, guidance_scale, model_
     # worker is deliberately a subprocess.
     if "--h3-worker" not in sys.argv:
         import subprocess
-        worker_python = plugin_dir / "breeze-tts" / "venv" / "Scripts" / "python.exe"
+        venv_dir = plugin_dir / "breeze-tts" / "venv"
+        worker_python = venv_dir / ("Scripts" if os.name == "nt" else "bin") / ("python.exe" if os.name == "nt" else "python")
         worker_script = Path(__file__).with_name("ace_step_worker.py")
         if not worker_python.is_file():
             return None, f"❌ ACE-Step 隔离环境不存在: {worker_python}"
@@ -219,6 +220,7 @@ def generate_music(prompt, lyrics, duration, infer_steps, guidance_scale, model_
             "model_version": model_version, "bpm": bpm, "key_scale": key_scale,
             "time_signature": time_signature, "vocal_language": vocal_language,
             "task_mode": task_mode, "cover_src_audio": cover_src_audio,
+            "reference_audio": reference_audio,
             "cover_strength": cover_strength, "cover_noise": cover_noise,
         }
         env = os.environ.copy()
@@ -232,8 +234,12 @@ def generate_music(prompt, lyrics, duration, infer_steps, guidance_scale, model_
             )
             if proc.stdout:
                 print(proc.stdout)
+            if proc.stderr:
+                print("[ACE-Step-1.5] worker stderr:\n" + proc.stderr)
             if proc.returncode != 0:
-                return None, f"❌ ACE-Step 隔离进程失败:\n{proc.stderr or proc.stdout}"
+                full_err = (proc.stderr or proc.stdout or "").strip()
+                # UI 只显示最后 2000 字符，完整日志在 WebUI 后台
+                return None, f"❌ ACE-Step 隔离进程失败（完整日志见 WebUI 后台）:\n{full_err[-2000:]}"
             for line in reversed((proc.stdout or "").splitlines()):
                 if line.startswith("H3_ACE_RESULT="):
                     result = json.loads(line.split("=", 1)[1])
@@ -242,9 +248,15 @@ def generate_music(prompt, lyrics, duration, infer_steps, guidance_scale, model_
         except Exception as exc:
             return None, f"❌ 无法启动 ACE-Step 隔离环境: {exc}"
 
-    is_cover = str(task_mode or "").strip() == "翻唱"
+    is_cover = str(task_mode or "").strip() == "AI翻唱"
+    is_instrumental = str(task_mode or "").strip() == "伴奏生成"
+    # 伴奏模式上传音频时走 cover 流程（vocal2bgm：保留旋律生成新伴奏）
+    use_cover_flow = is_cover or (is_instrumental and cover_src_audio is not None)
     if is_cover and not cover_src_audio:
-        return None, "❌ 翻唱模式请先上传翻唱源音频（原曲）"
+        return None, "❌ AI翻唱模式请先上传原曲"
+    # 伴奏模式：自动设置 lyrics="[Instrumental]"，生成纯音乐无人声
+    if is_instrumental:
+        lyrics = "[Instrumental]"
     try:
         # Forge may keep the currently selected SD model resident on the GPU.
         # torch.cuda.empty_cache() cannot release those live model tensors, and
@@ -294,31 +306,35 @@ def generate_music(prompt, lyrics, duration, infer_steps, guidance_scale, model_
         from acestep.inference import GenerationParams, GenerationConfig, generate_music
 
         params = GenerationParams(
-            task_type="cover" if is_cover else "text2music",
+            task_type="cover" if use_cover_flow else "text2music",
             caption=prompt,
             lyrics=lyrics if lyrics.strip() else "",
             bpm=bpm if bpm else None,
             keyscale=key_scale if key_scale else "",
             timesignature=time_signature if time_signature else "",
             vocal_language=vocal_language if vocal_language else "en",
-            duration=duration if (duration and duration > 0 and not is_cover) else -1.0,
+            duration=duration if (duration and duration > 0 and not use_cover_flow) else -1.0,
             inference_steps=infer_steps,
             guidance_scale=guidance_scale,
             seed=-1,
-            # 翻唱模式官方强制关闭 LM thinking（无需 CoT，直接基于原曲 latent 加噪去噪）
-            thinking=not is_cover,
-            use_cot_caption=not is_cover,
-            use_cot_metas=not is_cover,
-            use_cot_language=not is_cover,
+            # 翻唱/伴奏(上传音频)模式关闭 LM thinking
+            thinking=not use_cover_flow,
+            use_cot_caption=not use_cover_flow,
+            use_cot_metas=not use_cover_flow,
+            use_cot_language=not use_cover_flow,
         )
 
-        if is_cover:
+        if use_cover_flow:
             params.src_audio = str(cover_src_audio)
-            # audio_cover_strength=混音强度（控制去噪步数/CFG混合），官方默认 0.0
-            # cover_noise_strength=翻唱强度（控制旋律还原：0=纯噪声，1=最接近原曲），官方默认 0.2
-            params.audio_cover_strength = float(cover_strength if cover_strength is not None else 0.0)
-            params.cover_noise_strength = float(cover_noise if cover_noise is not None else 0.2)
-            print(f"[ACE-Step-1.5] 翻唱源音频: {cover_src_audio}, 混音强度: {params.audio_cover_strength}, 翻唱强度: {params.cover_noise_strength}")
+            # 参考音频（声音克隆）：上传你的声音，用你的音色翻唱歌曲
+            if reference_audio:
+                params.reference_audio = str(reference_audio)
+                print(f"[ACE-Step-1.5] 参考音频（声音克隆）: {reference_audio}")
+            # audio_cover_strength=参考音频影响强度（0=无影响，1=最强；翻唱建议 1.0）
+            # cover_noise_strength=原曲保留程度（0=纯噪声完全重生成，1=最接近原曲；翻唱建议 0.0）
+            params.audio_cover_strength = float(cover_strength if cover_strength is not None else 1.0)
+            params.cover_noise_strength = float(cover_noise if cover_noise is not None else 0.0)
+            print(f"[ACE-Step-1.5] 翻唱源音频: {cover_src_audio}, 参考强度: {params.audio_cover_strength}, 原曲保留: {params.cover_noise_strength}")
 
         config = GenerationConfig(
             batch_size=1,
@@ -421,28 +437,32 @@ def create_ace_step_ui(asset_bridge_id="h3studio-asset-bridge"):
         
         with gr.Row():
             with gr.Column(scale=3):
-                # 生成模式：文本生成音乐 / 翻唱
+                # 生成模式：文本生成音乐 / 伴奏生成 / AI翻唱
                 task_mode = gr.Radio(
                     label="🎼 生成模式",
-                    choices=["文本生成音乐", "翻唱"],
+                    choices=["文本生成音乐", "伴奏生成", "AI翻唱"],
                     value="文本生成音乐"
                 )
                 
-                # 翻唱模式参数（仅在「翻唱」模式下显示）
+                # 音频上传区（伴奏生成 / AI翻唱 模式下显示）
                 cover_group = gr.Group(visible=False)
                 with cover_group:
                     cover_src_audio = gr.Audio(
-                        label="🎤 上传翻唱源音频（原曲，仅需一段）",
+                        label="🎤 上传音频（伴奏模式：上传歌曲生成新伴奏；翻唱模式：上传原曲）",
+                        type="filepath"
+                    )
+                    reference_audio = gr.Audio(
+                        label="🎙️ 参考音频（仅翻唱模式，可选：上传你的声音做音色克隆）",
                         type="filepath"
                     )
                     with gr.Row():
                         cover_noise = gr.Slider(
-                            label="翻唱强度（旋律还原：0=纯噪声，1=最接近原曲，推荐 0.1~0.25）",
-                            minimum=0.0, maximum=1.0, value=0.2, step=0.05
+                            label="原曲保留程度（0=完全重生成新作品，1=最接近原曲，翻唱建议 0.0）",
+                            minimum=0.0, maximum=1.0, value=0.0, step=0.05
                         )
                         cover_strength = gr.Slider(
-                            label="混音强度（风格转换：0=完全去噪，1=保留最多原曲信息）",
-                            minimum=0.0, maximum=1.0, value=0.0, step=0.05
+                            label="参考音频影响强度（0=无音色克隆，1=最强，翻唱建议 1.0）",
+                            minimum=0.0, maximum=1.0, value=1.0, step=0.05
                         )
                 
                 prompt = gr.Textbox(
@@ -456,7 +476,9 @@ def create_ace_step_ui(asset_bridge_id="h3studio-asset-bridge"):
                     label="📝 歌词（可选）",
                     placeholder="输入歌词内容，支持段落式格式...",
                     value=EXAMPLE_LYRICS,
-                    lines=8
+                    lines=8,
+                    max_lines=30,
+                    autoscroll=True
                 )
                 
                 # 音乐参数行
@@ -553,8 +575,13 @@ def create_ace_step_ui(asset_bridge_id="h3studio-asset-bridge"):
         
         # 生成模式切换：翻唱模式显示翻唱参数
         def _toggle_cover_group(mode):
-            return gr.update(visible=str(mode or "").strip() == "翻唱")
+            # 伴奏生成（上传音频时）和 AI翻唱 都显示音频上传区
+            return gr.update(visible=str(mode or "").strip() in ("伴奏生成", "AI翻唱"))
+        def _toggle_lyrics_visibility(mode):
+            # 伴奏模式隐藏歌词框（自动设为 [Instrumental]）
+            return gr.update(visible=str(mode or "").strip() != "伴奏生成")
         task_mode.change(fn=_toggle_cover_group, inputs=task_mode, outputs=cover_group)
+        task_mode.change(fn=_toggle_lyrics_visibility, inputs=task_mode, outputs=lyrics)
         
         # 生成按钮点击事件
         generate_button.click(
@@ -572,6 +599,7 @@ def create_ace_step_ui(asset_bridge_id="h3studio-asset-bridge"):
                 vocal_language,     # 演唱语言
                 task_mode,          # 生成模式（文本/翻唱）
                 cover_src_audio,    # 翻唱源音频
+                reference_audio,    # 参考音频（声音克隆）
                 cover_strength,     # 翻唱强度
                 cover_noise,        # 翻唱噪声强度
             ],
