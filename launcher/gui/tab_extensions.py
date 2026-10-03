@@ -715,9 +715,13 @@ class ExtensionsTab(QWidget):
 
     def _open_url(self, url: str):
         """在浏览器中打开URL"""
-        import webbrowser
-        webbrowser.open(url)
-        self._log(f"🌐 打开链接: {url}")
+        try:
+            from PyQt6.QtGui import QDesktopServices
+            from PyQt6.QtCore import QUrl
+            QDesktopServices.openUrl(QUrl(url))
+            self._log(f"🌐 打开链接: {url}")
+        except Exception as e:
+            self._log(f"⚠️ 打开链接失败: {e}")
 
     def _show_plugin_detail(self, ext: ExtInfo):
         """显示插件详情"""

@@ -77,6 +77,7 @@ class GitCheckWorker(QThread):
         try:
             r_local = subprocess.run([git, "rev-parse", "--short", "HEAD"],
                 capture_output=True, text=True, timeout=5, cwd=WEBUI_DIR,
+                errors="replace",
                 creationflags=subprocess.CREATE_NO_WINDOW, env=_env)
             local = (r_local.stdout or "").strip() if r_local.returncode == 0 else "?"
 
@@ -86,6 +87,7 @@ class GitCheckWorker(QThread):
 
             r_remote = subprocess.run([git, "rev-parse", "--short", "origin/HEAD"],
                 capture_output=True, text=True, timeout=5, cwd=WEBUI_DIR,
+                errors="replace",
                 creationflags=subprocess.CREATE_NO_WINDOW, env=_env)
             remote = (r_remote.stdout or "").strip() if r_remote.returncode == 0 else "?"
 
@@ -528,7 +530,10 @@ class LaunchTab(QWidget):
                 # 创建自定义点击事件处理
                 def make_click_handler(link_url):
                     def handler(event):
-                        QDesktopServices.openUrl(QUrl(link_url))
+                        try:
+                            QDesktopServices.openUrl(QUrl(link_url))
+                        except Exception as ex:
+                            print(f"[链接] 打开失败: {ex}")
                     return handler
                 
                 lbl_value.mousePressEvent = make_click_handler(url)
@@ -823,10 +828,19 @@ class LaunchTab(QWidget):
         arrow.setStyleSheet(f"color:{COLORS['accent_light']};font-size:14px;background:transparent;")
         layout.addWidget(arrow)
 
-        # 点击事件
+        # 子标签不拦截鼠标事件，使整张卡片（含文字区域）都可点击
+        for lbl in (name, desc, arrow):
+            lbl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
+        # 点击事件：使用 QDesktopServices（Qt 原生），try/except 防止异常导致闪退
         url = resource["url"]
         def make_handler(u):
-            return lambda e: webbrowser.open(u)
+            def on_click(e):
+                try:
+                    QDesktopServices.openUrl(QUrl(u))
+                except Exception as ex:
+                    print(f"[资源卡片] 打开链接失败: {ex}")
+            return on_click
         card.mousePressEvent = make_handler(url)
 
         return card

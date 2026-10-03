@@ -247,6 +247,7 @@ def uninstall_extension(info: ExtInfo) -> tuple[bool, str]:
                     cmd,
                     capture_output=True,
                     text=True,
+                    errors="replace",
                     creationflags=subprocess.CREATE_NO_WINDOW
                 )
                 if result.returncode == 0:

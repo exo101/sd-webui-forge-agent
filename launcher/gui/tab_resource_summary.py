@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QGridLayout, QFrame
-from PyQt6.QtCore import Qt
-import webbrowser
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QDesktopServices
 from .theme import COLORS
 
 class ResourceSummaryTab(QWidget):
@@ -117,7 +117,13 @@ class ResourceSummaryTab(QWidget):
                 border-color: {COLORS['accent_light']};
             }}
         """)
-        link_btn.clicked.connect(lambda: webbrowser.open(resource['url']))
+        link_btn.clicked.connect(lambda: self._open_url(resource['url']))
         layout.addWidget(link_btn)
 
         return card
+
+    def _open_url(self, url: str):
+        try:
+            QDesktopServices.openUrl(QUrl(url))
+        except Exception as ex:
+            print(f"[资源汇总] 打开链接失败: {ex}")

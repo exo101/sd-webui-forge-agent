@@ -519,6 +519,7 @@ class EnvTab(QWidget):
                     cmd,
                     capture_output=True,
                     text=True,
+                    errors="replace",
                     timeout=120
                 )
                 
@@ -549,6 +550,7 @@ class EnvTab(QWidget):
                     cmd,
                     capture_output=True,
                     text=True,
+                    errors="replace",
                     timeout=60
                 )
                 
@@ -575,6 +577,7 @@ class EnvTab(QWidget):
                     cmd,
                     capture_output=True,
                     text=True,
+                    errors="replace",
                     timeout=60
                 )
                 
@@ -604,6 +607,7 @@ class EnvTab(QWidget):
                     ["powershell.exe", "-Command", ps1_command],
                     capture_output=True,
                     text=True,
+                    errors="replace",
                     timeout=60
                 )
                 
@@ -628,6 +632,7 @@ class EnvTab(QWidget):
                     pip_cmd,
                     capture_output=True,
                     text=True,
+                    errors="replace",
                     timeout=60
                 )
                 

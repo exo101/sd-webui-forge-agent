@@ -387,7 +387,7 @@ class GitPullWorker(QThread):
             # Step 2: Get current branch
             r2 = subprocess.run(
                 [git_cmd, "rev-parse", "--abbrev-ref", "HEAD"],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True, text=True, timeout=10, errors="replace",
                 cwd=BASE_DIR, env=git_env,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
@@ -398,7 +398,7 @@ class GitPullWorker(QThread):
             self.log_line.emit("[UPDATE] Fetching latest changes...")
             r3 = subprocess.run(
                 [git_cmd, "fetch", "origin"],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True, text=True, timeout=30, errors="replace",
                 cwd=BASE_DIR, env=git_env,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
@@ -412,7 +412,7 @@ class GitPullWorker(QThread):
             # Step 4: Check if there are local changes
             r4 = subprocess.run(
                 [git_cmd, "status", "--porcelain"],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True, text=True, timeout=10, errors="replace",
                 cwd=BASE_DIR, env=git_env,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
@@ -424,7 +424,7 @@ class GitPullWorker(QThread):
                 self.log_line.emit("[WARN] Local changes detected, stashing (including untracked files)...")
                 r4b = subprocess.run(
                     [git_cmd, "stash", "push", "--include-untracked", "-m", "launcher-auto-stash"],
-                    capture_output=True, text=True, timeout=120,
+                    capture_output=True, text=True, timeout=120, errors="replace",
                     cwd=BASE_DIR, env=git_env,
                     creationflags=subprocess.CREATE_NO_WINDOW
                 )
@@ -436,7 +436,7 @@ class GitPullWorker(QThread):
             # Step 5: Get the current and remote HEAD
             r5 = subprocess.run(
                 [git_cmd, "rev-parse", "--short", "HEAD"],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True, text=True, timeout=10, errors="replace",
                 cwd=BASE_DIR, env=git_env,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
@@ -444,7 +444,7 @@ class GitPullWorker(QThread):
 
             r6 = subprocess.run(
                 [git_cmd, "rev-parse", "--short", f"origin/{branch}"],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True, text=True, timeout=10, errors="replace",
                 cwd=BASE_DIR, env=git_env,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
@@ -455,7 +455,7 @@ class GitPullWorker(QThread):
                 if stashed:
                     r9 = subprocess.run(
                         [git_cmd, "stash", "pop"],
-                        capture_output=True, text=True, timeout=120,
+                        capture_output=True, text=True, timeout=120, errors="replace",
                         cwd=BASE_DIR, env=git_env,
                         creationflags=subprocess.CREATE_NO_WINDOW
                     )
@@ -470,7 +470,7 @@ class GitPullWorker(QThread):
             self.log_line.emit(f"[UPDATE] Pulling latest code ({remote_commit})...")
             r7 = subprocess.run(
                 [git_cmd, "pull", "origin", branch],
-                capture_output=True, text=True, timeout=60,
+                capture_output=True, text=True, timeout=60, errors="replace",
                 cwd=BASE_DIR, env=git_env,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
@@ -479,7 +479,7 @@ class GitPullWorker(QThread):
                 # Show what changed
                 r8 = subprocess.run(
                     [git_cmd, "log", f"{local_commit}..HEAD", "--oneline", "--no-decorate"],
-                    capture_output=True, text=True, timeout=10,
+                    capture_output=True, text=True, timeout=10, errors="replace",
                     cwd=BASE_DIR, env=git_env,
                     creationflags=subprocess.CREATE_NO_WINDOW
                 )
@@ -495,7 +495,7 @@ class GitPullWorker(QThread):
                 if stashed:
                     r9 = subprocess.run(
                         [git_cmd, "stash", "pop"],
-                        capture_output=True, text=True, timeout=120,
+                        capture_output=True, text=True, timeout=120, errors="replace",
                         cwd=BASE_DIR, env=git_env,
                         creationflags=subprocess.CREATE_NO_WINDOW
                     )
@@ -563,6 +563,7 @@ def kill_process_on_port(port: int) -> bool:
             ["netstat", "-ano"],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=5,
             creationflags=subprocess.CREATE_NO_WINDOW
         )

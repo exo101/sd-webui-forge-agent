@@ -36,6 +36,7 @@ class HWWorker(QThread):
                     ["nvidia-smi", "--query-gpu=temperature.gpu,utilization.gpu,memory.used,memory.total",
                      "--format=csv,noheader,nounits"],
                     capture_output=True, text=True, timeout=3,
+                    errors="replace",
                     creationflags=subprocess.CREATE_NO_WINDOW,
                 )
                 if r.returncode == 0:

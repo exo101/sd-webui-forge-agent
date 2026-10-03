@@ -397,6 +397,7 @@ print("垃圾回收完成")
                         [python_exe, "-c", cleanup_script],
                         capture_output=True,
                         text=True,
+                        errors="replace",
                         timeout=30
                     )
                     

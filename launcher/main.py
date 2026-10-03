@@ -3,6 +3,41 @@ import os
 import subprocess
 import importlib.util
 import traceback
+import threading
+
+
+def _install_global_exception_hooks():
+    """
+    安装全局异常钩子，防止未捕获异常（尤其是子线程异常）导致进程闪退。
+    在 PyInstaller 打包的无控制台模式下，sys.stderr 可能为 None，
+    默认的 threading.excepthook 写入 stderr 时会二次崩溃。
+    """
+    def _safe_print(msg: str):
+        try:
+            if sys.stderr is not None:
+                print(msg, file=sys.stderr)
+            else:
+                print(msg)
+        except Exception:
+            pass
+
+    def _sys_excepthook(exc_type, exc_value, exc_tb):
+        _safe_print("\n" + "=" * 60)
+        _safe_print("未捕获异常（主线程）")
+        _safe_print("=" * 60)
+        _safe_print("".join(traceback.format_exception(exc_type, exc_value, exc_tb)))
+
+    def _threading_excepthook(args):
+        _safe_print("\n" + "=" * 60)
+        _safe_print(f"未捕获异常（线程: {args.thread.name if args.thread else '?'}）")
+        _safe_print("=" * 60)
+        _safe_print("".join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback)))
+
+    sys.excepthook = _sys_excepthook
+    threading.excepthook = _threading_excepthook
+
+
+_install_global_exception_hooks()
 
 
 def _ensure_dependencies():
@@ -41,7 +76,7 @@ def _ensure_dependencies():
     try:
         result = subprocess.run(
             [python_exe, "-m", "pip", "install"] + missing + ["-i", "https://pypi.tuna.tsinghua.edu.cn/simple"],
-            capture_output=True, text=True, timeout=120
+            capture_output=True, text=True, timeout=120, errors="replace"
         )
         if result.returncode == 0:
             print("✅ 依赖安装成功")
@@ -51,7 +86,7 @@ def _ensure_dependencies():
             # 备选：不带镜像源重试
             result2 = subprocess.run(
                 [python_exe, "-m", "pip", "install"] + missing,
-                capture_output=True, text=True, timeout=120
+                capture_output=True, text=True, timeout=120, errors="replace"
             )
             if result2.returncode != 0:
                 print(f"❌ 依赖安装失败: {result2.stderr}")

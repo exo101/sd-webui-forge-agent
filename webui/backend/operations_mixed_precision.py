@@ -57,11 +57,14 @@ def _quantized_apply(module: torch.nn.Module, fn, recurse=True):
         if param is None:
             continue
         p = fn(param)
-        if p.is_inference():
-            # inference tensors cannot have requires_grad set; clone outside inference mode
-            with torch.inference_mode(False):
+        # torch.nn.Parameter internally calls data.detach().requires_grad_(),
+        # which fails on inference tensors. QuantizedTensor wrappers may report
+        # is_inference()=False while their underlying storage is an inference
+        # tensor, so the Parameter must be built outside inference mode.
+        with torch.inference_mode(False):
+            if p.is_inference():
                 p = p.clone()
-        module.register_parameter(key, torch.nn.Parameter(p, requires_grad=False))
+            module.register_parameter(key, torch.nn.Parameter(p, requires_grad=False))
     for key, buf in module._buffers.items():
         if buf is not None:
             module._buffers[key] = fn(buf)

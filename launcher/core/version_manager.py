@@ -190,6 +190,7 @@ def update_from_github(progress_callback=None):
             cwd=git_repo_path,
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=10,
             env=_GIT_ENV
         )
@@ -224,6 +225,7 @@ def update_from_github(progress_callback=None):
             cwd=git_repo_path,
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=10,
             env=_GIT_ENV
         )
@@ -264,6 +266,7 @@ def update_from_github(progress_callback=None):
             cwd=git_repo_path,
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=120,
             env=_GIT_ENV
         )
@@ -336,6 +339,7 @@ def refresh_local_versions():
             cwd=git_repo_path,
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=10,
             env=_GIT_ENV
         )

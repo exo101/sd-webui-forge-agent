@@ -203,6 +203,7 @@ def _link_existing_python(python_dir: str, fallback_dir: str) -> tuple[bool, str
         subprocess.run(
             ["cmd", "/c", "mklink", "/J", python_dir, fallback_dir],
             capture_output=True, text=True, timeout=30,
+            errors="replace",
             creationflags=subprocess.CREATE_NO_WINDOW,
         )
     except Exception as e:
@@ -256,6 +257,7 @@ def ensure_python_installed(progress_callback=None) -> dict:
             [installer, "/quiet", f"TargetDir={python_dir}", "InstallAllUsers=0", "PrependPath=0",
              "Include_launcher=0", "InstallLauncherAllUsers=0", "AssociateFiles=0", "Shortcuts=0"],
             capture_output=True, text=True, timeout=300,
+            errors="replace",
             creationflags=subprocess.CREATE_NO_WINDOW,
         )
         # 0=成功；1641/3010=成功但需重启（不影响使用）；1638=本机已有相同或更新的 Python，
@@ -330,7 +332,8 @@ def ensure_git_installed() -> dict:
     try:
         result = subprocess.run(
             [installer, "-o" + git_dir],
-            capture_output=True, text=True, timeout=120
+            capture_output=True, text=True, timeout=120,
+            errors="replace"
         )
         if result.returncode != 0:
             return {"ok": False, "message": f"Git 安装失败 (code={result.returncode})"}
