@@ -89,3 +89,7 @@ webui/extensions/sd-webui-agent-dev-2.5/data/agent_memory.json
 .agent_backups/
 .trae/
 _launch_tmp_*.bat
+
+# 运行时日志
+*.log
+webui/test_output.log
