@@ -18,7 +18,7 @@ WebUI 目录的特征：
 
 **查找方法**（按顺序尝试）：
 1. 检查当前工作目录是否包含上述文件
-2. 搜索常见位置：`D:\ai\sd-webui-forge-agent`、`C:\sd-webui-forge-agent`、用户桌面、用户文档
+2. 搜索常见位置：`D:\ai\sd-webui-forge-neo-agent`、`C:\sd-webui-forge-neo-agent`、用户桌面、用户文档
 3. 询问用户 WebUI 安装在哪里
 
 找到后，用实际路径替换下方所有的 `<WEBUI_DIR>`。
@@ -144,7 +144,7 @@ codex /mcp add forge-webui
 
 如果用户反馈连接失败：
 
-1. **检查 WebUI 是否启动** — 浏览器访问 `http://127.0.0.1:7860`（端口可能不同，查看 launcher_config.json）
+1. **检查 WebUI 是否启动** — 浏览器访问 `http://127.0.0.1:7869`（端口可能不同，查看 launcher_config.json）
 2. **检查 API 是否注册** — 访问 `http://127.0.0.1:<端口>/agent/api/tools` 应返回 JSON
 3. **检查 Python 路径** — 确认 `<WEBUI_DIR>\system\python\python.exe` 存在
 4. **检查 server.py 路径** — 确认 `<WEBUI_DIR>\mcp-server\server.py` 存在

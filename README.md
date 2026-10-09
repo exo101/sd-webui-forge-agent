@@ -66,12 +66,16 @@
 - **工具调用**：智能体可以调用文生图、图生图、模型切换、参数更新、模型列表、后期处理、视频处理、文档分析、网页读取、扩展诊断等工具。
 - **可扩展性**：用户可以根据自己的工作流增加模型、扩展、MCP 服务或 Skill，使智能体逐步适应个人的生产流程。
 
+### 使用 MCP 调用 WebUI
+
+可以直接让 Codex、Claude Code、Qwen Code 等支持 MCP 的编程软件读取并执行 [`mcp-server/README.md`](./mcp-server/README.md) 中的配置说明，再将 `<WEBUI_DIR>` 替换为本项目实际路径。配置完成并重启客户端后，即可通过自然语言调用 WebUI 的生图、图像处理、视频生成和图层分离等工具，无需手动填写 WebUI API 端口。
+
 ### 智能体大脑
 
 项目支持使用云端 API 模型或本地模型作为智能体大脑：
 
 - **API 模型**：可配置兼容 OpenAI 接口的云端模型，也可以使用项目中支持的图像/视频 API 服务。
-- **本地模型**：可通过本地 OpenAI 兼容服务或 `llama.cpp` 运行 GGUF 模型，适合重视隐私、希望离线使用或网络条件有限的用户。
+- **本地模型**：智能体可连接 `llama.cpp`、Ollama 或 LM Studio 等本地推理程序。项目会检测可用的本地后端，通常无需手动填写端口；具体模型加载方式和兼容性取决于对应推理程序。
 - **混合工作流**：使用本地模型负责对话、参数规划和工具调用，使用云端模型负责复杂推理或图像/视频生成；具体组合取决于用户的配置。
 
 ### 面向新手的 UI 方向
@@ -106,6 +110,8 @@
 - 已下载模型可继续由 WebUI 或智能体发现、切换和调用。
 
 > ModelScope 下载速度和可用性仍取决于网络、仓库权限、模型大小和平台服务状态。部分模型还需要额外的文本编码器、VAE、LoRA 或其他组件，下载后请按照模型说明放入正确目录。
+
+> 如果网络不稳定，或不熟悉本地模型部署和依赖配置，可以通过项目交流群获取已经配置好的压缩包。解压后即可使用；压缩包通常已经合并并配置了多项扩展，但模型文件和硬件要求仍需根据说明准备。
 
 ---
 
@@ -400,24 +406,18 @@ models/VAE/
 | **sd-dynamic-prompts_neo** | 动态提示词模板，支持变量与逻辑分支 |
 | **sd-forge-regional-prompter-neo** | 区域提示词，分区域控制画面内容 |
 | **sd-forge-tutorial** | 内置新手图文教程 |
-| **sd-webui-AestheticEnhancement-llama.cpp** | 基于 Qwen3.5 的图像/视频美学分析 |
 | **sd-webui-agent-dev-2.5** | 智能体 Agent，支持自然语言对话式生图 |
 | **sd-webui-bsk-camera-control-forge-neo** | 3D 相机角度选择器，多角度提示词 |
-| **sd-webui-forge-neo-seedvr2** | SeedVR2 视频超分辨率增强 |
-| **sd-webui-model-keyword** | 自动识别模型关键词，避免漏触发 |
 | **sd-webui-model_downloader** | 模型批量下载工具 |
 | **sd-webui-image-recognition-tagger** | 图像识别、反向提示词和标签生成 |
 | **sd-webui-openpose-editor** | OpenPose 姿态可视化编辑器 |
-| **sd-webui-prompt-all-in-one-neo** | 提示词管理一体化（历史记录、翻译、权重） |
 | **sd-webui-ps-plugin-api** | Photoshop 插件对接 API，PS 内直接生图 |
 | **sd-webui-see-through-sam** | See-Through 人物图层分离与 PSD 导出 |
 | **sd-webui-tagcomplete-prompt-all-in-one** | 提示词补全、翻译和提示词工具整合 |
 | **sd-webui-supermerger-forgeneo-anima** | SuperMerger 模型合并/融合 |
-| **sd-webui-tagcomplete-neo** | 提示词自动补全 |
 | **sd-webui-trellis2** | TRELLIS.2 单图生成 3D 模型 |
 | **stable-diffusion-webui-localization-zh_Hans** | 中文汉化语言包 |
 | **sd-forge-tutorial** | WebUI 使用教程 |
-| **stable-diffusion-webui-wd14-tagger** | WD 1.4 反向标签器，自动给图像打标 |
 | **sd-webui-DLSS5-seedvr2** | DLSS/SeedVR2 视频超分与插帧 |
 
 > [!TIP]
