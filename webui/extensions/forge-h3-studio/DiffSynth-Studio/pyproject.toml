@@ -1,0 +1,103 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "diffsynth"
+dynamic = ["version"]
+description = "Enjoy the magic of Diffusion models!"
+readme = "README.md"
+authors = [{name = "ModelScope Team"}]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.10.1"
+dependencies = [
+    "torch>=2.0.0",
+    "torchvision",
+    "transformers",
+    "imageio[ffmpeg]",
+    "safetensors",
+    "einops",
+    "modelscope",
+    "ftfy",
+    "pandas",
+    "accelerate",
+    "peft",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools.packages.find]
+where = ["./"]
+include = ["diffsynth", "diffsynth.*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "diffsynth.version.__version__"}
+
+[project.optional-dependencies]
+audio = [
+    "av",
+    "torchaudio",
+    "torchcodec",
+    "librosa"
+]
+quant = [
+    "bitsandbytes",
+    "comfy-kitchen",
+    "entropack[cuda13]",
+    "torchao>=0.16"
+]
+training = [
+    "deepspeed"
+]
+logger = [
+    "tensorboard",
+    "swanlab",
+    "wandb"
+]
+npu = [
+    "torch==2.7.1+cpu",
+    "torch-npu==2.7.1",
+    "torchvision==0.22.1+cpu"
+]
+npu_aarch64 = [
+    "torch==2.7.1",
+    "torch-npu==2.7.1",
+    "torchvision==0.22.1"
+]
+controlnet = [
+    "controlnet_aux"
+]
+infiniteyou = [
+    "insightface",
+    "facexlib"
+]
+ses = [
+    "pywt"
+]
+nexusgen = [
+    "qwen_vl_utils",
+    "transformers==4.49.0"
+]
+yue2 = [
+    "tiktoken"
+]
+all = [
+    "av",
+    "torchaudio",
+    "torchcodec",
+    "librosa",
+    "bitsandbytes",
+    "comfy-kitchen",
+    "entropack[cuda13]",
+    "torchao>=0.16",
+    "deepspeed",
+    "tensorboard",
+    "swanlab",
+    "wandb"
+]
+
+[tool.setuptools]
+include-package-data = true

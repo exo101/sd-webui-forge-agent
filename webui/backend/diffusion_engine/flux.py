@@ -1,0 +1,105 @@
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from modules.prompt_parser import SdConditioning
+
+import torch
+from huggingface_guess import model_list
+
+from backend import memory_management
+from backend.args import dynamic_args
+from backend.diffusion_engine.base import ForgeDiffusionEngine, ForgeObjects
+from backend.patcher.clip import CLIP
+from backend.patcher.unet import UnetPatcher
+from backend.patcher.vae import VAE
+from backend.text_processing.classic_engine import ClassicTextProcessingEngine
+from backend.text_processing.t5_engine import T5TextProcessingEngine
+
+
+class Flux(ForgeDiffusionEngine):
+    matched_guesses = [model_list.Flux, model_list.FluxSchnell]
+
+    def __init__(self, estimated_config, huggingface_components):
+        super().__init__(estimated_config, huggingface_components)
+
+        clip = CLIP(model_dict={"clip_l": huggingface_components["text_encoder"], "t5xxl": huggingface_components["text_encoder_2"]}, tokenizer_dict={"clip_l": huggingface_components["tokenizer"], "t5xxl": huggingface_components["tokenizer_2"]})
+
+        vae = VAE(model=huggingface_components["vae"])
+
+        self.use_distilled_cfg_scale = "schnell" not in estimated_config.huggingface_repo
+        k_predictor = self._get_predictor()
+
+        unet = UnetPatcher.from_model(model=huggingface_components["transformer"], diffusers_scheduler=None, k_predictor=k_predictor, config=estimated_config)
+
+        self.text_processing_engine_l = ClassicTextProcessingEngine(
+            text_encoder=clip.cond_stage_model.clip_l,
+            tokenizer=clip.tokenizer.clip_l,
+            embedding_dir=dynamic_args.embedding_dir,
+            embedding_key="clip_l",
+            embedding_expected_shape=768,
+            text_projection=False,
+            minimal_clip_skip=1,
+            clip_skip=1,
+            return_pooled=True,
+            final_layer_norm=True,
+        )
+
+        self.text_processing_engine_t5 = T5TextProcessingEngine(
+            text_encoder=clip.cond_stage_model.t5xxl,
+            tokenizer=clip.tokenizer.t5xxl,
+        )
+
+        self.forge_objects = ForgeObjects(unet=unet, clip=clip, vae=vae, clipvision=None)
+        self.forge_objects_original = self.forge_objects.shallow_copy()
+        self.forge_objects_after_applying_lora = self.forge_objects.shallow_copy()
+
+    def set_clip_skip(self, clip_skip):
+        self.text_processing_engine_l.clip_skip = clip_skip
+
+    @torch.inference_mode()
+    def get_learned_conditioning(self, prompt: "SdConditioning"):
+        memory_management.load_model_gpu(self.forge_objects.clip.patcher)
+        _, pooled_l = self.text_processing_engine_l(prompt)
+        cond_t5 = self.text_processing_engine_t5(prompt)
+        cond = dict(crossattn=cond_t5, vector=pooled_l)
+
+        if self.use_distilled_cfg_scale:
+            distilled_cfg_scale = getattr(prompt, "distilled_cfg_scale", 3.0) or 3.0
+            cond["guidance"] = torch.FloatTensor([distilled_cfg_scale] * len(prompt))
+            memory_management.logger.debug(f"Distilled CFG Scale: {distilled_cfg_scale}")
+
+        if not prompt.is_negative_prompt:
+            if not dynamic_args.kontext:
+                dynamic_args.ref_latents.clear()
+            else:
+                _references = [*self.ref_latents]
+                if self.ini_latent is not None:
+                    _references.insert(0, self.ini_latent)
+                    self.ini_latent = None
+                dynamic_args.ref_latents = _references.copy()
+
+        return cond
+
+    @torch.inference_mode()
+    def get_prompt_lengths_on_ui(self, prompt):
+        token_count = len(self.text_processing_engine_t5.tokenize([prompt])[0])
+        return token_count, max(255, token_count)
+
+    @torch.inference_mode()
+    def encode_first_stage(self, x):
+        sample = self.forge_objects.vae.encode(x.movedim(1, -1) * 0.5 + 0.5)
+        sample = self.forge_objects.vae.first_stage_model.process_in(sample)
+
+        if dynamic_args.kontext:
+            if dynamic_args.is_referencing:
+                self.ref_latents.append(sample.cpu())
+            else:
+                self.ini_latent = sample.cpu()
+
+        return sample.to(x)
+
+    @torch.inference_mode()
+    def decode_first_stage(self, x):
+        sample = self.forge_objects.vae.first_stage_model.process_out(x)
+        sample = self.forge_objects.vae.decode(sample).movedim(-1, 1) * 2.0 - 1.0
+        return sample.to(x)

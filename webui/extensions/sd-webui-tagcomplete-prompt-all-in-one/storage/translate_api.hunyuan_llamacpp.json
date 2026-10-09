@@ -1,0 +1,8 @@
+{
+    "model_path": "D:\\ai\\llama.cpp\\models\\Hy-MT2-1.8B-Q8_0.gguf",
+    "llama_cpp_path": "D:\\ai\\llama.cpp",
+    "server_port": "8080",
+    "threads": "4",
+    "n_predict": "512",
+    "n_gpu_layers": "0"
+}

@@ -1,0 +1,2 @@
+D:/ai/sd-webui-forge-neo-agent/webui/extensions/sd-dynamic-prompts_neo/wildcards
+-----

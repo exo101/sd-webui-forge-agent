@@ -1,0 +1,7 @@
+[tool.black]
+line-length = 1024
+
+[tool.ruff]
+target-version = "py311"
+exclude = ["extensions"]
+lint.select = ["N805", "S307", "S102", "T", "W", "F"]

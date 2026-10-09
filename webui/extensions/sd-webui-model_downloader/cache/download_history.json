@@ -1,0 +1,26 @@
+[
+  {
+    "model_name": "MiniMax-H3-Turbo-LoRA",
+    "source": "modelscope",
+    "save_path": "webui\\models\\Lora\\minimax_h3_fl2v_turbo_8step_v1.0_768p_bf16.safetensors, webui\\models\\Lora\\minimax_h3_fl2v_turbo_4step_v1.0_768p_bf16.safetensors, webui\\models\\Lora\\minimax_h3_fl2v_turbo_8step_v1.0_bf16.safetensors, webui\\models\\Lora\\minimax_h3_ref2v_turbo_8step_v1.0_768p_bf16.safetensors, webui\\models\\Lora\\minimax_h3_ref2v_turbo_4step_v0.1_bf16.safetensors",
+    "filename": "minimax_h3_fl2v_turbo_8step_v1.0_768p_bf16.safetensors, minimax_h3_fl2v_turbo_4step_v1.0_768p_bf16.safetensors, minimax_h3_fl2v_turbo_8step_v1.0_bf16.safetensors, minimax_h3_ref2v_turbo_8step_v1.0_768p_bf16.safetensors, minimax_h3_ref2v_turbo_4step_v0.1_bf16.safetensors",
+    "time": "2026-10-04 13:12:52",
+    "type": "MiniMax-H3-Turbo-LoRA 组合"
+  },
+  {
+    "model_name": "H3 Turbo LoRA 8步（FL2VA + Ref2VA）",
+    "source": "modelscope",
+    "save_path": "D:\\ai\\sd-webui-forge-agent\\webui\\models\\Lora",
+    "filename": "minimax_h3_fl2v_turbo_8step_v1.0_768p_bf16.safetensors, minimax_h3_ref2v_turbo_8step_v1.0_768p_bf16.safetensors",
+    "time": "2026-10-04 14:05:29",
+    "type": "LoRA 模型"
+  },
+  {
+    "model_name": "SCAIL-2 角色动画",
+    "source": "modelscope",
+    "save_path": "webui\\models\\diffusion_models\\wan2.1_14B_SCAIL_2_fp8_scaled.safetensors, webui\\models\\Lora\\wan2.1_SCAIL_2_DPO_lora_bf16.safetensors, webui\\models\\text_encoder\\umt5_xxl_fp8_e4m3fn_scaled.safetensors, webui\\models\\clip_vision\\clip_vision_h.safetensors, webui\\models\\vae\\wan_2.1_vae.safetensors, webui\\models\\sam3\\sam3.1_multiplex_fp16.safetensors",
+    "filename": "wan2.1_14B_SCAIL_2_fp8_scaled.safetensors, wan2.1_SCAIL_2_DPO_lora_bf16.safetensors, umt5_xxl_fp8_e4m3fn_scaled.safetensors, clip_vision_h.safetensors, wan_2.1_vae.safetensors, sam3.1_multiplex_fp16.safetensors",
+    "time": "2026-10-05 23:06:01",
+    "type": "SCAIL-2 角色动画 组合"
+  }
+]

@@ -1,0 +1,32 @@
+remote: error: GH013: Repository rule violations found for refs/heads/master.        
+remote: 
+remote: - GITHUB PUSH PROTECTION        
+remote:   —————————————————————————————————————————        
+remote:     Resolve the following violations before pushing again        
+remote: 
+remote:     - Push cannot contain secrets        
+remote: 
+remote:             
+remote:      (?) Learn how to resolve a blocked push        
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push        
+remote:             
+remote:             
+remote:       —— Mistral AI API Key ————————————————————————————————        
+remote:        locations:        
+remote:          - commit: a067b9f30aa2751133f85c1649c17b5aa96c23e1        
+remote:            path: webui/extensions/forge-h3-studio/breeze-tts/venv/Lib/site-packages/transformers/models/auto/modeling_auto.py:491        
+remote:          - commit: a067b9f30aa2751133f85c1649c17b5aa96c23e1        
+remote:            path: webui/extensions/forge-h3-studio/breeze-tts/venv/Lib/site-packages/transformers/models/auto/modeling_auto.py:989        
+remote:          - commit: a067b9f30aa2751133f85c1649c17b5aa96c23e1        
+remote:            path: webui/extensions/forge-h3-studio/breeze-tts/venv/Lib/site-packages/transformers/models/auto/modeling_auto.py:1044        
+remote:          - commit: a067b9f30aa2751133f85c1649c17b5aa96c23e1        
+remote:            path: webui/extensions/forge-h3-studio/breeze-tts/venv/Lib/site-packages/transformers/models/mistral3/modeling_mistral3.py:536        
+remote:             
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.        
+remote:        https://github.com/exo101/sd-webui-forge-neo-agent/security/secret-scanning/unblock-secret/3KRAn9zqSQSrVoO1OQxcRk3PvpN        
+remote:             
+remote: 
+remote: 
+To https://github.com/exo101/sd-webui-forge-neo-agent.git
+ ! [remote rejected]   HEAD -> master (push declined due to repository rule violations)
+error: failed to push some refs to 'https://github.com/exo101/sd-webui-forge-neo-agent.git'

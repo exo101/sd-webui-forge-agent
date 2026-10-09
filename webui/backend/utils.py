@@ -1,0 +1,372 @@
+import json
+import math
+import os.path
+
+import safetensors
+import torch
+from einops import rearrange, repeat
+
+from backend.args import args
+from backend.loader_gguf import dequantize, get_orig_shape
+from backend.memory_management import logger
+from backend.operations_gguf import ParameterGGUF
+from modules_forge.packages import gguf
+from modules_forge.packages.comfy.weight_adapter.base import WeightAdapterBase
+
+if not hasattr(torch.serialization, "add_safe_globals"):
+    logger.critical("Update your PyTorch...")
+    raise SystemExit
+
+
+class ModelCheckpoint:
+    pass
+
+
+ModelCheckpoint.__module__ = "pytorch_lightning.callbacks.model_checkpoint"
+
+
+def scalar(*args, **kwargs):
+    from numpy.core.multiarray import scalar as sc
+
+    return sc(*args, **kwargs)
+
+
+scalar.__module__ = "numpy.core.multiarray"
+
+from _codecs import encode
+
+from numpy import dtype
+from numpy.dtypes import Float64DType
+
+torch.serialization.add_safe_globals([ModelCheckpoint, scalar, dtype, Float64DType, encode])
+logger.debug("Models will always be loaded safely")
+
+
+MMAP_TORCH_FILES = args.mmap_torch_files
+DISABLE_MMAP = args.disable_mmap
+
+
+def read_arbitrary_config(directory: os.PathLike) -> dict:
+    config_path = os.path.join(directory, "config.json")
+
+    if not os.path.isfile(config_path):
+        raise FileNotFoundError(f'No config.json file found in "{directory}"')
+
+    with open(config_path, "r", encoding="utf-8") as file:
+        config_data = json.load(file)
+
+    return config_data
+
+
+def load_torch_file(ckpt: str, *, safe_load=True, device=None, return_metadata=False) -> dict[str, torch.Tensor]:
+    """https://github.com/Comfy-Org/ComfyUI/blob/v0.10.0/comfy/utils.py#L59"""
+
+    device = device or torch.device("cpu")
+    metadata = None
+
+    if ckpt.lower().endswith((".safetensors", ".sft")):
+        try:
+            with safetensors.safe_open(ckpt, framework="pt", device=device.type) as f:
+                sd = {}
+                for k in f.keys():
+                    tensor = f.get_tensor(k)
+                    if DISABLE_MMAP:
+                        tensor = tensor.to(device=device, copy=True)
+                    sd[k] = tensor
+                if return_metadata:
+                    metadata = f.metadata()
+        except Exception:
+            raise ValueError(f'\nModel "{ckpt}" is corrupt or invalid...\nPlease download the model again\n') from None
+
+    elif ckpt.lower().endswith(".gguf"):
+        reader = gguf.GGUFReader(ckpt)
+        sd = {}
+        for tensor in reader.tensors:
+            tensor_name = str(tensor.name)
+            torch_tensor = torch.from_numpy(tensor.data)
+            if (shape := get_orig_shape(reader, tensor_name)) is None:
+                shape = torch.Size(tuple(int(v) for v in reversed(tensor.shape)))
+            if tensor.tensor_type in {gguf.GGMLQuantizationType.F32, gguf.GGMLQuantizationType.F16}:
+                torch_tensor = torch_tensor.view(*shape)
+            sd[tensor_name] = ParameterGGUF(torch_tensor, tensor_type=tensor.tensor_type, tensor_shape=shape)
+            if len(shape) <= 1 and tensor.tensor_type == gguf.GGMLQuantizationType.BF16:
+                sd[tensor_name] = dequantize(sd[tensor_name], dtype=torch.float32)
+
+    else:
+        assert safe_load
+        torch_args = {"weights_only": True}
+        if MMAP_TORCH_FILES:
+            torch_args["mmap"] = True
+
+        pl_sd = torch.load(ckpt, map_location=device, **torch_args)
+
+        if "state_dict" in pl_sd:
+            sd = pl_sd["state_dict"]
+        else:
+            if len(pl_sd) == 1:
+                key = list(pl_sd.keys())[0]
+                sd = pl_sd[key]
+                if not isinstance(sd, dict):
+                    sd = pl_sd
+            else:
+                sd = pl_sd
+
+    return (sd, metadata) if return_metadata else sd
+
+
+ATTR_UNSET = {}
+
+
+def resolve_attr(obj, attr):
+    attrs = attr.split(".")
+    for name in attrs[:-1]:
+        obj = getattr(obj, name)
+    return obj, attrs[-1]
+
+
+def set_attr_raw(obj, attr, value):
+    obj, name = resolve_attr(obj, attr)
+    prev = getattr(obj, name, ATTR_UNSET)
+    if value is ATTR_UNSET:
+        delattr(obj, name)
+    else:
+        setattr(obj, name, value)
+    return prev
+
+
+def set_attr(obj, attr, value):
+    try:
+        set_attr_raw(obj, attr, torch.nn.Parameter(value, requires_grad=False))
+    except RuntimeError:
+        value = value.clone()
+        set_attr_raw(obj, attr, torch.nn.Parameter(value, requires_grad=False))
+
+
+def copy_to_param(obj, attr, value):
+    attrs = attr.split(".")
+    for name in attrs[:-1]:
+        obj = getattr(obj, name)
+    prev = getattr(obj, attrs[-1])
+    prev.data.copy_(value)
+
+
+def get_attr(obj, attr):
+    attrs = attr.split(".")
+    for name in attrs:
+        obj = getattr(obj, name)
+    return obj
+
+
+def get_attr_with_parent(obj, attr):
+    attrs = attr.split(".")
+    parent = obj
+    name = None
+    for name in attrs:
+        parent = obj
+        obj = getattr(obj, name)
+    return parent, name, obj
+
+
+def calculate_parameters(sd: dict[str, torch.Tensor], prefix: str = "") -> int:
+    params = 0
+    for k in sd.keys():
+        if k.startswith(prefix):
+            params += sd[k].nelement()
+    return params
+
+
+def weight_dtype(sd: dict[str, torch.Tensor], prefix: str = "") -> torch.dtype | str:
+    for k, v in sd.items():
+        if hasattr(v, "gguf_cls"):
+            return "gguf"
+        if "bitsandbytes__nf4" in k:
+            return "nf4"
+        if "bitsandbytes__fp4" in k:
+            return "fp4"
+
+    dtypes: dict[torch.dtype, int] = {}
+    for k in sd.keys():
+        if k.startswith(prefix):
+            w = sd[k]
+            dtypes[w.dtype] = dtypes.get(w.dtype, 0) + w.numel()
+
+    if len(dtypes) == 0:
+        return None
+
+    dtypes = {_d: dtypes[_d] for _d in dtypes if _d.is_floating_point}
+    return max(dtypes, key=dtypes.get)
+
+
+def tensor2parameter(x):
+    if isinstance(x, torch.nn.Parameter):
+        return x
+    else:
+        return torch.nn.Parameter(x, requires_grad=False)
+
+
+def fp16_fix(x):
+    # avoid fp16 overflow
+    # https://github.com/comfyanonymous/ComfyUI/blob/v0.3.64/comfy/ldm/chroma/layers.py#L111
+
+    if x.dtype == torch.float16:
+        return torch.nan_to_num(x, nan=0.0, posinf=65504, neginf=-65504)
+    return x
+
+
+def dtype_to_element_size(dtype: torch.dtype) -> int:
+    assert isinstance(dtype, torch.dtype)
+    return torch.tensor([], dtype=dtype).element_size()
+
+
+def nested_compute_size(obj: dict, element_size: int) -> int:
+    module_mem = 0
+
+    if isinstance(obj, dict):
+        for key in obj:
+            module_mem += nested_compute_size(obj[key], element_size)
+    elif isinstance(obj, list) or isinstance(obj, tuple):
+        for i in range(len(obj)):
+            module_mem += nested_compute_size(obj[i], element_size)
+    elif isinstance(obj, torch.Tensor):
+        module_mem += obj.nelement() * element_size
+    elif isinstance(obj, WeightAdapterBase):
+        module_mem += nested_compute_size(obj.weights, element_size)
+
+    return module_mem
+
+
+def nested_move_to_device(obj, **kwargs):
+    if isinstance(obj, dict):
+        for key in obj:
+            obj[key] = nested_move_to_device(obj[key], **kwargs)
+    elif isinstance(obj, list):
+        for i in range(len(obj)):
+            obj[i] = nested_move_to_device(obj[i], **kwargs)
+    elif isinstance(obj, tuple):
+        obj = tuple(nested_move_to_device(i, **kwargs) for i in obj)
+    elif isinstance(obj, torch.Tensor):
+        return obj.to(**kwargs)
+    return obj
+
+
+def get_state_dict_after_quant(model, prefix=""):
+    for m in model.modules():
+        if hasattr(m, "weight") and hasattr(m.weight, "bnb_quantized"):
+            if not m.weight.bnb_quantized:
+                original_device = m.weight.device
+                m.cuda()
+                m.to(original_device)
+
+    sd = model.state_dict()
+    sd = {(prefix + k): v.clone() for k, v in sd.items()}
+    return sd
+
+
+def beautiful_print_gguf_state_dict_statics(state_dict):
+    type_counts = {}
+    for k, v in state_dict.items():
+        gguf_cls = getattr(v, "gguf_cls", None)
+        if gguf_cls is not None:
+            type_name = gguf_cls.__name__
+            if type_name in type_counts:
+                type_counts[type_name] += 1
+            else:
+                type_counts[type_name] = 1
+    print(f"GGUF state dict: {type_counts}")
+    return
+
+
+def resize_to_batch_size(tensor, batch_size):
+    in_batch_size = tensor.shape[0]
+    if in_batch_size == batch_size:
+        return tensor
+
+    if batch_size <= 1:
+        return tensor[:batch_size]
+
+    output = torch.empty([batch_size] + list(tensor.shape)[1:], dtype=tensor.dtype, device=tensor.device)
+    if batch_size < in_batch_size:
+        scale = (in_batch_size - 1) / (batch_size - 1)
+        for i in range(batch_size):
+            output[i] = tensor[min(round(i * scale), in_batch_size - 1)]
+    else:
+        scale = in_batch_size / batch_size
+        for i in range(batch_size):
+            output[i] = tensor[min(math.floor((i + 0.5) * scale), in_batch_size - 1)]
+
+    return output
+
+
+def pad_to_patch_size(img, patch_size=(2, 2), padding_mode="circular"):
+    """https://github.com/comfyanonymous/ComfyUI/blob/v0.3.64/comfy/ldm/common_dit.py#L5"""
+    if padding_mode == "circular" and (torch.jit.is_tracing() or torch.jit.is_scripting()):
+        padding_mode = "reflect"
+
+    pad = ()
+    for i in range(img.ndim - 2):
+        pad = (0, (patch_size[i] - img.shape[i + 2] % patch_size[i]) % patch_size[i]) + pad
+
+    return torch.nn.functional.pad(img, pad, mode=padding_mode)
+
+
+def process_img(x, index=0, h_offset=0, w_offset=0):
+    """https://github.com/comfyanonymous/ComfyUI/blob/v0.3.64/comfy/ldm/flux/model.py#L213"""
+    bs, c, h, w = x.shape
+    patch_size = 2
+    x = pad_to_patch_size(x, (patch_size, patch_size))
+
+    img = rearrange(x, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=patch_size, pw=patch_size)
+    h_len = (h + (patch_size // 2)) // patch_size
+    w_len = (w + (patch_size // 2)) // patch_size
+
+    h_offset = (h_offset + (patch_size // 2)) // patch_size
+    w_offset = (w_offset + (patch_size // 2)) // patch_size
+
+    img_ids = torch.zeros((h_len, w_len, 3), device=x.device, dtype=x.dtype)
+    img_ids[:, :, 0] = img_ids[:, :, 1] + index
+    img_ids[:, :, 1] = img_ids[:, :, 1] + torch.linspace(h_offset, h_len - 1 + h_offset, steps=h_len, device=x.device, dtype=x.dtype).unsqueeze(1)
+    img_ids[:, :, 2] = img_ids[:, :, 2] + torch.linspace(w_offset, w_len - 1 + w_offset, steps=w_len, device=x.device, dtype=x.dtype).unsqueeze(0)
+    return img, repeat(img_ids, "h w c -> b (h w) c", b=bs)
+
+
+def join_dicts(base_dict: dict | None, update_dict: dict | None) -> dict:
+    if not update_dict:
+        return (base_dict or {}).copy()
+
+    result = (base_dict or {}).copy()
+
+    for key, value in update_dict.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = join_dicts(result[key], value)
+        elif key in result and isinstance(result[key], list) and isinstance(value, list):
+            result[key] = result[key] + value
+        else:
+            result[key] = value
+
+    return result
+
+
+def deepcopy_(obj, memo=None):
+    if memo is None:
+        memo = {}
+
+    obj_id = id(obj)
+    if obj_id in memo:
+        return memo[obj_id]
+
+    if isinstance(obj, dict):
+        res = {deepcopy_(k, memo): deepcopy_(v, memo) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        res = [deepcopy_(i, memo) for i in obj]
+    else:
+        res = obj
+
+    memo[obj_id] = res
+    return res
+
+
+def hash_tensor(x: torch.Tensor) -> int:
+    if hasattr(torch, "hash_tensor"):
+        return torch.hash_tensor(x.cpu()).item()
+    else:
+        return hash(tuple(x.reshape(-1).tolist()))

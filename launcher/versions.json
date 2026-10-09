@@ -1,0 +1,15 @@
+{
+  "current_version": "f9b0ea1",
+  "versions": [
+    {
+      "id": "f9b0ea1",
+      "date": "2026-04-09 15:51:41",
+      "message": "update VAE-Utils, fix qwen CN strength"
+    },
+    {
+      "id": "ae4bbd2",
+      "date": "2026-04-09 09:03:49",
+      "message": "change qwen2512 presets sampler"
+    }
+  ]
+}

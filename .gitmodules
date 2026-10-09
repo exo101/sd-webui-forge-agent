@@ -1,0 +1,3 @@
+[submodule "webui/extensions/sd-webui-trellis2"]
+	path = webui/extensions/sd-webui-trellis2
+	url = https://github.com/exo101/sd-webui-trellis2.git
