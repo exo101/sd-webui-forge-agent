@@ -293,45 +293,6 @@ cd sd-webui-forge-neo-agent
 
 ---
 
-## 📦 更新日志
-
-> 版本更新内容以本 README 和 Git 提交记录为准。使用启动器「Update 内核更新」后，会自动检查远程仓库并更新本地代码。
-
-### 2026-10-01
-
-**新增**
-
-- **全栈式视听工作台（H3 Studio）**：整合视频生成、视频关键帧提取、声音合成、音乐生成
-- **MiniMax-H3 视频生成**：DiffSynth Pipeline 本地推理，支持 INT8 / NF4 量化，自动匹配 VAE 与文本编码器
-- **声音合成（Breeze-TTS-2）**：声音克隆、声音设计、声音引导，开源双语 TTS
-- **音乐生成（ACE-Step 1.5）**
-- **Qwen-Image-2.1**：本地图像生成与编辑
-- **开源社区模型下载器**：一键下载 MiniMax-H3、Qwen-Image-2.1、Breeze-TTS-2 等模型组合
-- **DLSS5 神经画质视频处理**
-
-**⚠️ transformers 版本隔离**：音乐生成与声音合成需 transformers 4.57.3（旧版），MiniMax-H3 与 Qwen-Image-2.1 需 transformers 5.17.0（新版），声音/音乐模块需部署在独立 Python 环境中
-
-### 2026-09-28
-
-**新增**
-
-- **Qwen-Image-2.1 本地模型**：基于 Comfy-Org int8 convrot 引擎，支持文本生图、图像编辑和 PoseStudio 白膜姿势迁移；常用默认参数为 Euler / 32 步 / CFG 2.5，具体参数以 WebUI 当前配置为准
-- **MiniMax-H3 本地视频模型**：INT8 版（Comfy-Org）与 **NF4 4bit 量化版**（DiffSynth-Studio/MiniMax-H3-NF4），模型下载器提供 `MiniMax-H3-INT8` / `MiniMax-H3-NF4` 一键组合
-- **H3 Studio 本地后端**：为 MiniMax-H3 系列模型提供本地推理后端
-- **绘梦智能体助手**新增 `@图层分离`（See-Through）与 `@自动发现插件` 标签
-- **启动器内核更新**完成后自动弹窗展示本次更新的新增内容
-
-**优化**
-
-- 绘梦智能体助手 `@qwen` 标签升级为 **Qwen-Image-2.1** 上下文编辑模型
-- PS 插件模型列表与绘梦智能体助手同步（PS 插件 2.1.0）
-
-**修复**
-
-- 内核更新：拉取前连同未跟踪文件一起暂存，更新成功后自动恢复本地改动，避免未跟踪文件冲突导致更新失败
-
----
-
 ## 📚 学习资源
 
 - **视频教程**: [B站教程合集](https://www.bilibili.com/video/BV1L9hY6PEJG/?spm_id_from=333.1387.homepage.video_card.click&vd_source=343e49b703fb5b4137cd6c1987846f37)
