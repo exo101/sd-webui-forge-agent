@@ -37,3 +37,8 @@ webui/extensions/*/outputs/
 .agent_backups/
 .trae/
 _launch_tmp_*.bat
+
+# 临时 Git 上传日志
+push-err*.log
+push-out*.log
+push-result.log
