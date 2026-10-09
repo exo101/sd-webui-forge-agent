@@ -1,11 +1,11 @@
-# sd-webui-forge-agent
+# sd-webui-forge-neo-agent
 
 <div align="center">
 
 **面向 Agent 智能体时代的 Stable Diffusion WebUI Forge 中文整合平台 | 多模态模型 | MCP / Skill | 智能 GUI 启动器**
 
-[![GitHub stars](https://img.shields.io/github/stars/exo101/sd-webui-agent-forge)](https://github.com/exo101/sd-webui-agent-forge/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/exo101/sd-webui-agent-forge)](https://github.com/exo101/sd-webui-agent-forge/network)
+[![GitHub stars](https://img.shields.io/github/stars/exo101/sd-webui-forge-neo-agent)](https://github.com/exo101/sd-webui-forge-neo-agent/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/exo101/sd-webui-forge-neo-agent)](https://github.com/exo101/sd-webui-forge-neo-agent/network)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.13.12-blue.svg)](https://www.python.org/)
 
@@ -28,13 +28,13 @@
 
 ## 📋 项目介绍
 
-**sd-webui-forge-agent** 是基于 **Stable Diffusion WebUI Forge** 的中文智能体增强整合版本，面向国内用户、多模态模型和对话式 AI 工作流进行改良。项目目标不再只是提供一个复杂参数面板，而是让用户通过聊天就能调用 WebUI 能力、组合模型、扩写提示词、处理图像/视频、诊断问题并完成复杂任务。
+**sd-webui-forge-neo-agent** 是基于 **Stable Diffusion WebUI Forge** 的中文智能体增强整合版本，面向国内用户、多模态模型和对话式 AI 工作流进行改良。项目目标不再只是提供一个复杂参数面板，而是让用户通过聊天就能调用 WebUI 能力、组合模型、扩写提示词、处理图像/视频、诊断问题并完成复杂任务。
 
 
 > [!NOTE]
 > 本版本为改良版本，部分插件直接安装会发生兼容性错误，为了适应众多新旧插件做了些许修改，如需要安装旧插件直接让智能体帮忙安装排除修改bug和不兼容性。
 >
-> **版本路线说明**：从 **v3.6.8** 之后，项目名称和发展方向调整为 `sd-webui-forge-agent`，不再继续沿用 `neo-v3` 分支路线，而是转向以智能体（Agent）、MCP 和 Skill 为核心的持续演进路线。后续版本将优先围绕自然语言操作、模型编排、多模态理解、工具调用和易用性进行设计。
+> 当前项目名称为 `sd-webui-forge-neo-agent`。项目在保留传统 WebUI 操作方式的同时，持续围绕 Agent、MCP、多模态理解、模型编排和工具调用进行维护。
 
 ---
 
@@ -134,8 +134,8 @@
 #### 第二步：下载项目代码
 
 ```bash
-git clone https://github.com/exo101/sd-webui-agent-forge.git
-cd sd-webui-agent-forge
+git clone https://github.com/exo101/sd-webui-forge-neo-agent.git
+cd sd-webui-forge-neo-agent
 ```
 
 或直接下载 ZIP 解压到任意目录（**路径不要包含中文和空格**）。
@@ -153,7 +153,7 @@ cd sd-webui-agent-forge
 
 1. 进入 `webui` 目录，双击运行 `webui-user.bat`
 2. 等待依赖安装和 WebUI 启动
-3. 浏览器打开 `http://127.0.0.1:7860`
+3. 浏览器打开 `http://127.0.0.1:7869`
 
 > [!NOTE]
 > 首次启动需要 5-15 分钟安装依赖，请保持网络畅通，不要关闭窗口。
@@ -183,7 +183,7 @@ cd sd-webui-agent-forge
 |------|------|
 | **启动器显示"环境检测失败"？** | 检查是否安装了 Python 3.13.12 并勾选了 "Add Python to PATH"，重启电脑后重试 |
 | **首次启动卡在"安装依赖"？** | 首次安装需要 10-30 分钟，请检查网络连接，可在启动器中配置代理 |
-| **浏览器显示"无法访问此网站"？** | 检查启动器日志，确认端口 7860 未被占用，或点击启动器"页面"按钮手动打开 |
+| **浏览器显示"无法访问此网站"？** | 检查启动器日志，确认端口 7869 未被占用，或点击启动器"页面"按钮手动打开 |
 | **生成图片时提示"显存不足"？** | 启用"显存防溢出保护"，降低分辨率，使用 FP8 量化模型 |
 | **生成的图片全黑或质量差？** | 确认选择了正确的模型，检查提示词，尝试换采样器（如 `Euler a`），增加采样步数 |
 | **如何更新到最新版本？** | 在启动器主控台点击"检查启动器更新"，或重新 `git pull` |
@@ -401,21 +401,24 @@ models/VAE/
 | **sd-forge-regional-prompter-neo** | 区域提示词，分区域控制画面内容 |
 | **sd-forge-tutorial** | 内置新手图文教程 |
 | **sd-webui-AestheticEnhancement-llama.cpp** | 基于 Qwen3.5 的图像/视频美学分析 |
-| **sd-webui-agent-dev-2.4** | 智能体 Agent，支持自然语言对话式生图 |
+| **sd-webui-agent-dev-2.5** | 智能体 Agent，支持自然语言对话式生图 |
 | **sd-webui-bsk-camera-control-forge-neo** | 3D 相机角度选择器，多角度提示词 |
 | **sd-webui-forge-neo-seedvr2** | SeedVR2 视频超分辨率增强 |
 | **sd-webui-model-keyword** | 自动识别模型关键词，避免漏触发 |
 | **sd-webui-model_downloader** | 模型批量下载工具 |
+| **sd-webui-image-recognition-tagger** | 图像识别、反向提示词和标签生成 |
 | **sd-webui-openpose-editor** | OpenPose 姿态可视化编辑器 |
 | **sd-webui-prompt-all-in-one-neo** | 提示词管理一体化（历史记录、翻译、权重） |
 | **sd-webui-ps-plugin-api** | Photoshop 插件对接 API，PS 内直接生图 |
-| **sd-webui-see-through-sam** | SAM 一键抠图与图层分离 |
+| **sd-webui-see-through-sam** | See-Through 人物图层分离与 PSD 导出 |
+| **sd-webui-tagcomplete-prompt-all-in-one** | 提示词补全、翻译和提示词工具整合 |
 | **sd-webui-supermerger-forgeneo-anima** | SuperMerger 模型合并/融合 |
 | **sd-webui-tagcomplete-neo** | 提示词自动补全 |
 | **sd-webui-trellis2** | TRELLIS.2 单图生成 3D 模型 |
 | **stable-diffusion-webui-localization-zh_Hans** | 中文汉化语言包 |
+| **sd-forge-tutorial** | WebUI 使用教程 |
 | **stable-diffusion-webui-wd14-tagger** | WD 1.4 反向标签器，自动给图像打标 |
-| **TE-webui-DLSS5** | DLSS 5 视频超分与插帧 |
+| **sd-webui-DLSS5-seedvr2** | DLSS/SeedVR2 视频超分与插帧 |
 
 > [!TIP]
 > 所有扩展均位于 `webui/extensions/`，可在 WebUI 的 **Extensions** 页面单独启用或禁用；删除对应文件夹即可彻底卸载。
@@ -424,8 +427,7 @@ models/VAE/
 
 ## 📦 更新日志
 
-> 完整的逐条更新记录见 [CHANGELOG.md](./CHANGELOG.md)。
-> 使用启动器「Update 内核更新」后，会**自动弹窗提示本次更新的新增内容**（按提交号匹配 CHANGELOG.md）。
+> 版本更新内容以本 README 和 Git 提交记录为准。使用启动器「Update 内核更新」后，会自动检查远程仓库并更新本地代码。
 
 ### 2026-10-01
 
@@ -437,7 +439,7 @@ models/VAE/
 - **音乐生成（ACE-Step 1.5）**
 - **Qwen-Image-2.1**：本地图像生成与编辑
 - **开源社区模型下载器**：一键下载 MiniMax-H3、Qwen-Image-2.1、Breeze-TTS-2 等模型组合
-- **DLLSS5神经画质视频处理
+- **DLSS5 神经画质视频处理**
 
 **⚠️ transformers 版本隔离**：音乐生成与声音合成需 transformers 4.57.3（旧版），MiniMax-H3 与 Qwen-Image-2.1 需 transformers 5.17.0（新版），声音/音乐模块需部署在独立 Python 环境中
 
@@ -445,7 +447,7 @@ models/VAE/
 
 **新增**
 
-- **Qwen-Image-2.1 本地模型**：基于 Comfy-Org int8 convrot 引擎，预设 Euler / 30 步 / CFG 1.0，模型下载器提供 `qwen-image-2.1` 一键组合
+- **Qwen-Image-2.1 本地模型**：基于 Comfy-Org int8 convrot 引擎，支持文本生图、图像编辑和 PoseStudio 白膜姿势迁移；常用默认参数为 Euler / 32 步 / CFG 2.5，具体参数以 WebUI 当前配置为准
 - **MiniMax-H3 本地视频模型**：INT8 版（Comfy-Org）与 **NF4 4bit 量化版**（DiffSynth-Studio/MiniMax-H3-NF4），模型下载器提供 `MiniMax-H3-INT8` / `MiniMax-H3-NF4` 一键组合
 - **H3 Studio 本地后端**：为 MiniMax-H3 系列模型提供本地推理后端
 - **绘梦智能体助手**新增 `@图层分离`（See-Through）与 `@自动发现插件` 标签
