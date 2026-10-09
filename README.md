@@ -246,97 +246,8 @@ cd sd-webui-forge-neo-agent
 
 ## 🎨 模型区
 
-> 模型区介绍本项目支持的各类模型及其文件结构，助你快速了解如何下载和配置模型。
-
-### 模型目录结构
-
-```
-webui/models/
-├── Stable-diffusion/          # 所有主模型（SD1.5、SDXL、Flux、Anima、Qwen-Image、Wan 等）
-├── Lora/                      # LoRA 微调模型
-├── VAE/                       # 变分自编码器
-├── text_encoder/              # 文本编码器 ⚠️ 需手动下载
-├── CLIP/                      # CLIP 文本编码器
-├── ControlNet/                # ControlNet 控制网络
-├── ControlNetPreprocessor/    # ControlNet 预处理器
-├── ESRGAN/                    # 超分辨率放大模型
-└── RealESRGAN/                # 超分辨率模型
-```
-
-### 模型类型与文件结构
-
-#### SD1.5 / SDXL 模型
-
-传统模型，只需一个 checkpoint 文件即可运行：
-
-```
-models/Stable-diffusion/
-└── your_model.safetensors    # 包含 UNet + VAE + 文本编码器
-```
-
-#### Flux 模型
-
-Flux 采用 DiT 架构，组件分离存储：
-
-```
-models/Stable-diffusion/
-└── flux1-dev-fp8.safetensors
-
-models/text_encoder/          # T5 编码器（必需，约 4.7GB）
-└── t5xxl_fp8_e4m3fn.safetensors
-
-models/clip/                  # CLIP 编码器（必需，约 235MB）
-└── clip_l.safetensors
-```
-
-#### Flux.2-Klein 模型
-
-多模态编辑模型，支持图像编辑与生成：
-
-```
-models/Stable-diffusion/
-└── flux-2-klein-9b-fp8.safetensors
-
-models/text_encoder/
-└── qwen_3_4b.safetensors
-
-models/vae/
-└── flux2-vae.safetensors
-```
-
-#### Anima 模型
-
-二次元高质量专用模型：
-
-```
-models/Stable-diffusion/
-└── anima.safetensors
-
-models/text_encoder/
-└── qwen_3_06b_base.safetensors
-
-models/VAE/
-└── qwen_image_vae.safetensors
-```
-
-#### Qwen-Image 模型
-
-通义千问图像生成/编辑模型：
-
-```
-models/Stable-diffusion/
-└── qwen_image_edit_2511_int8_convrot.safetensors
-
-models/text_encoder/
-└── qwen_2.5_vl_7b_fp8_scaled.safetensors
-
-models/VAE/
-└── qwen_image_vae.safetensors
-```
-
-
 > [!TIP]
-> 导出视频需要安装 **[FFmpeg](https://ffmpeg.org/)**
+> 模型下载器会根据模型类型自动下载组件并放置到正确目录，无需手动维护模型文件结构。导出视频仍需要安装 **[FFmpeg](https://ffmpeg.org/)**。
 
 ### 模型下载
 
@@ -350,50 +261,7 @@ models/VAE/
 
 ---
 
-## 🔌 插件区
-
-> 插件区介绍本项目已集成和优化的各类扩展插件，按功能分类展示。
-
-### 新增插件
-
-| 插件名称 | 功能说明 |
-|---------|---------|
-| **🎨 美学提升** | Qwen3.5 图像与视频美学质量分析 |
-| **📷 相机角度选择器** | 3D 可视化多角度提示词选择，支持方位角、高程角、距离调整 |
-| **🎥 多媒体处理** | Qwen3-TTS 语音合成、唇形同步多媒体处理 |
-| **👁️ 图像识别与对话** | 基于 Qwen3.5 视觉模型的图像识别与对话功能 |
-| **✂️ 图像分割与抠图** | SAM 模型一键抠图、背景替换、图像清理 |
-| **🔍 图层分离** | 动漫风格图像的图层分解与透明化处理，支持深度估计和3D效果生成 |
-| **🌄 无边图像浏览** | 快速浏览和管理历史生成图片 |
-| **🖼️ 图像对比** | 并排对比两张生成图片的差异 |
-
-
-### 优化插件
-
-| 插件名称 | 优化说明 |
-|---------|---------|
-| **🔧 ADetailer** | 兼容性优化，修复人脸修复问题 |
-| **🔧 Photoshop 插件** | Auto-Photoshop-StableDiffusion-Plugin 增强 |
-| **🏷️ WD 1.4 标签器** | 自动生成图像标签，支持中文 |
-| **🌐 Civitai Helper** | 模型下载与管理，支持一键下载、元数据同步、批量操作 |
-| **🎯 LoRA Prompt Tool** | LoRA 提示词智能推荐与权重调节 |
-| **🔄 区域提示词** | 图像分区控制，不同区域使用不同提示词 |
-| **📦 SuperMerger** | 模型合并与融合工具 |
-| **🔤 标签补全** | 提示词自动补全，提高输入效率 |
-| **🇨🇳 中文界面** | 完全汉化的界面语言包 |
-
-### 内置功能
-
-| 功能名称 | 说明 |
-|---------|------|
-| **🛡️ 显存防溢出保护** | 防止显存溢出导致的崩溃，支持 UNet/VAE 分块处理 |
-| **🖼️ 多图拼接参考** | 多图像拼接与参考功能 |
-| **🌱 种子多样性增强** | 改善蒸馏模型的种子多样性 |
-| **⚡ 频谱预测加速** | 免训练加速所有模型 |
-| **🔥 PyTorch 编译加速** | 使用 torch.compile 加速推理 |
-| **🎛️ 调制引导控制** | 改善 Anima 模型的生成质量 |
-
-### 已集成扩展列表
+## 🧩 已集成扩展列表
 
 > 以下是 `webui/extensions/` 目录下已集成的全部扩展，开箱即用，无需自行安装。
 
